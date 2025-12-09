@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Atualização</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .info {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        button {
+            background: #6B1C40;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #8B2E5A;
+        }
+        .config {
+            background: #e8f5e9;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Configurações</h1>
+    
+    <div class="info">
+        <h3>Valores Atuais no HTML:</h3>
+        <p><strong>Telefone:</strong> <span id="contato-telefone">(54) 99999-9999</span></p>
+        <p><strong>Email:</strong> <span id="contato-email">contato@davinivinhos.com.br</span></p>
+        <p><strong>Endereço:</strong> <span id="contato-endereco">Jolimont, RS</span></p>
+    </div>
+
+    <button onclick="testarAPI()">🔄 Buscar Configurações da API</button>
+    
+    <div id="resultado"></div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+
+        async function testarAPI() {
+            const resultado = document.getElementById('resultado');
+            resultado.innerHTML = '<p>⏳ Buscando configurações...</p>';
+
+            try {
+                // Buscar configurações
+                const response = await fetch(`${API_URL}/configuracoes`);
+                console.log('Status da resposta:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+
+                const config = await response.json();
+                console.log('Configurações recebidas:', config);
+
+                // Mostrar configurações
+                let html = '<div class="config"><h3>✅ Configurações do Banco de Dados:</h3>';
+                html += `<p><strong>Telefone:</strong> ${config.telefone || 'não definido'}</p>`;
+                html += `<p><strong>Email:</strong> ${config.email || 'não definido'}</p>`;
+                html += `<p><strong>Endereço:</strong> ${config.endereco || 'não definido'}</p>`;
+                html += `<p><strong>Nome do Site:</strong> ${config.nome_site || 'não definido'}</p>`;
+                html += `<p><strong>Título:</strong> ${config.titulo || 'não definido'}</p>`;
+                html += `<p><strong>Descrição:</strong> ${config.descricao || 'não definido'}</p>`;
+                html += '</div>';
+
+                // Atualizar elementos
+                const telefone = document.getElementById('contato-telefone');
+                const email = document.getElementById('contato-email');
+                const endereco = document.getElementById('contato-endereco');
+
+                console.log('Elementos encontrados:', {
+                    telefone: !!telefone,
+                    email: !!email,
+                    endereco: !!endereco
+                });
+
+                if (telefone && config.telefone) {
+                    console.log('Atualizando telefone de:', telefone.textContent, 'para:', config.telefone);
+                    telefone.textContent = config.telefone;
+                    html += '<p>✅ Telefone atualizado!</p>';
+                }
+
+                if (email && config.email) {
+                    console.log('Atualizando email de:', email.textContent, 'para:', config.email);
+                    email.textContent = config.email;
+                    html += '<p>✅ Email atualizado!</p>';
+                }
+
+                if (endereco && config.endereco) {
+                    console.log('Atualizando endereço de:', endereco.textContent, 'para:', config.endereco);
+                    endereco.textContent = config.endereco;
+                    html += '<p>✅ Endereço atualizado!</p>';
+                }
+
+                resultado.innerHTML = html;
+
+            } catch (error) {
+                console.error('Erro ao buscar configurações:', error);
+                resultado.innerHTML = `
+                    <div class="config" style="border-color: #f44336; background: #ffebee;">
+                        <h3>❌ Erro:</h3>
+                        <p>${error.message}</p>
+                        <p><strong>Verifique se o servidor está rodando em http://localhost:3000</strong></p>
+                    </div>
+                `;
+            }
+        }
+
+        // Executar automaticamente ao carregar
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Página de teste carregada');
+            console.log('Elementos encontrados:', {
+                telefone: document.getElementById('contato-telefone'),
+                email: document.getElementById('contato-email'),
+                endereco: document.getElementById('contato-endereco')
+            });
+        });
+    </script>
+</body>
+</html>

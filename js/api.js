@@ -1,0 +1,350 @@
+// ===== CONFIGURAÇÃO DA API =====
+const API_URL = 'http://localhost:3000/api';
+
+// ===== GERENCIAMENTO DE DADOS COM API =====
+class VinhoManager {
+    constructor() {
+        this.vinhos = [];
+        this.configuracoes = {};
+    }
+
+    async carregarVinhos() {
+        try {
+            const response = await fetch(`${API_URL}/vinhos`);
+            if (!response.ok) throw new Error('Erro ao carregar vinhos');
+            this.vinhos = await response.json();
+            return this.vinhos;
+        } catch (error) {
+            console.error('Erro ao carregar vinhos:', error);
+            return [];
+        }
+    }
+
+    async carregarConfiguracoes() {
+        try {
+            console.log('Buscando configurações da API...');
+            const response = await fetch(`${API_URL}/configuracoes`);
+            console.log('Resposta da API:', response.status);
+            if (!response.ok) throw new Error('Erro ao carregar configurações');
+            this.configuracoes = await response.json();
+            console.log('Configurações recebidas da API:', this.configuracoes);
+            return this.configuracoes;
+        } catch (error) {
+            console.error('Erro ao carregar configurações:', error);
+            return {};
+        }
+    }
+
+    async salvarConfiguracoes(configuracoes) {
+        try {
+            const response = await fetch(`${API_URL}/configuracoes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(configuracoes)
+            });
+            if (!response.ok) throw new Error('Erro ao salvar configurações');
+            this.configuracoes = await response.json();
+            return this.configuracoes;
+        } catch (error) {
+            console.error('Erro ao salvar configurações:', error);
+            throw error;
+        }
+    }
+
+    getVinhos(filtro = 'todos') {
+        if (filtro === 'todos') {
+            return this.vinhos;
+        }
+        return this.vinhos.filter(vinho => vinho.tipo === filtro);
+    }
+
+    getVinhoPorId(id) {
+        return this.vinhos.find(vinho => vinho.id == id);
+    }
+}
+
+// Instância global do gerenciador
+const vinhoManager = new VinhoManager();
+
+// ===== RENDERIZAÇÃO DO CATÁLOGO =====
+async function renderizarVinhos(filtro = 'todos') {
+    const container = document.getElementById('vinhos-container');
+    if (!container) return;
+
+    await vinhoManager.carregarVinhos();
+    const vinhos = vinhoManager.getVinhos(filtro);
+
+    if (vinhos.length === 0) {
+        container.innerHTML = `
+            <div class="mensagem-vazio">
+                <i class="fas fa-wine-bottle"></i>
+                <p>Nenhum vinho encontrado nesta categoria.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = vinhos.map(vinho => {
+        const imagemSrc = vinho.imagem ? 
+            (vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`) :
+            'https://via.placeholder.com/300x300?text=Vinho';
+        
+        return `
+            <div class="vinho-card" data-id="${vinho.id}">
+                <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-imagem" onerror="this.src='https://via.placeholder.com/300x300?text=Vinho'">
+                <div class="vinho-info">
+                    <span class="vinho-tipo tipo-${vinho.tipo}">${capitalizar(vinho.tipo)}</span>
+                    <h3 class="vinho-nome">${vinho.nome}</h3>
+                    <p class="vinho-uva"><i class="fas fa-grape-alt"></i> ${vinho.uva}</p>
+                    <p class="vinho-ano"><i class="fas fa-calendar"></i> Safra ${vinho.ano}</p>
+                    <p class="vinho-preco">R$ ${formatarPreco(vinho.preco)}</p>
+                    <button class="btn btn-adicionar-carrinho" onclick="event.stopPropagation(); carrinhoManager.adicionarItem(${JSON.stringify(vinho).replace(/"/g, '&quot;')})">
+                        <i class="fas fa-shopping-cart"></i> Adicionar
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Adicionar event listeners aos cards
+    document.querySelectorAll('.vinho-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const id = parseInt(card.dataset.id);
+            abrirModal(id);
+        });
+    });
+}
+
+// ===== MODAL DE DETALHES =====
+function abrirModal(id) {
+    const vinho = vinhoManager.getVinhoPorId(id);
+    if (!vinho) return;
+
+    const modal = document.getElementById('modal-vinho');
+    const modalBody = document.getElementById('modal-body');
+
+    const imagemSrc = vinho.imagem ? 
+        (vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`) :
+        'https://via.placeholder.com/400x400?text=Vinho';
+
+    modalBody.innerHTML = `
+        <div class="modal-vinho-detalhes">
+            <div class="modal-imagem">
+                <img src="${imagemSrc}" alt="${vinho.nome}" onerror="this.src='https://via.placeholder.com/400x400?text=Vinho'">
+            </div>
+            <div class="modal-info">
+                <span class="vinho-tipo tipo-${vinho.tipo}">${capitalizar(vinho.tipo)}</span>
+                <h2>${vinho.nome}</h2>
+                <div class="modal-detalhes">
+                    <div class="detalhe-item">
+                        <span class="detalhe-label"><i class="fas fa-grape-alt"></i> Tipo de Uva:</span>
+                        <span class="detalhe-valor">${vinho.uva}</span>
+                    </div>
+                    <div class="detalhe-item">
+                        <span class="detalhe-label"><i class="fas fa-calendar"></i> Ano de Safra:</span>
+                        <span class="detalhe-valor">${vinho.ano}</span>
+                    </div>
+                    ${vinho.guarda ? `
+                    <div class="detalhe-item">
+                        <span class="detalhe-label"><i class="fas fa-clock"></i> Tempo de Guarda:</span>
+                        <span class="detalhe-valor">${vinho.guarda}</span>
+                    </div>
+                    ` : ''}
+                    ${vinho.harmonizacao ? `
+                    <div class="detalhe-item">
+                        <span class="detalhe-label"><i class="fas fa-utensils"></i> Harmonização:</span>
+                        <span class="detalhe-valor">${vinho.harmonizacao}</span>
+                    </div>
+                    ` : ''}
+                    ${vinho.descricao ? `
+                    <div class="detalhe-item">
+                        <span class="detalhe-label"><i class="fas fa-info-circle"></i> Sobre o Vinho:</span>
+                        <span class="detalhe-valor">${vinho.descricao}</span>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="modal-preco">R$ ${formatarPreco(vinho.preco)}</div>
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'block';
+}
+
+function fecharModal() {
+    const modal = document.getElementById('modal-vinho');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// ===== FILTROS =====
+function configurarFiltros() {
+    const filtros = document.querySelectorAll('.filtro-btn');
+    filtros.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filtros.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const filtro = btn.dataset.filtro;
+            renderizarVinhos(filtro);
+        });
+    });
+}
+
+// ===== NAVEGAÇÃO =====
+function configurarNavegacao() {
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            
+            // Só prevenir default para âncoras internas (que começam com #)
+            if (href && href.startsWith('#')) {
+                e.preventDefault();
+                navLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                
+                const target = document.querySelector(href);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+            // Links externos (como admin.html) funcionarão normalmente
+        });
+    });
+}
+
+// ===== ATUALIZAR INFORMAÇÕES DE CONTATO =====
+async function atualizarInformacoesContato() {
+    console.log('=== INICIANDO ATUALIZAÇÃO DE INFORMAÇÕES ===');
+    console.log('Carregando configurações para atualizar página...');
+    await vinhoManager.carregarConfiguracoes();
+    const config = vinhoManager.configuracoes;
+    console.log('Configurações carregadas:', config);
+
+    // Atualizar informações de contato usando IDs específicos
+    const telefoneElement = document.getElementById('contato-telefone');
+    const emailElement = document.getElementById('contato-email');
+    const enderecoElement = document.getElementById('contato-endereco');
+
+    console.log('Elementos encontrados:', {
+        telefone: !!telefoneElement,
+        email: !!emailElement,
+        endereco: !!enderecoElement
+    });
+
+    if (telefoneElement) {
+        console.log('Atualizando telefone de:', telefoneElement.textContent, 'para:', config.telefone);
+        telefoneElement.textContent = config.telefone || '(54) 99999-9999';
+    }
+
+    if (emailElement) {
+        console.log('Atualizando email de:', emailElement.textContent, 'para:', config.email);
+        emailElement.textContent = config.email || 'contato@davinivinhos.com.br';
+    }
+
+    if (enderecoElement) {
+        console.log('Atualizando endereço de:', enderecoElement.textContent, 'para:', config.endereco);
+        enderecoElement.textContent = config.endereco || 'Jolimont, RS';
+    }
+
+    // Atualizar título e descrição do Hero
+    const heroTitle = document.querySelector('.hero-content h2');
+    const heroDescription = document.querySelector('.hero-content p');
+    
+    if (heroTitle && config.titulo) {
+        console.log('Atualizando título do hero:', config.titulo);
+        heroTitle.textContent = config.titulo;
+    }
+    
+    if (heroDescription && config.descricao) {
+        console.log('Atualizando descrição do hero:', config.descricao);
+        heroDescription.textContent = config.descricao;
+    }
+
+    // Atualizar título da página
+    if (config.titulo) {
+        console.log('Atualizando título da página:', config.titulo);
+        document.title = config.titulo;
+    }
+
+    // Atualizar logo/nome do site
+    const logoElement = document.querySelector('.logo h1');
+    if (logoElement && config.nome_site) {
+        console.log('Atualizando nome do site:', config.nome_site);
+        logoElement.textContent = config.nome_site;
+    }
+
+    // Atualizar links das redes sociais
+    const socialLinks = document.querySelectorAll('.social-link');
+    console.log('Social links encontrados:', socialLinks.length);
+    
+    if (socialLinks[0] && config.instagram) {
+        console.log('Atualizando Instagram:', config.instagram);
+        socialLinks[0].href = config.instagram;
+    }
+    if (socialLinks[1] && config.facebook) {
+        console.log('Atualizando Facebook:', config.facebook);
+        socialLinks[1].href = config.facebook;
+    }
+    if (socialLinks[2] && config.whatsapp) {
+        const whatsappLink = `https://wa.me/${config.whatsapp.replace(/\D/g, '')}`;
+        console.log('Atualizando WhatsApp:', whatsappLink);
+        socialLinks[2].href = whatsappLink;
+    }
+
+    console.log('Informações de contato atualizadas!');
+}
+
+// ===== FUNÇÕES UTILITÁRIAS =====
+function capitalizar(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function formatarPreco(preco) {
+    return parseFloat(preco).toFixed(2).replace('.', ',');
+}
+
+// ===== INICIALIZAÇÃO =====
+document.addEventListener('DOMContentLoaded', async () => {
+    // Renderizar vinhos iniciais
+    await renderizarVinhos();
+
+    // Atualizar informações de contato
+    await atualizarInformacoesContato();
+
+    // Configurar filtros
+    configurarFiltros();
+
+    // Configurar navegação
+    configurarNavegacao();
+
+    // Configurar modal
+    const modal = document.getElementById('modal-vinho');
+    const closeBtn = modal?.querySelector('.close');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', fecharModal);
+    }
+
+    if (modal) {
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                fecharModal();
+            }
+        });
+    }
+
+    // Scroll suave para seções
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    });
+});

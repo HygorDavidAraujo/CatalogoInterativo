@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Login</title>
+    <style>
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); }
+        .modal-content { background-color: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 10px; }
+        button { padding: 10px 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Teste de Login</h1>
+    <button id="btn-teste-login">Abrir Modal</button>
+
+    <div id="modal-auth" class="modal">
+        <div class="modal-content">
+            <h2>Modal de Teste</h2>
+            <p>Se você está vendo isso, o modal está funcionando!</p>
+            <button onclick="document.getElementById('modal-auth').style.display='none'">Fechar</button>
+        </div>
+    </div>
+
+    <script>
+        console.log('Script carregado');
+        document.getElementById('btn-teste-login').addEventListener('click', function() {
+            console.log('Botão clicado');
+            document.getElementById('modal-auth').style.display = 'block';
+        });
+    </script>
+</body>
+</html>

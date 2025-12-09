@@ -1,0 +1,107 @@
+const express = require('express');
+const router = express.Router();
+const { pool } = require('../config/database');
+
+// GET - Listar pedidos de um cliente
+router.get('/cliente/:clienteId', async (req, res) => {
+    try {
+        const { clienteId } = req.params;
+        
+        // Buscar pedidos
+        const [pedidos] = await pool.query(
+            'SELECT * FROM pedidos WHERE usuario_id = ? ORDER BY created_at DESC',
+            [clienteId]
+        );
+
+        // Para cada pedido, buscar os itens
+        for (let pedido of pedidos) {
+            const [itens] = await pool.query(
+                'SELECT * FROM pedidos_itens WHERE pedido_id = ?',
+                [pedido.id]
+            );
+            pedido.itens = itens;
+        }
+
+        res.json(pedidos);
+    } catch (error) {
+        console.error('Erro ao buscar pedidos:', error);
+        res.status(500).json({ error: 'Erro ao buscar pedidos' });
+    }
+});
+
+// POST - Criar novo pedido
+router.post('/', async (req, res) => {
+    try {
+        const { usuario_id, total, itens, observacoes } = req.body;
+
+        // Inserir pedido
+        const [result] = await pool.query(
+            'INSERT INTO pedidos (usuario_id, total, observacoes) VALUES (?, ?, ?)',
+            [usuario_id, total, observacoes || null]
+        );
+
+        const pedidoId = result.insertId;
+
+        // Inserir itens do pedido
+        for (const item of itens) {
+            await pool.query(
+                'INSERT INTO pedidos_itens (pedido_id, vinho_id, vinho_nome, quantidade, preco_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)',
+                [pedidoId, item.id, item.nome, item.quantidade, item.preco, item.preco * item.quantidade]
+            );
+        }
+
+        res.status(201).json({ 
+            success: true, 
+            pedidoId,
+            message: 'Pedido criado com sucesso' 
+        });
+    } catch (error) {
+        console.error('Erro ao criar pedido:', error);
+        res.status(500).json({ error: 'Erro ao criar pedido' });
+    }
+});
+
+// GET - Listar todos os pedidos (admin)
+router.get('/', async (req, res) => {
+    try {
+        const [pedidos] = await pool.query(`
+            SELECT p.*, u.nome_completo, u.email, u.telefone 
+            FROM pedidos p 
+            JOIN usuarios u ON p.usuario_id = u.id 
+            ORDER BY p.created_at DESC
+        `);
+
+        for (let pedido of pedidos) {
+            const [itens] = await pool.query(
+                'SELECT * FROM pedidos_itens WHERE pedido_id = ?',
+                [pedido.id]
+            );
+            pedido.itens = itens;
+        }
+
+        res.json(pedidos);
+    } catch (error) {
+        console.error('Erro ao listar pedidos:', error);
+        res.status(500).json({ error: 'Erro ao listar pedidos' });
+    }
+});
+
+// PUT - Atualizar status do pedido
+router.put('/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        await pool.query(
+            'UPDATE pedidos SET status = ? WHERE id = ?',
+            [status, id]
+        );
+
+        res.json({ success: true, message: 'Status atualizado' });
+    } catch (error) {
+        console.error('Erro ao atualizar status:', error);
+        res.status(500).json({ error: 'Erro ao atualizar status' });
+    }
+});
+
+module.exports = router;

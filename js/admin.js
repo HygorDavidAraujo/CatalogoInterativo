@@ -1,6 +1,39 @@
 // ===== VARIÁVEIS GLOBAIS =====
 let vinhoEmEdicao = null;
 
+// ===== GERENCIAMENTO DE CONFIGURAÇÕES =====
+function carregarConfiguracoes() {
+    const config = vinhoManager.configuracoes;
+    
+    document.getElementById('config-telefone').value = config.telefone || '';
+    document.getElementById('config-email').value = config.email || '';
+    document.getElementById('config-endereco').value = config.endereco || '';
+    document.getElementById('config-instagram').value = config.instagram || '';
+    document.getElementById('config-facebook').value = config.facebook || '';
+    document.getElementById('config-whatsapp').value = config.whatsapp || '';
+}
+
+function configurarFormularioConfig() {
+    const form = document.getElementById('form-configuracoes');
+    if (!form) return;
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const configuracoes = {
+            telefone: document.getElementById('config-telefone').value.trim(),
+            email: document.getElementById('config-email').value.trim(),
+            endereco: document.getElementById('config-endereco').value.trim(),
+            instagram: document.getElementById('config-instagram').value.trim(),
+            facebook: document.getElementById('config-facebook').value.trim(),
+            whatsapp: document.getElementById('config-whatsapp').value.trim()
+        };
+
+        vinhoManager.salvarConfiguracoes(configuracoes);
+        mostrarMensagem('Configurações salvas com sucesso! As alterações já estão visíveis no site.', 'sucesso');
+    });
+}
+
 // ===== RENDERIZAÇÃO DA LISTA ADMIN =====
 function renderizarListaAdmin() {
     const container = document.getElementById('lista-vinhos-admin');
@@ -204,6 +237,8 @@ function formatarPreco(preco) {
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
+    carregarConfiguracoes();
+    configurarFormularioConfig();
     renderizarListaAdmin();
     configurarFormulario();
     configurarModais();

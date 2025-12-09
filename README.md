@@ -1,10 +1,10 @@
 # Catálogo Interativo - Davini Vinhos Finos
 
-Sistema web de catálogo interativo para exibição de vinhos da vinícola.
+Sistema web completo de catálogo interativo para exibição de vinhos da vinícola com backend Node.js, banco de dados MySQL e upload de imagens.
 
 ## 📋 Sobre o Projeto
 
-Este é um catálogo interativo moderno desenvolvido para a Davini Vinhos Finos, permitindo a exibição organizada dos vinhos disponíveis com informações detalhadas e um sistema de administração para gerenciamento dos produtos.
+Este é um catálogo interativo moderno desenvolvido para a Davini Vinhos Finos, permitindo a exibição organizada dos vinhos disponíveis com informações detalhadas e um sistema de administração completo para gerenciamento dos produtos e configurações do site.
 
 ## ✨ Funcionalidades
 
@@ -37,17 +37,82 @@ Este é um catálogo interativo moderno desenvolvido para a Davini Vinhos Finos,
 - **Animações**: Transições suaves e efeitos hover
 - **Layout**: Grid responsivo para os cards de vinhos
 
-## 🚀 Como Usar
+## 🚀 Como Instalar e Executar
+
+### Pré-requisitos
+- **Node.js** (versão 14 ou superior)
+- **MySQL** (versão 5.7 ou superior)
+- **npm** (gerenciador de pacotes do Node.js)
+
+### Passo 1: Clonar o Repositório
+```bash
+git clone https://github.com/SEU_USUARIO/CatalogoInterativoDaviniVinhosFinos.git
+cd CatalogoInterativoDaviniVinhosFinos
+```
+
+### Passo 2: Instalar Dependências
+```bash
+npm install
+```
+
+### Passo 3: Configurar Banco de Dados
+1. Certifique-se de que o MySQL está rodando
+2. Crie o banco de dados executando o script:
+```bash
+mysql -u root -p < database/schema.sql
+```
+
+Ou execute manualmente no MySQL:
+```sql
+source database/schema.sql
+```
+
+### Passo 4: Configurar Variáveis de Ambiente
+1. Copie o arquivo `.env.example` para `.env`:
+```bash
+cp .env.example .env
+```
+
+2. Edite o arquivo `.env` com suas configurações:
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=sua_senha
+DB_NAME=catalogo_vinhos
+DB_PORT=3306
+PORT=3000
+```
+
+### Passo 5: Iniciar o Servidor
+```bash
+npm start
+```
+
+Ou para desenvolvimento com auto-reload:
+```bash
+npm run dev
+```
+
+### Passo 6: Acessar o Sistema
+- **Site Principal**: http://localhost:3000
+- **Painel Admin**: http://localhost:3000/admin.html
+- **API Status**: http://localhost:3000/api/status
+
+## 📖 Como Usar
 
 ### Visualizar o Catálogo
-1. Abra o arquivo `index.html` em um navegador
-2. Navegue pelos vinhos usando os filtros
+1. Acesse http://localhost:3000
+2. Navegue pelos vinhos usando os filtros por tipo
 3. Clique em um vinho para ver detalhes completos
 
-### Acessar o Painel Administrativo
-1. Abra o arquivo `admin.html` em um navegador
-2. Cadastre novos vinhos usando o formulário
-3. Gerencie os vinhos existentes (editar/excluir)
+### Gerenciar Vinhos (Painel Admin)
+1. Acesse http://localhost:3000/admin.html
+2. **Configurar Site**: Edite informações de contato e redes sociais
+3. **Cadastrar Vinho**: Preencha o formulário com:
+   - Nome, tipo, uva, safra, preço
+   - Upload de imagem do computador OU URL externa
+   - Informações adicionais (guarda, harmonização, descrição)
+4. **Editar/Excluir**: Use os botões na lista de vinhos
 
 ## 📁 Estrutura de Arquivos
 
@@ -64,17 +129,51 @@ CatalogoInterativo/
 └── images/             # Pasta para imagens locais
 ```
 
-## 💾 Armazenamento de Dados
+## 💾 Banco de Dados
 
-Os dados dos vinhos são armazenados no **localStorage** do navegador, permitindo que as informações persistam entre sessões sem necessidade de banco de dados ou servidor.
+### Estrutura
+O sistema utiliza **MySQL** com duas tabelas principais:
+
+#### Tabela `vinhos`
+- id, nome, tipo, uva, ano
+- guarda, harmonizacao, descricao
+- preco, imagem
+- timestamps (created_at, updated_at)
+
+#### Tabela `configuracoes`
+- id, chave, valor
+- timestamps (created_at, updated_at)
+
+### API Endpoints
+
+**Vinhos:**
+- `GET /api/vinhos` - Listar todos os vinhos
+- `GET /api/vinhos/:id` - Buscar vinho específico
+- `POST /api/vinhos` - Criar novo vinho (com upload)
+- `PUT /api/vinhos/:id` - Atualizar vinho
+- `DELETE /api/vinhos/:id` - Excluir vinho
+- `GET /api/vinhos/tipo/:tipo` - Filtrar por tipo
+
+**Configurações:**
+- `GET /api/configuracoes` - Buscar todas configurações
+- `POST /api/configuracoes` - Atualizar configurações
+- `GET /api/configuracoes/:chave` - Buscar configuração específica
+- `PUT /api/configuracoes/:chave` - Atualizar configuração específica
 
 ## 🔧 Tecnologias Utilizadas
 
+### Frontend
 - **HTML5**: Estrutura das páginas
 - **CSS3**: Estilização e design responsivo
 - **JavaScript**: Funcionalidades e interatividade
 - **Font Awesome**: Ícones
-- **LocalStorage**: Persistência de dados
+
+### Backend
+- **Node.js**: Servidor backend
+- **Express**: Framework web
+- **MySQL**: Banco de dados relacional
+- **Multer**: Upload de arquivos
+- **CORS**: Comunicação entre frontend e backend
 
 ## 📱 Redes Sociais
 
@@ -85,13 +184,38 @@ O site inclui links para:
 
 (Os links devem ser atualizados no arquivo `index.html` com os perfis reais da vinícola)
 
-## 🎯 Próximos Passos
+## 📤 Upload de Imagens
 
-- Adicionar autenticação para o painel administrativo
-- Implementar upload de imagens
-- Adicionar sistema de busca por nome
-- Criar exportação de catálogo em PDF
-- Integrar com backend e banco de dados
+O sistema suporta duas formas de adicionar imagens:
+
+1. **Upload Local**: Faça upload de imagens do seu computador (JPG, PNG, GIF - máx 5MB)
+   - As imagens são salvas em `/uploads/vinhos/`
+   - Nomenclatura automática: `vinho-timestamp-random.ext`
+
+2. **URL Externa**: Cole uma URL de imagem hospedada externamente
+
+## 🔒 Segurança
+
+**Importante**: Este projeto é uma versão básica. Para produção, recomenda-se:
+- Adicionar autenticação JWT no painel admin
+- Implementar validação e sanitização de dados
+- Configurar HTTPS
+- Usar variáveis de ambiente seguras
+- Implementar rate limiting
+- Adicionar backup automático do banco
+
+## 🎯 Melhorias Futuras
+
+- ✅ Sistema completo de backend com Node.js
+- ✅ Banco de dados MySQL
+- ✅ Upload de imagens
+- ✅ API RESTful
+- 🔲 Autenticação de administrador
+- 🔲 Sistema de busca por nome
+- 🔲 Exportação de catálogo em PDF
+- 🔲 Relatórios e estatísticas
+- 🔲 Sistema de categorias personalizadas
+- 🔲 Integração com WhatsApp Business API
 
 ## 📝 Licença
 

@@ -1,8 +1,15 @@
 # Dependências
 node_modules/
 
+# Variáveis de ambiente
+.env
+
+# Uploads
+uploads/
+
 # Logs
 *.log
+npm-debug.log*
 
 # Arquivos do sistema
 .DS_Store
@@ -16,3 +23,7 @@ Thumbs.db
 # Temporários
 *.tmp
 *.temp
+
+# Build
+dist/
+build/

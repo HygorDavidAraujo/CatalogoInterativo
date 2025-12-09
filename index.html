@@ -18,6 +18,12 @@
                 <ul>
                     <li><a href="#catalogo" class="nav-link active">Catálogo</a></li>
                     <li><a href="#contato" class="nav-link">Contato</a></li>
+                    <li id="menu-admin" style="display: none;"><a href="admin.html" class="nav-link" id="link-admin" onclick="console.log('Link Painel ADM clicado!')">Painel ADM</a></li>
+                    <li id="menu-login"><a href="#" class="nav-link" id="btn-login"><i class="fas fa-user"></i> Login</a></li>
+                    <li id="menu-usuario" style="display: none;">
+                        <a href="#" class="nav-link" id="usuario-nome"></a>
+                        <a href="#" class="nav-link" id="btn-logout"><i class="fas fa-sign-out-alt"></i> Sair</a>
+                    </li>
                 </ul>
             </nav>
         </div>
@@ -58,21 +64,21 @@
                         <i class="fas fa-phone"></i>
                         <div>
                             <h3>Telefone</h3>
-                            <p>(54) 99999-9999</p>
+                            <p id="contato-telefone">(54) 99999-9999</p>
                         </div>
                     </div>
                     <div class="info-item">
                         <i class="fas fa-envelope"></i>
                         <div>
                             <h3>E-mail</h3>
-                            <p>contato@davinivinhos.com.br</p>
+                            <p id="contato-email">contato@davinivinhos.com.br</p>
                         </div>
                     </div>
                     <div class="info-item">
                         <i class="fas fa-map-marker-alt"></i>
                         <div>
                             <h3>Endereço</h3>
-                            <p>Jolimont, RS</p>
+                            <p id="contato-endereco">Jolimont, RS</p>
                         </div>
                     </div>
                 </div>
@@ -114,6 +120,111 @@
         </div>
     </div>
 
-    <script src="js/app.js"></script>
+    <!-- Modal Login/Cadastro -->
+    <div id="modal-auth" class="modal">
+        <div class="modal-content modal-auth">
+            <span class="close close-auth">&times;</span>
+            
+            <!-- Formulário de Login -->
+            <div id="form-login-container" class="auth-container">
+                <h2><i class="fas fa-sign-in-alt"></i> Entrar</h2>
+                <form id="form-login" class="auth-form">
+                    <div class="form-group">
+                        <label for="login-email">E-mail</label>
+                        <input type="email" id="login-email" name="email" required placeholder="seu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-senha">Senha</label>
+                        <input type="password" id="login-senha" name="senha" required placeholder="Sua senha">
+                    </div>
+                    <div id="login-erro" class="mensagem-erro-auth" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary btn-auth">
+                        <i class="fas fa-sign-in-alt"></i> Entrar
+                    </button>
+                </form>
+                <p class="auth-switch">
+                    Não tem uma conta? <a href="#" id="mostrar-cadastro">Cadastre-se</a>
+                </p>
+            </div>
+
+            <!-- Formulário de Cadastro -->
+            <div id="form-cadastro-container" class="auth-container" style="display: none;">
+                <h2><i class="fas fa-user-plus"></i> Cadastrar</h2>
+                <form id="form-cadastro" class="auth-form">
+                    <div class="form-group">
+                        <label for="cadastro-nome">Nome Completo *</label>
+                        <input type="text" id="cadastro-nome" name="nome_completo" required placeholder="Seu nome completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="cadastro-telefone">Telefone *</label>
+                        <input type="tel" id="cadastro-telefone" name="telefone" required placeholder="(XX)XXXXX-XXXX">
+                    </div>
+                    <div class="form-group">
+                        <label for="cadastro-email">E-mail *</label>
+                        <input type="email" id="cadastro-email" name="email" required placeholder="seu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="cadastro-senha">Senha *</label>
+                        <input type="password" id="cadastro-senha" name="senha" required placeholder="Mínimo 6 caracteres">
+                    </div>
+                    <div class="form-group">
+                        <label for="cadastro-confirmar-senha">Confirmar Senha *</label>
+                        <input type="password" id="cadastro-confirmar-senha" name="confirmar_senha" required placeholder="Digite a senha novamente">
+                    </div>
+                    <div id="cadastro-erro" class="mensagem-erro-auth" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary btn-auth">
+                        <i class="fas fa-user-plus"></i> Cadastrar
+                    </button>
+                </form>
+                <p class="auth-switch">
+                    Já tem uma conta? <a href="#" id="mostrar-login">Entrar</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botão Carrinho Flutuante -->
+    <button class="btn-carrinho" id="btn-abrir-carrinho" title="Ver Carrinho">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="badge-carrinho" id="badge-carrinho">0</span>
+    </button>
+
+    <!-- Overlay -->
+    <div class="carrinho-overlay" id="carrinho-overlay"></div>
+
+    <!-- Sidebar Carrinho -->
+    <div class="carrinho-sidebar" id="carrinho-sidebar">
+        <div class="carrinho-header">
+            <h3><i class="fas fa-shopping-cart"></i> Meu Carrinho</h3>
+            <button class="btn-fechar-carrinho" id="btn-fechar-carrinho">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="carrinho-body" id="carrinho-body">
+            <div class="carrinho-vazio">
+                <i class="fas fa-shopping-cart"></i>
+                <p>Seu carrinho está vazio</p>
+            </div>
+        </div>
+        <div class="carrinho-footer" id="carrinho-footer" style="display: none;">
+            <div class="carrinho-total">
+                <span>Total:</span>
+                <span class="carrinho-total-valor" id="carrinho-total">R$ 0,00</span>
+            </div>
+            <button class="btn-finalizar" id="btn-finalizar-pedido">
+                <i class="fab fa-whatsapp"></i> Finalizar Pedido
+            </button>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/carrinho.js"></script>
+    <script>
+        // Inicializar carrinho quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            configurarEventosCarrinho();
+        });
+    </script>
 </body>
 </html>

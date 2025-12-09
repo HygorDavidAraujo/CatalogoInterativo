@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Clientes - Davini Vinhos Finos</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="admin-body">
+    <!-- Header Admin -->
+    <header class="admin-header">
+        <div class="container">
+            <h1><i class="fas fa-users"></i> Gerenciar Clientes</h1>
+            <div class="admin-nav">
+                <a href="admin.html" class="btn btn-secondary">
+                    <i class="fas fa-wine-bottle"></i> Painel Principal
+                </a>
+                <a href="index.html" class="btn-voltar">
+                    <i class="fas fa-home"></i> Ver Site
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Admin Content -->
+    <main class="admin-main">
+        <div class="container">
+            <!-- Lista de Clientes -->
+            <div class="admin-card admin-card-full">
+                <div class="clientes-header">
+                    <h2><i class="fas fa-address-book"></i> Clientes Cadastrados</h2>
+                    <div class="clientes-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-users"></i>
+                            <span id="total-clientes">0</span>
+                            <small>Total</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="filtros-clientes">
+                    <div class="filtro-grupo">
+                        <i class="fas fa-search"></i>
+                        <input type="text" 
+                               id="filtro-busca" 
+                               placeholder="Buscar por nome, email ou telefone..."
+                               class="input-filtro">
+                    </div>
+                    <button class="btn btn-secondary" onclick="limparFiltros()">
+                        <i class="fas fa-times"></i> Limpar
+                    </button>
+                </div>
+
+                <div class="tabela-wrapper">
+                    <table class="tabela-clientes">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>E-mail</th>
+                                <th>Telefone</th>
+                                <th>Data Cadastro</th>
+                                <th>Pedidos</th>
+                                <th>Admin</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-clientes">
+                            <tr>
+                                <td colspan="8" style="text-align: center;">
+                                    <i class="fas fa-spinner fa-spin"></i> Carregando clientes...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Detalhes Cliente -->
+    <div id="modal-cliente" class="modal">
+        <div class="modal-content modal-cliente-detalhes">
+            <span class="close" onclick="fecharModalCliente()">&times;</span>
+            <div class="modal-cliente-header">
+                <h2><i class="fas fa-user-circle"></i> Detalhes do Cliente</h2>
+            </div>
+            <div class="modal-cliente-body" id="modal-cliente-body">
+                <!-- Conteúdo será preenchido via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/clientes.js"></script>
+    <script>
+        // Proteger página admin
+        (function() {
+            const usuarioSalvo = sessionStorage.getItem('usuario');
+            if (usuarioSalvo) {
+                const usuario = JSON.parse(usuarioSalvo);
+                if (usuario.isAdmin === true) {
+                    return;
+                }
+            }
+            alert('Acesso negado! Apenas administradores podem acessar esta página.');
+            window.location.href = 'index.html';
+        })();
+    </script>
+</body>
+</html>

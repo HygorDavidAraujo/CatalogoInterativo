@@ -2,6 +2,7 @@
 class VinhoManager {
     constructor() {
         this.vinhos = this.carregarVinhos();
+        this.configuracoes = this.carregarConfiguracoes();
     }
 
     carregarVinhos() {
@@ -11,6 +12,27 @@ class VinhoManager {
 
     salvarVinhos() {
         localStorage.setItem('vinhos', JSON.stringify(this.vinhos));
+    }
+
+    carregarConfiguracoes() {
+        const config = localStorage.getItem('configuracoes');
+        return config ? JSON.parse(config) : this.getConfiguracoesIniciais();
+    }
+
+    salvarConfiguracoes(configuracoes) {
+        this.configuracoes = configuracoes;
+        localStorage.setItem('configuracoes', JSON.stringify(configuracoes));
+    }
+
+    getConfiguracoesIniciais() {
+        return {
+            telefone: '(54) 99999-9999',
+            email: 'contato@davinivinhos.com.br',
+            endereco: 'Jolimont, RS',
+            instagram: 'https://instagram.com',
+            facebook: 'https://facebook.com',
+            whatsapp: '5554999999999'
+        };
     }
 
     getDadosIniciais() {
@@ -239,10 +261,36 @@ function formatarPreco(preco) {
     return parseFloat(preco).toFixed(2).replace('.', ',');
 }
 
+// ===== ATUALIZAR INFORMAÇÕES DE CONTATO =====
+function atualizarInformacoesContato() {
+    const config = vinhoManager.configuracoes;
+
+    // Atualizar telefone
+    const telefoneElement = document.querySelector('.info-item:nth-child(1) p');
+    if (telefoneElement) telefoneElement.textContent = config.telefone;
+
+    // Atualizar e-mail
+    const emailElement = document.querySelector('.info-item:nth-child(2) p');
+    if (emailElement) emailElement.textContent = config.email;
+
+    // Atualizar endereço
+    const enderecoElement = document.querySelector('.info-item:nth-child(3) p');
+    if (enderecoElement) enderecoElement.textContent = config.endereco;
+
+    // Atualizar links das redes sociais
+    const socialLinks = document.querySelectorAll('.social-link');
+    if (socialLinks[0]) socialLinks[0].href = config.instagram;
+    if (socialLinks[1]) socialLinks[1].href = config.facebook;
+    if (socialLinks[2]) socialLinks[2].href = `https://wa.me/${config.whatsapp}`;
+}
+
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
     // Renderizar vinhos iniciais
     renderizarVinhos();
+
+    // Atualizar informações de contato
+    atualizarInformacoesContato();
 
     // Configurar filtros
     configurarFiltros();
