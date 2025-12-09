@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administração - Davini Vinhos Finos</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="admin-body">
+    <!-- Header Admin -->
+    <header class="admin-header">
+        <div class="container">
+            <h1><i class="fas fa-wine-bottle"></i> Painel Administrativo</h1>
+            <a href="index.html" class="btn-voltar">
+                <i class="fas fa-home"></i> Ver Site
+            </a>
+        </div>
+    </header>
+
+    <!-- Admin Content -->
+    <main class="admin-main">
+        <div class="container">
+            <div class="admin-grid">
+                <!-- Formulário de Cadastro -->
+                <div class="admin-card">
+                    <h2><i class="fas fa-plus-circle"></i> Cadastrar Novo Vinho</h2>
+                    <form id="form-vinho" class="form-vinho">
+                        <div class="form-group">
+                            <label for="nome">Nome do Vinho *</label>
+                            <input type="text" id="nome" name="nome" required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="tipo">Tipo *</label>
+                                <select id="tipo" name="tipo" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="tinto">Tinto</option>
+                                    <option value="branco">Branco</option>
+                                    <option value="rose">Rosé</option>
+                                    <option value="espumante">Espumante</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="uva">Tipo de Uva *</label>
+                                <input type="text" id="uva" name="uva" required placeholder="Ex: Merlot, Cabernet">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ano">Ano de Safra *</label>
+                                <input type="number" id="ano" name="ano" required min="1900" max="2025" placeholder="Ex: 2020">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="guarda">Tempo de Guarda</label>
+                                <input type="text" id="guarda" name="guarda" placeholder="Ex: 5 a 10 anos">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="harmonizacao">Harmonização</label>
+                            <textarea id="harmonizacao" name="harmonizacao" rows="3" placeholder="Ex: Carnes vermelhas, massas, queijos..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="descricao">Sobre o Vinho</label>
+                            <textarea id="descricao" name="descricao" rows="4" placeholder="Descrição completa do vinho..."></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="preco">Preço (R$) *</label>
+                                <input type="number" id="preco" name="preco" required min="0" step="0.01" placeholder="Ex: 89.90">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="imagem">URL da Imagem *</label>
+                                <input type="text" id="imagem" name="imagem" required placeholder="URL da foto do vinho">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Salvar Vinho
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="btn-cancelar">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Lista de Vinhos Cadastrados -->
+                <div class="admin-card">
+                    <h2><i class="fas fa-list"></i> Vinhos Cadastrados</h2>
+                    <div id="lista-vinhos-admin" class="lista-vinhos-admin">
+                        <!-- Lista será carregada via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Confirmação -->
+    <div id="modal-confirmar" class="modal">
+        <div class="modal-content modal-small">
+            <h3>Confirmar Exclusão</h3>
+            <p>Tem certeza que deseja excluir este vinho?</p>
+            <div class="modal-actions">
+                <button class="btn btn-danger" id="btn-confirmar-delete">Sim, Excluir</button>
+                <button class="btn btn-secondary" id="btn-cancelar-delete">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

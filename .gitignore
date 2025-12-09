@@ -1,0 +1,18 @@
+# Dependências
+node_modules/
+
+# Logs
+*.log
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporários
+*.tmp
+*.temp
