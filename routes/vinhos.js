@@ -10,7 +10,8 @@ router.get('/', async (req, res) => {
         
         let query = 'SELECT * FROM vinhos';
         if (!mostrarInativos) {
-            query += ' WHERE ativo = TRUE';
+            // Mostra vinhos ativos ou NULL (NULL = ativo por padrão)
+            query += ' WHERE (ativo = TRUE OR ativo IS NULL)';
         }
         query += ' ORDER BY created_at DESC';
         
