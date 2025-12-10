@@ -1484,6 +1484,96 @@ body {
     background: #f8f9fa;
 }
 
+/* Botões menores no admin */
+.btn-icon-small {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transicao);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    min-width: 38px;
+}
+
+.btn-icon-small.btn-editar {
+    background: #007bff;
+    color: white;
+}
+
+.btn-icon-small.btn-editar:hover {
+    background: #0056b3;
+}
+
+.btn-icon-small.btn-excluir {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-icon-small.btn-excluir:hover {
+    background: #a71d2a;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    margin-top: 0.5rem;
+}
+
+.toggle-switch input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 42px;
+    height: 22px;
+    background: #ccc;
+    border-radius: 22px;
+    transition: var(--transicao);
+}
+
+.toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    top: 2px;
+    left: 2px;
+    transition: var(--transicao);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: #28a745;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.toggle-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #666;
+}
+
+.vinho-item-acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
 /* Responsivo Perfil */
 @media (max-width: 768px) {
     .perfil-tabs {

@@ -93,22 +93,24 @@ async function renderizarListaAdmin() {
             <div class="vinho-item-admin ${vinho.ativo === false ? 'vinho-inativo' : ''}" data-id="${vinho.id}">
                 <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-item-imagem" onerror="this.src='https://via.placeholder.com/80x80?text=Vinho'">
                 <div class="vinho-item-info">
-                    <div class="vinho-item-nome">
-                        ${vinho.nome}
-                        ${vinho.ativo === false ? '<span class="badge-inativo">Oculto</span>' : '<span class="badge-ativo">Visível</span>'}
-                    </div>
+                    <div class="vinho-item-nome">${vinho.nome}</div>
                     <div class="vinho-item-detalhes">
                         ${capitalizar(vinho.tipo)} | ${vinho.uva} | ${vinho.ano}
                     </div>
                     <div class="vinho-item-preco">R$ ${formatarPreco(vinho.preco)}</div>
                 </div>
                 <div class="vinho-item-acoes">
-                    <button class="btn-icon btn-editar" onclick="editarVinho(${vinho.id})">
-                        <i class="fas fa-edit"></i> Editar
+                    <button class="btn-icon-small btn-editar" onclick="editarVinho(${vinho.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon btn-excluir" onclick="confirmarExclusao(${vinho.id})">
-                        <i class="fas fa-trash"></i> Excluir
+                    <button class="btn-icon-small btn-excluir" onclick="confirmarExclusao(${vinho.id})" title="Excluir">
+                        <i class="fas fa-trash"></i>
                     </button>
+                    <label class="toggle-switch" title="${vinho.ativo === false ? 'Clique para mostrar no site' : 'Clique para ocultar do site'}">
+                        <input type="checkbox" ${vinho.ativo !== false ? 'checked' : ''} onchange="toggleVisibilidade(${vinho.id}, this.checked)">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">${vinho.ativo === false ? 'Oculto' : 'Visível'}</span>
+                    </label>
                 </div>
             </div>
         `;
@@ -339,6 +341,44 @@ function confirmarExclusao(id) {
     const modal = document.getElementById('modal-confirmar');
     if (modal) {
         modal.style.display = 'block';
+    }
+}
+
+// ===== TOGGLE VISIBILIDADE =====
+async function toggleVisibilidade(id, ativo) {
+    try {
+        const vinho = vinhoManager.vinhos.find(v => v.id == id);
+        if (!vinho) return;
+
+        const formData = new FormData();
+        formData.append('nome', vinho.nome);
+        formData.append('tipo', vinho.tipo);
+        formData.append('uva', vinho.uva);
+        formData.append('ano', vinho.ano);
+        formData.append('guarda', vinho.guarda || '');
+        formData.append('harmonizacao', vinho.harmonizacao || '');
+        formData.append('descricao', vinho.descricao || '');
+        formData.append('preco', vinho.preco);
+        formData.append('ativo', ativo);
+        if (vinho.imagem) {
+            formData.append('imagemUrl', vinho.imagem);
+        }
+
+        const response = await fetch(`${API_URL}/vinhos/${id}`, {
+            method: 'PUT',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao atualizar visibilidade');
+        }
+
+        mostrarMensagem(ativo ? 'Vinho agora está visível no site!' : 'Vinho ocultado do site!', 'sucesso');
+        await renderizarListaAdmin();
+    } catch (error) {
+        console.error('Erro ao alterar visibilidade:', error);
+        mostrarMensagem('Erro ao alterar visibilidade. Tente novamente.', 'erro');
+        await renderizarListaAdmin(); // Recarregar para reverter o estado visual
     }
 }
 
