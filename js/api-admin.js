@@ -67,12 +67,25 @@ async function configurarFormularioConfig() {
 }
 
 // ===== RENDERIZAÇÃO DA LISTA ADMIN =====
-async function renderizarListaAdmin() {
+async function renderizarListaAdmin(filtros = {}) {
     const container = document.getElementById('lista-vinhos-admin');
     if (!container) return;
 
     await vinhoManager.carregarVinhos(true); // true = admin, mostra todos os vinhos
-    const vinhos = vinhoManager.vinhos;
+    let vinhos = vinhoManager.vinhos;
+
+    // Aplicar filtros
+    if (filtros.busca) {
+        const buscaLower = filtros.busca.toLowerCase();
+        vinhos = vinhos.filter(v => 
+            v.nome.toLowerCase().includes(buscaLower) || 
+            v.uva.toLowerCase().includes(buscaLower)
+        );
+    }
+
+    if (filtros.tipo && filtros.tipo !== 'todos') {
+        vinhos = vinhos.filter(v => v.tipo === filtros.tipo);
+    }
 
     if (vinhos.length === 0) {
         container.innerHTML = `
@@ -478,6 +491,28 @@ function formatarPreco(preco) {
     return parseFloat(preco).toFixed(2).replace('.', ',');
 }
 
+// ===== FILTROS ADMIN =====
+function configurarFiltrosAdmin() {
+    const buscaInput = document.getElementById('busca-admin');
+    const tipoSelect = document.getElementById('filtro-tipo-admin');
+
+    if (buscaInput) {
+        buscaInput.addEventListener('input', () => {
+            const busca = buscaInput.value;
+            const tipo = tipoSelect ? tipoSelect.value : 'todos';
+            renderizarListaAdmin({ busca, tipo });
+        });
+    }
+
+    if (tipoSelect) {
+        tipoSelect.addEventListener('change', () => {
+            const busca = buscaInput ? buscaInput.value : '';
+            const tipo = tipoSelect.value;
+            renderizarListaAdmin({ busca, tipo });
+        });
+    }
+}
+
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', async () => {
     await carregarConfiguracoes();
@@ -486,4 +521,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     configurarFormulario();
     configurarUploadImagem();
     configurarModais();
+    configurarFiltrosAdmin();
 });

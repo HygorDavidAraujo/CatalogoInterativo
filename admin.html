@@ -177,6 +177,24 @@
                 <!-- Lista de Vinhos Cadastrados -->
                 <div class="admin-card">
                     <h2><i class="fas fa-list"></i> Vinhos Cadastrados</h2>
+                    
+                    <!-- Filtros de Busca -->
+                    <div class="filtros-admin">
+                        <div class="busca-admin">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="busca-admin" placeholder="Buscar por nome ou tipo de uva..." class="input-busca-admin">
+                        </div>
+                        <div class="filtro-tipo-admin">
+                            <select id="filtro-tipo-admin" class="select-filtro-admin">
+                                <option value="todos">Todos os tipos</option>
+                                <option value="tinto">Tintos</option>
+                                <option value="branco">Brancos</option>
+                                <option value="rose">Rosés</option>
+                                <option value="espumante">Espumantes</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <div id="lista-vinhos-admin" class="lista-vinhos-admin">
                         <!-- Lista será carregada via JavaScript -->
                     </div>

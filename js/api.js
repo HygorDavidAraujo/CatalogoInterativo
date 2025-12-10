@@ -72,13 +72,22 @@ class VinhoManager {
 // Instância global do gerenciador
 const vinhoManager = new VinhoManager();
 
-// ===== RENDERIZAÇÃO DO CATÁLOGO =====
-async function renderizarVinhos(filtro = 'todos') {
+// ===== RENDERIZAÇÃO DOS VINHOS =====
+async function renderizarVinhos(filtro = 'todos', busca = '') {
     const container = document.getElementById('vinhos-container');
     if (!container) return;
 
     await vinhoManager.carregarVinhos();
-    const vinhos = vinhoManager.getVinhos(filtro);
+    let vinhos = vinhoManager.getVinhos(filtro);
+
+    // Aplicar busca se fornecida
+    if (busca) {
+        const buscaLower = busca.toLowerCase();
+        vinhos = vinhos.filter(v => 
+            v.nome.toLowerCase().includes(buscaLower) || 
+            v.uva.toLowerCase().includes(buscaLower)
+        );
+    }
 
     if (vinhos.length === 0) {
         container.innerHTML = `
@@ -187,14 +196,26 @@ function fecharModal() {
 // ===== FILTROS =====
 function configurarFiltros() {
     const filtros = document.querySelectorAll('.filtro-btn');
+    const buscaInput = document.getElementById('busca-catalogo');
+    
+    let filtroAtual = 'todos';
+    let buscaAtual = '';
+
     filtros.forEach(btn => {
         btn.addEventListener('click', () => {
             filtros.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            const filtro = btn.dataset.filtro;
-            renderizarVinhos(filtro);
+            filtroAtual = btn.dataset.filtro;
+            renderizarVinhos(filtroAtual, buscaAtual);
         });
     });
+
+    if (buscaInput) {
+        buscaInput.addEventListener('input', () => {
+            buscaAtual = buscaInput.value;
+            renderizarVinhos(filtroAtual, buscaAtual);
+        });
+    }
 }
 
 // ===== NAVEGAÇÃO =====

@@ -1484,6 +1484,94 @@ body {
     background: #f8f9fa;
 }
 
+/* Busca no Catálogo */
+.busca-catalogo {
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto 2rem;
+}
+
+.busca-catalogo i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+}
+
+.input-busca-catalogo {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 3rem;
+    border: 2px solid #ddd;
+    border-radius: 50px;
+    font-size: 1rem;
+    transition: var(--transicao);
+}
+
+.input-busca-catalogo:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+}
+
+/* Filtros Admin */
+.filtros-admin {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.busca-admin {
+    position: relative;
+    flex: 1;
+    min-width: 250px;
+}
+
+.busca-admin i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+}
+
+.input-busca-admin {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: var(--transicao);
+}
+
+.input-busca-admin:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+}
+
+.filtro-tipo-admin {
+    min-width: 180px;
+}
+
+.select-filtro-admin {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: white;
+    cursor: pointer;
+    transition: var(--transicao);
+}
+
+.select-filtro-admin:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+}
+
 /* Botões menores no admin */
 .btn-icon-small {
     padding: 0.5rem;
