@@ -71,7 +71,7 @@ async function renderizarListaAdmin() {
     const container = document.getElementById('lista-vinhos-admin');
     if (!container) return;
 
-    await vinhoManager.carregarVinhos();
+    await vinhoManager.carregarVinhos(true); // true = admin, mostra todos os vinhos
     const vinhos = vinhoManager.vinhos;
 
     if (vinhos.length === 0) {
