@@ -96,6 +96,38 @@ app.get('/api/add-ativo-column', async (req, res) => {
     }
 });
 
+// Rota para corrigir vinhos com ativo NULL
+app.get('/api/fix-ativo', async (req, res) => {
+    const mysql = require('mysql2/promise');
+    
+    try {
+        const dbConfig = {
+            host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+            user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '79461382',
+            database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
+            port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306')
+        };
+
+        const connection = await mysql.createConnection(dbConfig);
+        
+        // Atualizar todos os vinhos com ativo NULL para TRUE
+        const [result] = await connection.execute(
+            'UPDATE vinhos SET ativo = TRUE WHERE ativo IS NULL'
+        );
+        
+        await connection.end();
+        
+        res.send(`
+            <h1>✅ Vinhos corrigidos!</h1>
+            <p>${result.affectedRows} vinho(s) foram marcados como ativos.</p>
+            <p><a href="/admin">Ir para o painel admin</a></p>
+        `);
+    } catch (error) {
+        res.status(500).send(`<h1>❌ Erro</h1><pre>${error.message}</pre>`);
+    }
+});
+
 // Rota de setup do banco de dados
 app.get('/api/setup', async (req, res) => {
     const mysql = require('mysql2/promise');
