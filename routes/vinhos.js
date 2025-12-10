@@ -1,33 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const { pool } = require('../config/database');
-
-// Criar diretório de uploads se não existir
-const uploadDir = path.join(__dirname, '../uploads/vinhos');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configuração do Multer para upload de imagens
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'vinho-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
-const fileFilter = (req, file, cb) => {
-    // Aceitar apenas imagens
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-    } else {
-        cb(new Error('Apenas arquivos de imagem são permitidos!'), false);
+const { upload, cloudinary } = require('../config/cloudinary');
     }
 };
 
@@ -66,7 +40,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// POST - Criar novo vinho (com upload de imagem)
+// POST - Criar novo vinho (com upload de imagem no Cloudinary)
 router.post('/', upload.single('imagem'), async (req, res) => {
     try {
         const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl } = req.body;
@@ -76,10 +50,11 @@ router.post('/', upload.single('imagem'), async (req, res) => {
             return res.status(400).json({ error: 'Campos obrigatórios faltando' });
         }
 
-        // Usar imagem do upload ou URL fornecida
+        // Usar imagem do Cloudinary, URL fornecida ou vazio
         let imagemPath = imagemUrl || '';
         if (req.file) {
-            imagemPath = `/uploads/vinhos/${req.file.filename}`;
+            // Cloudinary retorna a URL completa em req.file.path
+            imagemPath = req.file.path;
         }
 
         const [result] = await pool.query(
@@ -92,11 +67,11 @@ router.post('/', upload.single('imagem'), async (req, res) => {
         res.status(201).json(novoVinho[0]);
     } catch (error) {
         console.error('Erro ao criar vinho:', error);
-        res.status(500).json({ error: 'Erro ao criar vinho' });
+        res.status(500).json({ error: 'Erro ao criar vinho', details: error.message });
     }
 });
 
-// PUT - Atualizar vinho
+// PUT - Atualizar vinho (com upload no Cloudinary)
 router.put('/:id', upload.single('imagem'), async (req, res) => {
     try {
         const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl } = req.body;
@@ -113,14 +88,19 @@ router.put('/:id', upload.single('imagem'), async (req, res) => {
         let imagemPath = vinhoAtual[0].imagem;
         
         if (req.file) {
-            // Nova imagem foi enviada via upload
-            imagemPath = `/uploads/vinhos/${req.file.filename}`;
+            // Nova imagem foi enviada via upload para Cloudinary
+            imagemPath = req.file.path;
             
-            // Deletar imagem antiga se for local
-            if (vinhoAtual[0].imagem && vinhoAtual[0].imagem.startsWith('/uploads/')) {
-                const oldImagePath = path.join(__dirname, '..', vinhoAtual[0].imagem);
-                if (fs.existsSync(oldImagePath)) {
-                    fs.unlinkSync(oldImagePath);
+            // Deletar imagem antiga do Cloudinary se existir
+            if (vinhoAtual[0].imagem && vinhoAtual[0].imagem.includes('cloudinary.com')) {
+                try {
+                    // Extrair public_id da URL do Cloudinary
+                    const urlParts = vinhoAtual[0].imagem.split('/');
+                    const publicIdWithExt = urlParts[urlParts.length - 1];
+                    const publicId = `vinhos/${publicIdWithExt.split('.')[0]}`;
+                    await cloudinary.uploader.destroy(publicId);
+                } catch (err) {
+                    console.log('Erro ao deletar imagem antiga do Cloudinary:', err.message);
                 }
             }
         } else if (imagemUrl) {
@@ -142,23 +122,28 @@ router.put('/:id', upload.single('imagem'), async (req, res) => {
     }
 });
 
-// DELETE - Deletar vinho
+// DELETE - Deletar vinho (e imagem do Cloudinary)
 router.delete('/:id', async (req, res) => {
     try {
         const id = req.params.id;
 
-        // Buscar vinho para deletar imagem se necessário
+        // Buscar vinho para deletar imagem do Cloudinary
         const [vinho] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [id]);
         
         if (vinho.length === 0) {
             return res.status(404).json({ error: 'Vinho não encontrado' });
         }
 
-        // Deletar imagem se for local
-        if (vinho[0].imagem && vinho[0].imagem.startsWith('/uploads/')) {
-            const imagePath = path.join(__dirname, '..', vinho[0].imagem);
-            if (fs.existsSync(imagePath)) {
-                fs.unlinkSync(imagePath);
+        // Deletar imagem do Cloudinary se existir
+        if (vinho[0].imagem && vinho[0].imagem.includes('cloudinary.com')) {
+            try {
+                // Extrair public_id da URL do Cloudinary
+                const urlParts = vinho[0].imagem.split('/');
+                const publicIdWithExt = urlParts[urlParts.length - 1];
+                const publicId = `vinhos/${publicIdWithExt.split('.')[0]}`;
+                await cloudinary.uploader.destroy(publicId);
+            } catch (err) {
+                console.log('Erro ao deletar imagem do Cloudinary:', err.message);
             }
         }
 
