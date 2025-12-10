@@ -90,10 +90,13 @@ async function renderizarListaAdmin() {
             'https://via.placeholder.com/80x80?text=Vinho';
         
         return `
-            <div class="vinho-item-admin" data-id="${vinho.id}">
+            <div class="vinho-item-admin ${vinho.ativo === false ? 'vinho-inativo' : ''}" data-id="${vinho.id}">
                 <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-item-imagem" onerror="this.src='https://via.placeholder.com/80x80?text=Vinho'">
                 <div class="vinho-item-info">
-                    <div class="vinho-item-nome">${vinho.nome}</div>
+                    <div class="vinho-item-nome">
+                        ${vinho.nome}
+                        ${vinho.ativo === false ? '<span class="badge-inativo">Oculto</span>' : '<span class="badge-ativo">Visível</span>'}
+                    </div>
                     <div class="vinho-item-detalhes">
                         ${capitalizar(vinho.tipo)} | ${vinho.uva} | ${vinho.ano}
                     </div>
@@ -212,6 +215,11 @@ function configurarFormulario() {
         formData.append('descricao', dadosVinho.descricao);
         formData.append('preco', dadosVinho.preco);
         
+        // Adicionar campo ativo (checkbox)
+        const ativo = document.getElementById('ativo').checked;
+        formData.append('ativo', ativo);
+        console.log('Campo ativo:', ativo);
+        
         // Verificar se tem upload ou URL
         const imagemUrl = document.getElementById('imagem-url').value.trim();
         if (imagemUpload) {
@@ -299,6 +307,7 @@ async function editarVinho(id) {
     document.getElementById('harmonizacao').value = vinho.harmonizacao || '';
     document.getElementById('descricao').value = vinho.descricao || '';
     document.getElementById('preco').value = vinho.preco;
+    document.getElementById('ativo').checked = vinho.ativo !== false; // Default true
 
     // Mostrar imagem atual
     if (vinho.imagem) {
