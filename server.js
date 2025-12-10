@@ -42,6 +42,23 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
+// Rota de diagnóstico de variáveis
+app.get('/api/check-env', (req, res) => {
+    res.json({
+        MYSQLHOST: process.env.MYSQLHOST || 'NÃO DEFINIDO',
+        MYSQLUSER: process.env.MYSQLUSER || 'NÃO DEFINIDO',
+        MYSQLPASSWORD: process.env.MYSQLPASSWORD ? '***DEFINIDO***' : 'NÃO DEFINIDO',
+        MYSQLDATABASE: process.env.MYSQLDATABASE || 'NÃO DEFINIDO',
+        MYSQLPORT: process.env.MYSQLPORT || 'NÃO DEFINIDO',
+        DB_HOST: process.env.DB_HOST || 'NÃO DEFINIDO',
+        DB_USER: process.env.DB_USER || 'NÃO DEFINIDO',
+        DB_PASSWORD: process.env.DB_PASSWORD ? '***DEFINIDO***' : 'NÃO DEFINIDO',
+        DB_NAME: process.env.DB_NAME || 'NÃO DEFINIDO',
+        DB_PORT: process.env.DB_PORT || 'NÃO DEFINIDO',
+        NODE_ENV: process.env.NODE_ENV || 'NÃO DEFINIDO'
+    });
+});
+
 // Rota para verificar status da API
 app.get('/api/status', (req, res) => {
     res.json({ 
