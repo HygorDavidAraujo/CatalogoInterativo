@@ -2,6 +2,14 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 async function setupDatabase() {
+    console.log('📋 Variáveis de ambiente detectadas:');
+    console.log('   DB_HOST:', process.env.DB_HOST || 'NÃO DEFINIDO');
+    console.log('   DB_USER:', process.env.DB_USER || 'NÃO DEFINIDO');
+    console.log('   DB_PASSWORD:', process.env.DB_PASSWORD ? '***' : 'NÃO DEFINIDO');
+    console.log('   DB_NAME:', process.env.DB_NAME || 'NÃO DEFINIDO');
+    console.log('   DB_PORT:', process.env.DB_PORT || 'NÃO DEFINIDO');
+    console.log('');
+
     const connection = await mysql.createConnection({
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
@@ -11,6 +19,7 @@ async function setupDatabase() {
     });
 
     try {
+        console.log('✅ Conexão com banco estabelecida!');
         console.log('🔧 Criando estrutura do banco de dados...\n');
 
         // Criar tabela de vinhos
@@ -89,7 +98,16 @@ async function setupDatabase() {
                 VALUES ('Admin', 'hygordavidaraujo@gmail.com', '79461382', TRUE)
             `);
             console.log('✓ Usuário admin criado (hygordavidaraujo@gmail.com / 79461382)');
+        } else {
+            console.log('⚠️  Usuário admin já existe');
         }
+        
+        // Verificar e mostrar todos os usuários
+        const [allUsers] = await connection.execute('SELECT id, nome_completo, email, is_admin FROM usuarios');
+        console.log('\n👥 Usuários no banco:');
+        allUsers.forEach(user => {
+            console.log(`   ${user.is_admin ? '👑' : '👤'} ${user.nome_completo} (${user.email}) - Admin: ${user.is_admin}`);
+        });
 
         // Criar tabela de pedidos
         await connection.execute(`
