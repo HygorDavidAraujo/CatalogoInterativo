@@ -139,7 +139,7 @@ app.get('/api/debug-vinhos', async (req, res) => {
     }
 });
 
-// Rota para corrigir vinhos com ativo NULL
+// Rota para corrigir vinhos - marcar TODOS como ativos
 app.get('/api/fix-ativo', async (req, res) => {
     const mysql = require('mysql2/promise');
     
@@ -154,17 +154,17 @@ app.get('/api/fix-ativo', async (req, res) => {
 
         const connection = await mysql.createConnection(dbConfig);
         
-        // Atualizar todos os vinhos com ativo NULL para TRUE
+        // Atualizar TODOS os vinhos para TRUE (visíveis)
         const [result] = await connection.execute(
-            'UPDATE vinhos SET ativo = TRUE WHERE ativo IS NULL'
+            'UPDATE vinhos SET ativo = TRUE'
         );
         
         await connection.end();
         
         res.send(`
             <h1>✅ Vinhos corrigidos!</h1>
-            <p>${result.affectedRows} vinho(s) foram marcados como ativos.</p>
-            <p><a href="/admin">Ir para o painel admin</a></p>
+            <p>${result.affectedRows} vinho(s) foram marcados como ativos (visíveis).</p>
+            <p><a href="/api/debug-vinhos">Ver vinhos</a> | <a href="/admin">Ir para o painel admin</a></p>
         `);
     } catch (error) {
         res.status(500).send(`<h1>❌ Erro</h1><pre>${error.message}</pre>`);
