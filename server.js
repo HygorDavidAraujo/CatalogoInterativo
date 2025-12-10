@@ -96,6 +96,49 @@ app.get('/api/add-ativo-column', async (req, res) => {
     }
 });
 
+// Rota para debug - ver todos os vinhos no banco
+app.get('/api/debug-vinhos', async (req, res) => {
+    const mysql = require('mysql2/promise');
+    
+    try {
+        const dbConfig = {
+            host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+            user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '79461382',
+            database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
+            port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306')
+        };
+
+        const connection = await mysql.createConnection(dbConfig);
+        
+        const [vinhos] = await connection.execute('SELECT id, nome, ativo FROM vinhos');
+        
+        await connection.end();
+        
+        res.send(`
+            <h1>🔍 Debug - Vinhos no Banco</h1>
+            <p>Total: ${vinhos.length} vinho(s)</p>
+            <table border="1" style="border-collapse: collapse; width: 100%;">
+                <tr>
+                    <th style="padding: 10px;">ID</th>
+                    <th style="padding: 10px;">Nome</th>
+                    <th style="padding: 10px;">Ativo</th>
+                </tr>
+                ${vinhos.map(v => `
+                    <tr>
+                        <td style="padding: 10px;">${v.id}</td>
+                        <td style="padding: 10px;">${v.nome}</td>
+                        <td style="padding: 10px;">${v.ativo === null ? 'NULL' : (v.ativo ? 'TRUE' : 'FALSE')}</td>
+                    </tr>
+                `).join('')}
+            </table>
+            <p><a href="/admin">Ir para o painel admin</a></p>
+        `);
+    } catch (error) {
+        res.status(500).send(`<h1>❌ Erro</h1><pre>${error.message}</pre>`);
+    }
+});
+
 // Rota para corrigir vinhos com ativo NULL
 app.get('/api/fix-ativo', async (req, res) => {
     const mysql = require('mysql2/promise');
