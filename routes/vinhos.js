@@ -2,16 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { upload, cloudinary } = require('../config/cloudinary');
-    }
-};
-
-const upload = multer({
-    storage: storage,
-    fileFilter: fileFilter,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // Limite de 5MB
-    }
-});
 
 // GET - Listar todos os vinhos
 router.get('/', async (req, res) => {
