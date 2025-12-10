@@ -1,5 +1,8 @@
 // ===== CONFIGURAÇÃO DA API =====
-const API_URL = 'http://localhost:3000/api';
+// Detecta automaticamente se está em produção ou local
+const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3000/api'
+    : window.location.origin + '/api';
 
 // ===== GERENCIAMENTO DE DADOS COM API =====
 class VinhoManager {
