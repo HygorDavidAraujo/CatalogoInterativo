@@ -5,15 +5,23 @@ const { pool } = require('../config/database');
 // GET - Buscar todas as configurações
 router.get('/', async (req, res) => {
     try {
-        const [configuracoes] = await pool.query('SELECT * FROM configuracoes');
+        const [configuracoes] = await pool.query('SELECT * FROM configuracoes LIMIT 1');
         
-        // Converter array para objeto
-        const configObj = {};
-        configuracoes.forEach(config => {
-            configObj[config.chave] = config.valor;
-        });
+        if (configuracoes.length === 0) {
+            return res.json({
+                nome_site: '',
+                titulo: '',
+                descricao: '',
+                telefone: '',
+                email: '',
+                endereco: '',
+                whatsapp: '',
+                instagram: '',
+                facebook: ''
+            });
+        }
         
-        res.json(configObj);
+        res.json(configuracoes[0]);
     } catch (error) {
         console.error('Erro ao buscar configurações:', error);
         res.status(500).json({ error: 'Erro ao buscar configurações' });
@@ -44,32 +52,68 @@ router.post('/', async (req, res) => {
     try {
         console.log('===== RECEBENDO CONFIGURAÇÕES =====');
         console.log('Body recebido:', req.body);
-        const configuracoes = req.body;
+        const config = req.body;
 
-        // Atualizar ou inserir cada configuração
-        for (const [chave, valor] of Object.entries(configuracoes)) {
-            console.log(`Salvando: ${chave} = ${valor}`);
+        // Verificar se já existe configuração
+        const [existing] = await pool.query('SELECT id FROM configuracoes LIMIT 1');
+        
+        if (existing.length > 0) {
+            // Atualizar configuração existente
             await pool.query(
-                'INSERT INTO configuracoes (chave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?',
-                [chave, valor, valor]
+                `UPDATE configuracoes SET 
+                    nome_site = ?,
+                    titulo = ?,
+                    descricao = ?,
+                    telefone = ?,
+                    email = ?,
+                    endereco = ?,
+                    whatsapp = ?,
+                    instagram = ?,
+                    facebook = ?
+                WHERE id = ?`,
+                [
+                    config.nome_site || '',
+                    config.titulo || '',
+                    config.descricao || '',
+                    config.telefone || '',
+                    config.email || '',
+                    config.endereco || '',
+                    config.whatsapp || '',
+                    config.instagram || '',
+                    config.facebook || '',
+                    existing[0].id
+                ]
+            );
+        } else {
+            // Inserir nova configuração
+            await pool.query(
+                `INSERT INTO configuracoes 
+                (nome_site, titulo, descricao, telefone, email, endereco, whatsapp, instagram, facebook)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    config.nome_site || '',
+                    config.titulo || '',
+                    config.descricao || '',
+                    config.telefone || '',
+                    config.email || '',
+                    config.endereco || '',
+                    config.whatsapp || '',
+                    config.instagram || '',
+                    config.facebook || ''
+                ]
             );
         }
 
-        console.log('Todas configurações salvas com sucesso');
+        console.log('Configurações salvas com sucesso');
 
         // Buscar configurações atualizadas
-        const [configsAtualizadas] = await pool.query('SELECT * FROM configuracoes');
+        const [configsAtualizadas] = await pool.query('SELECT * FROM configuracoes LIMIT 1');
         
-        const configObj = {};
-        configsAtualizadas.forEach(config => {
-            configObj[config.chave] = config.valor;
-        });
-        
-        console.log('Retornando configurações atualizadas:', configObj);
-        res.json(configObj);
+        console.log('Retornando configurações atualizadas:', configsAtualizadas[0]);
+        res.json(configsAtualizadas[0]);
     } catch (error) {
         console.error('Erro ao atualizar configurações:', error);
-        res.status(500).json({ error: 'Erro ao atualizar configurações' });
+        res.status(500).json({ error: 'Erro ao atualizar configurações', details: error.message });
     }
 });
 
