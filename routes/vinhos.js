@@ -3,10 +3,18 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { upload, cloudinary } = require('../config/cloudinary');
 
-// GET - Listar todos os vinhos
+// GET - Listar todos os vinhos (área pública mostra apenas ativos)
 router.get('/', async (req, res) => {
     try {
-        const [vinhos] = await pool.query('SELECT * FROM vinhos ORDER BY created_at DESC');
+        const mostrarInativos = req.query.admin === 'true';
+        
+        let query = 'SELECT * FROM vinhos';
+        if (!mostrarInativos) {
+            query += ' WHERE ativo = TRUE';
+        }
+        query += ' ORDER BY created_at DESC';
+        
+        const [vinhos] = await pool.query(query);
         res.json(vinhos);
     } catch (error) {
         console.error('Erro ao buscar vinhos:', error);
@@ -33,7 +41,7 @@ router.get('/:id', async (req, res) => {
 // POST - Criar novo vinho (com upload de imagem no Cloudinary)
 router.post('/', upload.single('imagem'), async (req, res) => {
     try {
-        const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl } = req.body;
+        const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
 
         // Verificar campos obrigatórios
         if (!nome || !tipo || !uva || !ano || !preco) {
@@ -47,9 +55,12 @@ router.post('/', upload.single('imagem'), async (req, res) => {
             imagemPath = req.file.path;
         }
 
+        // Converter ativo para boolean (vem como string do FormData)
+        const ativoBoolean = ativo === 'true' || ativo === true || ativo === '1';
+
         const [result] = await pool.query(
-            'INSERT INTO vinhos (nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [nome, tipo, uva, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath]
+            'INSERT INTO vinhos (nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagem, ativo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [nome, tipo, uva, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean]
         );
 
         const [novoVinho] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [result.insertId]);
@@ -64,7 +75,7 @@ router.post('/', upload.single('imagem'), async (req, res) => {
 // PUT - Atualizar vinho (com upload no Cloudinary)
 router.put('/:id', upload.single('imagem'), async (req, res) => {
     try {
-        const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl } = req.body;
+        const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
         const id = req.params.id;
 
         // Buscar vinho atual
@@ -98,9 +109,12 @@ router.put('/:id', upload.single('imagem'), async (req, res) => {
             imagemPath = imagemUrl;
         }
 
+        // Converter ativo para boolean
+        const ativoBoolean = ativo === 'true' || ativo === true || ativo === '1';
+
         await pool.query(
-            'UPDATE vinhos SET nome = ?, tipo = ?, uva = ?, ano = ?, guarda = ?, harmonizacao = ?, descricao = ?, preco = ?, imagem = ? WHERE id = ?',
-            [nome, tipo, uva, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, id]
+            'UPDATE vinhos SET nome = ?, tipo = ?, uva = ?, ano = ?, guarda = ?, harmonizacao = ?, descricao = ?, preco = ?, imagem = ?, ativo = ? WHERE id = ?',
+            [nome, tipo, uva, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean, id]
         );
 
         const [vinhoAtualizado] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [id]);

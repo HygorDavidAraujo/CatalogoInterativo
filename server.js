@@ -59,6 +59,43 @@ app.get('/api/check-env', (req, res) => {
     });
 });
 
+// Rota para adicionar coluna 'ativo' na tabela vinhos
+app.get('/api/add-ativo-column', async (req, res) => {
+    const mysql = require('mysql2/promise');
+    
+    try {
+        const dbConfig = {
+            host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+            user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '79461382',
+            database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
+            port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306')
+        };
+
+        const connection = await mysql.createConnection(dbConfig);
+        
+        // Verificar se a coluna já existe
+        const [columns] = await connection.execute(
+            "SHOW COLUMNS FROM vinhos LIKE 'ativo'"
+        );
+        
+        if (columns.length === 0) {
+            // Adicionar coluna 'ativo' (TRUE = mostrar no site, FALSE = ocultar)
+            await connection.execute(
+                'ALTER TABLE vinhos ADD COLUMN ativo BOOLEAN DEFAULT TRUE AFTER imagem'
+            );
+            
+            await connection.end();
+            res.send('<h1>✅ Coluna "ativo" adicionada com sucesso!</h1><p>Todos os vinhos existentes estão marcados como ativos (visíveis).</p><p><a href="/admin">Ir para o painel admin</a></p>');
+        } else {
+            await connection.end();
+            res.send('<h1>ℹ️ Coluna "ativo" já existe!</h1><p><a href="/admin">Ir para o painel admin</a></p>');
+        }
+    } catch (error) {
+        res.status(500).send(`<h1>❌ Erro</h1><pre>${error.message}</pre>`);
+    }
+});
+
 // Rota de setup do banco de dados
 app.get('/api/setup', async (req, res) => {
     const mysql = require('mysql2/promise');

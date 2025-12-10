@@ -11,9 +11,10 @@ class VinhoManager {
         this.configuracoes = {};
     }
 
-    async carregarVinhos() {
+    async carregarVinhos(admin = false) {
         try {
-            const response = await fetch(`${API_URL}/vinhos`);
+            const url = admin ? `${API_URL}/vinhos?admin=true` : `${API_URL}/vinhos`;
+            const response = await fetch(url);
             if (!response.ok) throw new Error('Erro ao carregar vinhos');
             this.vinhos = await response.json();
             return this.vinhos;

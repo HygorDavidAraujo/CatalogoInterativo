@@ -52,10 +52,13 @@ function renderizarListaAdmin() {
     }
 
     container.innerHTML = vinhos.map(vinho => `
-        <div class="vinho-item-admin" data-id="${vinho.id}">
+        <div class="vinho-item-admin ${vinho.ativo === false ? 'vinho-inativo' : ''}" data-id="${vinho.id}">
             <img src="${vinho.imagem}" alt="${vinho.nome}" class="vinho-item-imagem" onerror="this.src='https://via.placeholder.com/80x80?text=Vinho'">
             <div class="vinho-item-info">
-                <div class="vinho-item-nome">${vinho.nome}</div>
+                <div class="vinho-item-nome">
+                    ${vinho.nome}
+                    ${vinho.ativo === false ? '<span class="badge-inativo">Oculto</span>' : '<span class="badge-ativo">Visível</span>'}
+                </div>
                 <div class="vinho-item-detalhes">
                     ${capitalizar(vinho.tipo)} | ${vinho.uva} | ${vinho.ano}
                 </div>
@@ -90,7 +93,8 @@ function configurarFormulario() {
             harmonizacao: document.getElementById('harmonizacao').value.trim(),
             descricao: document.getElementById('descricao').value.trim(),
             preco: parseFloat(document.getElementById('preco').value),
-            imagem: document.getElementById('imagem').value.trim()
+            imagem: document.getElementById('imagem').value.trim(),
+            ativo: document.getElementById('ativo').checked
         };
 
         if (vinhoEmEdicao) {
@@ -139,6 +143,7 @@ function editarVinho(id) {
     document.getElementById('descricao').value = vinho.descricao || '';
     document.getElementById('preco').value = vinho.preco;
     document.getElementById('imagem').value = vinho.imagem;
+    document.getElementById('ativo').checked = vinho.ativo !== false; // Default true
 
     // Alterar título do formulário
     const titulo = document.querySelector('.admin-card h2');
@@ -236,9 +241,10 @@ function formatarPreco(preco) {
 }
 
 // ===== INICIALIZAÇÃO =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     carregarConfiguracoes();
     configurarFormularioConfig();
+    await vinhoManager.carregarVinhos(true); // Carrega todos (incluindo inativos) para admin
     renderizarListaAdmin();
     configurarFormulario();
     configurarModais();
