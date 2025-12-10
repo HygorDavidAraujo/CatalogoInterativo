@@ -2,12 +2,13 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 // Configuração do pool de conexões
+// Prioriza variáveis Railway nativas (MYSQLHOST, etc), depois as personalizadas (DB_HOST, etc)
 const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'catalogo_vinhos',
-    port: process.env.DB_PORT || 3306,
+    host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+    user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+    password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '79461382',
+    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
+    port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306'),
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,

@@ -2,7 +2,17 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 async function setupDatabase() {
-    console.log('📋 Variáveis de ambiente detectadas:');
+    console.log('📋 Todas as variáveis de ambiente disponíveis:');
+    console.log(JSON.stringify(process.env, null, 2));
+    console.log('\n========================================\n');
+    
+    console.log('📋 Variáveis de ambiente do MySQL:');
+    console.log('   MYSQLHOST:', process.env.MYSQLHOST || 'NÃO DEFINIDO');
+    console.log('   MYSQLUSER:', process.env.MYSQLUSER || 'NÃO DEFINIDO');
+    console.log('   MYSQLPASSWORD:', process.env.MYSQLPASSWORD ? '***' : 'NÃO DEFINIDO');
+    console.log('   MYSQLDATABASE:', process.env.MYSQLDATABASE || 'NÃO DEFINIDO');
+    console.log('   MYSQLPORT:', process.env.MYSQLPORT || 'NÃO DEFINIDO');
+    console.log('');
     console.log('   DB_HOST:', process.env.DB_HOST || 'NÃO DEFINIDO');
     console.log('   DB_USER:', process.env.DB_USER || 'NÃO DEFINIDO');
     console.log('   DB_PASSWORD:', process.env.DB_PASSWORD ? '***' : 'NÃO DEFINIDO');
@@ -10,13 +20,23 @@ async function setupDatabase() {
     console.log('   DB_PORT:', process.env.DB_PORT || 'NÃO DEFINIDO');
     console.log('');
 
-    const connection = await mysql.createConnection({
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '79461382',
-        database: process.env.DB_NAME || 'catalogo_vinhos',
-        port: process.env.DB_PORT || 3306
-    });
+    // Tentar primeiro com variáveis Railway nativas, depois com as personalizadas
+    const dbConfig = {
+        host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+        user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+        password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '79461382',
+        database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
+        port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306')
+    };
+
+    console.log('🔌 Tentando conectar com:');
+    console.log('   Host:', dbConfig.host);
+    console.log('   User:', dbConfig.user);
+    console.log('   Database:', dbConfig.database);
+    console.log('   Port:', dbConfig.port);
+    console.log('');
+
+    const connection = await mysql.createConnection(dbConfig);
 
     try {
         console.log('✅ Conexão com banco estabelecida!');
