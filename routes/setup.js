@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2/promise');
 
+console.log('✅ Rota /api/setup carregada com sucesso!');
+
 router.get('/setup', async (req, res) => {
+    console.log('🔧 Executando setup do banco de dados...');
     try {
         // Mostrar variáveis de ambiente (sem mostrar senhas completas)
         const envInfo = {
