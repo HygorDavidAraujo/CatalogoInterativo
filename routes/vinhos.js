@@ -120,7 +120,7 @@ router.put('/:id', upload.single('imagem'), async (req, res) => {
             ativoBoolean = true;
         }
 
-        console.log('Atualizando vinho:', { id, ativo: ativoBoolean, ativoOriginal: ativo });
+        console.log('Atualizando vinho:', { id, ativo: ativoBoolean, ativoOriginal: ativo, tipoAtivo: typeof ativo });
 
         await pool.query(
             'UPDATE vinhos SET nome = ?, tipo = ?, uva = ?, ano = ?, guarda = ?, harmonizacao = ?, descricao = ?, preco = ?, imagem = ?, ativo = ? WHERE id = ?',
@@ -128,6 +128,8 @@ router.put('/:id', upload.single('imagem'), async (req, res) => {
         );
 
         const [vinhoAtualizado] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [id]);
+        
+        console.log('Vinho atualizado:', vinhoAtualizado[0]);
         
         res.json(vinhoAtualizado[0]);
     } catch (error) {

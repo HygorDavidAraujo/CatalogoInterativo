@@ -90,7 +90,7 @@ async function renderizarListaAdmin() {
             'https://via.placeholder.com/80x80?text=Vinho';
         
         return `
-            <div class="vinho-item-admin ${vinho.ativo === false ? 'vinho-inativo' : ''}" data-id="${vinho.id}">
+            <div class="vinho-item-admin ${vinho.ativo === 0 || vinho.ativo === false ? 'vinho-inativo' : ''}" data-id="${vinho.id}">
                 <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-item-imagem" onerror="this.src='https://via.placeholder.com/80x80?text=Vinho'">
                 <div class="vinho-item-info">
                     <div class="vinho-item-nome">${vinho.nome}</div>
@@ -106,10 +106,10 @@ async function renderizarListaAdmin() {
                     <button class="btn-icon-small btn-excluir" onclick="confirmarExclusao(${vinho.id})" title="Excluir">
                         <i class="fas fa-trash"></i>
                     </button>
-                    <label class="toggle-switch" title="${vinho.ativo === false ? 'Clique para mostrar no site' : 'Clique para ocultar do site'}">
-                        <input type="checkbox" ${vinho.ativo !== false ? 'checked' : ''} onchange="toggleVisibilidade(${vinho.id}, this.checked)">
+                    <label class="toggle-switch" title="${vinho.ativo === 0 || vinho.ativo === false ? 'Clique para mostrar no site' : 'Clique para ocultar do site'}">
+                        <input type="checkbox" ${vinho.ativo === 1 || vinho.ativo === true ? 'checked' : ''} onchange="toggleVisibilidade(${vinho.id}, this.checked)">
                         <span class="toggle-slider"></span>
-                        <span class="toggle-label">${vinho.ativo === false ? 'Oculto' : 'Visível'}</span>
+                        <span class="toggle-label">${vinho.ativo === 0 || vinho.ativo === false ? 'Oculto' : 'Visível'}</span>
                     </label>
                 </div>
             </div>
@@ -309,7 +309,7 @@ async function editarVinho(id) {
     document.getElementById('harmonizacao').value = vinho.harmonizacao || '';
     document.getElementById('descricao').value = vinho.descricao || '';
     document.getElementById('preco').value = vinho.preco;
-    document.getElementById('ativo').checked = vinho.ativo !== false; // Default true
+    document.getElementById('ativo').checked = (vinho.ativo === 1 || vinho.ativo === true); // Trata valores do MySQL (0/1)
 
     // Mostrar imagem atual
     if (vinho.imagem) {
