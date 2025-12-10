@@ -111,7 +111,16 @@ router.put('/:id', upload.single('imagem'), async (req, res) => {
         }
 
         // Converter ativo para boolean
-        const ativoBoolean = ativo === 'true' || ativo === true || ativo === '1';
+        let ativoBoolean;
+        if (ativo === undefined || ativo === null) {
+            ativoBoolean = true; // Default para true se não fornecido
+        } else if (ativo === 'false' || ativo === false || ativo === '0' || ativo === 0) {
+            ativoBoolean = false;
+        } else {
+            ativoBoolean = true;
+        }
+
+        console.log('Atualizando vinho:', { id, ativo: ativoBoolean, ativoOriginal: ativo });
 
         await pool.query(
             'UPDATE vinhos SET nome = ?, tipo = ?, uva = ?, ano = ?, guarda = ?, harmonizacao = ?, descricao = ?, preco = ?, imagem = ?, ativo = ? WHERE id = ?',

@@ -347,8 +347,16 @@ function confirmarExclusao(id) {
 // ===== TOGGLE VISIBILIDADE =====
 async function toggleVisibilidade(id, ativo) {
     try {
+        console.log('Toggle visibilidade:', { id, ativo });
+        
         const vinho = vinhoManager.vinhos.find(v => v.id == id);
-        if (!vinho) return;
+        if (!vinho) {
+            console.error('Vinho não encontrado:', id);
+            return;
+        }
+
+        console.log('Vinho encontrado:', vinho);
+        console.log('Alterando ativo de', vinho.ativo, 'para', ativo);
 
         const formData = new FormData();
         formData.append('nome', vinho.nome);
@@ -364,14 +372,21 @@ async function toggleVisibilidade(id, ativo) {
             formData.append('imagemUrl', vinho.imagem);
         }
 
+        console.log('FormData ativo:', formData.get('ativo'));
+
         const response = await fetch(`${API_URL}/vinhos/${id}`, {
             method: 'PUT',
             body: formData
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Resposta erro:', errorText);
             throw new Error('Erro ao atualizar visibilidade');
         }
+
+        const result = await response.json();
+        console.log('Resposta sucesso:', result);
 
         mostrarMensagem(ativo ? 'Vinho agora está visível no site!' : 'Vinho ocultado do site!', 'sucesso');
         await renderizarListaAdmin();
