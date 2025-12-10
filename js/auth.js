@@ -47,6 +47,8 @@ class AuthManager {
             return;
         }
 
+        const menuPerfil = document.getElementById('menu-perfil');
+
         if (this.isLogado()) {
             // Usuário logado
             console.log('Usuário está logado:', this.usuarioLogado.nome);
@@ -64,9 +66,11 @@ class AuthManager {
             if (this.isAdmin()) {
                 console.log('Mostrando menu admin');
                 menuAdmin.style.display = 'block';
+                if (menuPerfil) menuPerfil.style.display = 'none';
             } else {
                 console.log('Ocultando menu admin');
                 menuAdmin.style.display = 'none';
+                if (menuPerfil) menuPerfil.style.display = 'block';
             }
         } else {
             // Usuário não logado
@@ -74,6 +78,7 @@ class AuthManager {
             menuLogin.style.display = 'block';
             menuUsuario.style.display = 'none';
             menuAdmin.style.display = 'none';
+            if (menuPerfil) menuPerfil.style.display = 'none';
         }
     }
 
@@ -128,8 +133,9 @@ class AuthManager {
     }
 }
 
-// Instância global
-const authManager = new AuthManager();
+// Instância global - acessível de qualquer lugar
+window.authManager = new AuthManager();
+console.log('✓ authManager criado e disponível globalmente');
 
 // ===== MODAL DE AUTENTICAÇÃO =====
 function abrirModalAuth() {
@@ -323,5 +329,5 @@ if (document.readyState === 'loading') {
 function inicializarAuth() {
     console.log('Inicializando sistema de autenticação...');
     configurarAuth();
-    authManager.atualizarInterface();
+    window.authManager.atualizarInterface();
 }

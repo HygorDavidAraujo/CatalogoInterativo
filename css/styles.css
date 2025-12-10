@@ -174,8 +174,10 @@ body {
 .vinho-imagem {
     width: 100%;
     height: 300px;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
     background-color: var(--cor-clara);
+    padding: 1rem;
 }
 
 .vinho-info {
@@ -1055,5 +1057,422 @@ body {
         width: 24px;
         height: 24px;
         font-size: 0.75rem;
+    }
+}
+
+/* ===== PÁGINA MEU PERFIL ===== */
+.hero-small {
+    padding: 4rem 2rem;
+}
+
+.perfil-container {
+    padding: 3rem 0;
+    margin-bottom: 3rem;
+}
+
+/* Tabs */
+.perfil-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 3px solid #e0e0e0;
+    background: white;
+    border-radius: 8px 8px 0 0;
+    padding: 0 1rem;
+    box-shadow: var(--sombra);
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 1.2rem 2rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--cor-texto-claro);
+    cursor: pointer;
+    transition: var(--transicao);
+    border-bottom: 3px solid transparent;
+    position: relative;
+    bottom: -3px;
+}
+
+.tab-btn:hover {
+    color: var(--cor-primaria);
+    background: rgba(107, 28, 64, 0.05);
+}
+
+.tab-btn.active {
+    color: var(--cor-primaria);
+    border-bottom-color: var(--cor-primaria);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeInUp 0.4s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Card do Perfil */
+.perfil-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2.5rem;
+    box-shadow: var(--sombra);
+    margin-bottom: 2rem;
+}
+
+.perfil-card h3 {
+    color: var(--cor-primaria);
+    font-size: 1.6rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid var(--cor-destaque);
+}
+
+/* Formulários */
+.perfil-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.flex-1 {
+    flex: 1;
+}
+
+.form-group.flex-3 {
+    flex: 3;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: var(--cor-secundaria);
+    margin-bottom: 0.6rem;
+    font-size: 1rem;
+}
+
+.form-group input,
+.form-group select {
+    padding: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: var(--transicao);
+    background: white;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(107, 28, 64, 0.1);
+}
+
+.form-group input[readonly] {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    color: var(--cor-texto-claro);
+}
+
+.form-group small {
+    color: var(--cor-texto-claro);
+    font-size: 0.875rem;
+    margin-top: 0.4rem;
+}
+
+.btn-salvar {
+    padding: 1.2rem 3rem;
+    background: linear-gradient(135deg, var(--cor-primaria), var(--cor-secundaria));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transicao);
+    width: fit-content;
+    box-shadow: var(--sombra);
+}
+
+.btn-salvar:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sombra-hover);
+}
+
+.btn-salvar:active {
+    transform: translateY(0);
+}
+
+/* Histórico de Pedidos */
+.pedidos-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.pedido-item {
+    background: #f8f9fa;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 2rem;
+    transition: var(--transicao);
+}
+
+.pedido-item:hover {
+    border-color: var(--cor-primaria);
+    box-shadow: var(--sombra-hover);
+    transform: translateY(-2px);
+}
+
+.pedido-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.pedido-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.pedido-numero {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--cor-primaria);
+}
+
+.pedido-data {
+    color: var(--cor-texto-claro);
+    font-size: 0.95rem;
+}
+
+.pedido-acoes {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-refazer {
+    padding: 0.8rem 1.5rem;
+    background: var(--cor-destaque);
+    color: var(--cor-escura);
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transicao);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: var(--sombra);
+}
+
+.btn-refazer:hover {
+    background: #D4A574;
+    transform: translateY(-2px);
+    box-shadow: var(--sombra-hover);
+}
+
+.pedido-item-body {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+.pedido-produtos h4 {
+    color: var(--cor-secundaria);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.produto-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+    transition: var(--transicao);
+}
+
+.produto-item:hover {
+    box-shadow: var(--sombra);
+}
+
+.produto-nome {
+    font-weight: 600;
+    color: var(--cor-escura);
+}
+
+.produto-quantidade {
+    color: var(--cor-texto-claro);
+    font-size: 0.9rem;
+    margin-top: 0.2rem;
+}
+
+.produto-preco {
+    color: var(--cor-primaria);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.pedido-resumo {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.resumo-linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+}
+
+.resumo-linha.total {
+    background: linear-gradient(135deg, var(--cor-primaria), var(--cor-secundaria));
+    color: white;
+    font-size: 1.3rem;
+    font-weight: 700;
+    padding: 1.5rem;
+    box-shadow: var(--sombra);
+}
+
+.sem-pedidos {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--cor-texto-claro);
+}
+
+.sem-pedidos-icon {
+    font-size: 5rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.3;
+}
+
+.sem-pedidos p {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: var(--cor-texto);
+}
+
+.sem-pedidos small {
+    color: var(--cor-texto-claro);
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.pendente {
+    background: #FFF3CD;
+    color: #856404;
+}
+
+.status-badge.confirmado {
+    background: #D1ECF1;
+    color: #0C5460;
+}
+
+.status-badge.enviado {
+    background: #CCE5FF;
+    color: #004085;
+}
+
+.status-badge.entregue {
+    background: #D4EDDA;
+    color: #155724;
+}
+
+.status-badge.cancelado {
+    background: #F8D7DA;
+    color: #721C24;
+}
+
+/* Responsivo Perfil */
+@media (max-width: 768px) {
+    .perfil-tabs {
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
+    }
+
+    .tab-btn {
+        padding: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+        border-left: 4px solid transparent;
+        border-radius: 0;
+    }
+
+    .tab-btn.active {
+        border-bottom-color: #e0e0e0;
+        border-left-color: var(--cor-primaria);
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .pedido-item-body {
+        grid-template-columns: 1fr;
+    }
+
+    .pedido-item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .pedido-acoes {
+        width: 100%;
+    }
+
+    .btn-refazer {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .perfil-card {
+        padding: 1.5rem;
     }
 }

@@ -100,14 +100,14 @@ class CarrinhoManager {
                         <div class="carrinho-item-nome">${item.nome}</div>
                         <div class="carrinho-item-preco">R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
                         <div class="carrinho-item-qtd">
-                            <button class="btn-qtd" onclick="carrinhoManager.atualizarQuantidade(${item.id}, ${item.quantidade - 1})">
+                            <button class="btn-qtd" onclick="window.carrinhoManager.atualizarQuantidade(${item.id}, ${item.quantidade - 1})">
                                 <i class="fas fa-minus"></i>
                             </button>
-                            <span>${item.quantidade}</span>
-                            <button class="btn-qtd" onclick="carrinhoManager.atualizarQuantidade(${item.id}, ${item.quantidade + 1})">
+                            <span class="quantidade">${item.quantidade}</span>
+                            <button class="btn-qtd" onclick="window.carrinhoManager.atualizarQuantidade(${item.id}, ${item.quantidade + 1})">
                                 <i class="fas fa-plus"></i>
                             </button>
-                            <button class="btn-remover-item" onclick="carrinhoManager.removerItem(${item.id})">
+                            <button class="btn-remover-item" onclick="window.carrinhoManager.removerItem(${item.id})">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -251,7 +251,7 @@ class CarrinhoManager {
 }
 
 // Instância global
-const carrinhoManager = new CarrinhoManager();
+window.carrinhoManager = new CarrinhoManager();
 
 // ===== CONFIGURAR EVENTOS DO CARRINHO =====
 function configurarEventosCarrinho() {
@@ -261,19 +261,19 @@ function configurarEventosCarrinho() {
     const btnFinalizar = document.getElementById('btn-finalizar-pedido');
 
     if (btnAbrir) {
-        btnAbrir.addEventListener('click', () => carrinhoManager.abrirCarrinho());
+        btnAbrir.addEventListener('click', () => window.carrinhoManager.abrirCarrinho());
     }
 
     if (btnFechar) {
-        btnFechar.addEventListener('click', () => carrinhoManager.fecharCarrinho());
+        btnFechar.addEventListener('click', () => window.carrinhoManager.fecharCarrinho());
     }
 
     if (overlay) {
-        overlay.addEventListener('click', () => carrinhoManager.fecharCarrinho());
+        overlay.addEventListener('click', () => window.carrinhoManager.fecharCarrinho());
     }
 
     if (btnFinalizar) {
-        btnFinalizar.addEventListener('click', () => carrinhoManager.finalizarPedido());
+        btnFinalizar.addEventListener('click', () => window.carrinhoManager.finalizarPedido());
     }
 }
 

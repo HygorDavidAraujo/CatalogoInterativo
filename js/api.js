@@ -100,7 +100,7 @@ async function renderizarVinhos(filtro = 'todos') {
                     <p class="vinho-uva"><i class="fas fa-grape-alt"></i> ${vinho.uva}</p>
                     <p class="vinho-ano"><i class="fas fa-calendar"></i> Safra ${vinho.ano}</p>
                     <p class="vinho-preco">R$ ${formatarPreco(vinho.preco)}</p>
-                    <button class="btn btn-adicionar-carrinho" onclick="event.stopPropagation(); carrinhoManager.adicionarItem(${JSON.stringify(vinho).replace(/"/g, '&quot;')})">
+                    <button class="btn btn-adicionar-carrinho" onclick="event.stopPropagation(); window.carrinhoManager.adicionarItem(${JSON.stringify(vinho).replace(/"/g, '&quot;')})">
                         <i class="fas fa-shopping-cart"></i> Adicionar
                     </button>
                 </div>

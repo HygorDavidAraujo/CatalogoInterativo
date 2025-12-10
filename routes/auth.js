@@ -13,7 +13,9 @@ router.post('/login', async (req, res) => {
 
         // Buscar usuário por email e senha
         const [usuarios] = await pool.query(
-            'SELECT id, nome_completo, telefone, email, is_admin FROM usuarios WHERE email = ? AND senha = ?',
+            `SELECT id, nome_completo, telefone, email, is_admin, cpf,
+                    logradouro, numero, complemento, bairro, cep, cidade, estado 
+             FROM usuarios WHERE email = ? AND senha = ?`,
             [email, senha]
         );
 
@@ -35,7 +37,15 @@ router.post('/login', async (req, res) => {
                 nome: usuario.nome_completo,
                 telefone: usuario.telefone,
                 email: usuario.email,
-                isAdmin: isAdmin
+                isAdmin: isAdmin,
+                cpf: usuario.cpf,
+                logradouro: usuario.logradouro,
+                numero: usuario.numero,
+                complemento: usuario.complemento,
+                bairro: usuario.bairro,
+                cep: usuario.cep,
+                cidade: usuario.cidade,
+                estado: usuario.estado
             }
         });
     } catch (error) {
@@ -148,13 +158,98 @@ router.get('/verificar', async (req, res) => {
 router.get('/usuarios', async (req, res) => {
     try {
         const [usuarios] = await pool.query(
-            'SELECT id, nome_completo, email, telefone, is_admin, created_at FROM usuarios ORDER BY created_at DESC'
+            `SELECT id, nome_completo, email, telefone, is_admin, created_at, 
+             cpf, logradouro, numero, complemento, bairro, cep, cidade, estado 
+             FROM usuarios ORDER BY created_at DESC`
         );
         
         res.json(usuarios);
     } catch (error) {
         console.error('Erro ao listar usuários:', error);
         res.status(500).json({ error: 'Erro ao listar usuários' });
+    }
+});
+
+// PUT - Atualizar perfil do usuário
+router.put('/perfil', async (req, res) => {
+    try {
+        const { 
+            usuario_id, 
+            nome, 
+            telefone, 
+            cpf, 
+            logradouro, 
+            numero, 
+            complemento, 
+            bairro, 
+            cep, 
+            cidade, 
+            estado 
+        } = req.body;
+
+        if (!usuario_id) {
+            return res.status(400).json({ error: 'ID do usuário é obrigatório' });
+        }
+
+        // Montar query de atualização dinamicamente
+        const campos = [];
+        const valores = [];
+
+        if (nome !== undefined) {
+            campos.push('nome_completo = ?');
+            valores.push(nome);
+        }
+        if (telefone !== undefined) {
+            campos.push('telefone = ?');
+            valores.push(telefone);
+        }
+        if (cpf !== undefined) {
+            campos.push('cpf = ?');
+            valores.push(cpf);
+        }
+        if (logradouro !== undefined) {
+            campos.push('logradouro = ?');
+            valores.push(logradouro);
+        }
+        if (numero !== undefined) {
+            campos.push('numero = ?');
+            valores.push(numero);
+        }
+        if (complemento !== undefined) {
+            campos.push('complemento = ?');
+            valores.push(complemento);
+        }
+        if (bairro !== undefined) {
+            campos.push('bairro = ?');
+            valores.push(bairro);
+        }
+        if (cep !== undefined) {
+            campos.push('cep = ?');
+            valores.push(cep);
+        }
+        if (cidade !== undefined) {
+            campos.push('cidade = ?');
+            valores.push(cidade);
+        }
+        if (estado !== undefined) {
+            campos.push('estado = ?');
+            valores.push(estado);
+        }
+
+        if (campos.length === 0) {
+            return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+        }
+
+        valores.push(usuario_id);
+
+        const query = `UPDATE usuarios SET ${campos.join(', ')} WHERE id = ?`;
+        
+        await pool.query(query, valores);
+
+        res.json({ success: true, message: 'Perfil atualizado com sucesso' });
+    } catch (error) {
+        console.error('Erro ao atualizar perfil:', error);
+        res.status(500).json({ error: 'Erro ao atualizar perfil' });
     }
 });
 

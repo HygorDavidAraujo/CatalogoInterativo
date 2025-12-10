@@ -6,12 +6,15 @@ const { pool } = require('../config/database');
 router.get('/cliente/:clienteId', async (req, res) => {
     try {
         const { clienteId } = req.params;
+        console.log('🔍 Buscando pedidos do cliente:', clienteId);
         
         // Buscar pedidos
         const [pedidos] = await pool.query(
             'SELECT * FROM pedidos WHERE usuario_id = ? ORDER BY created_at DESC',
             [clienteId]
         );
+
+        console.log('📦 Pedidos encontrados:', pedidos.length);
 
         // Para cada pedido, buscar os itens
         for (let pedido of pedidos) {
@@ -20,11 +23,13 @@ router.get('/cliente/:clienteId', async (req, res) => {
                 [pedido.id]
             );
             pedido.itens = itens;
+            console.log(`  Pedido #${pedido.id}: ${itens.length} itens`);
         }
 
+        console.log('✅ Enviando resposta com', pedidos.length, 'pedidos');
         res.json(pedidos);
     } catch (error) {
-        console.error('Erro ao buscar pedidos:', error);
+        console.error('❌ Erro ao buscar pedidos:', error);
         res.status(500).json({ error: 'Erro ao buscar pedidos' });
     }
 });
