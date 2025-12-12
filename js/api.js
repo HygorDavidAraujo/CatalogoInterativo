@@ -22,17 +22,23 @@ class VinhoManager {
             
             if (!response.ok) throw new Error(`Erro ao carregar vinhos: ${response.status}`);
             
-            this.vinhos = await response.json();
+            const responseData = await response.json();
+            
+            // Extrair array de vinhos (a API agora retorna {data, pagination})
+            let vinhos = Array.isArray(responseData) 
+                ? responseData 
+                : (responseData.data || responseData);
             
             // Otimizar URLs do Cloudinary
             if (window.optimizeCloudinaryUrl) {
-                this.vinhos = this.vinhos.map(vinho => ({
+                vinhos = vinhos.map(vinho => ({
                     ...vinho,
                     imagem: window.optimizeCloudinaryUrl(vinho.imagem, 'card'),
                     imagemOriginal: vinho.imagem
                 }));
             }
             
+            this.vinhos = vinhos;
             return this.vinhos;
         } catch (error) {
             console.error('Erro ao carregar vinhos:', error);
