@@ -182,34 +182,52 @@ router.get('/setup', async (req, res) => {
         output += '<hr><h2>🔍 Criando Índices para Performance</h2>';
         
         try {
-            await connection.execute('CREATE INDEX IF NOT EXISTS idx_vinhos_nome ON vinhos(nome)');
+            await connection.execute('ALTER TABLE vinhos ADD INDEX idx_vinhos_nome (nome)');
             output += '<p>✓ Índice idx_vinhos_nome criado</p>';
-        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+        } catch (e) { 
+            if (e.errno === 1061) output += '<p>ℹ️ idx_vinhos_nome: já existe</p>';
+            else output += `<p>⚠️ ${e.message}</p>`; 
+        }
 
         try {
-            await connection.execute('CREATE INDEX IF NOT EXISTS idx_vinhos_uva ON vinhos(uva)');
+            await connection.execute('ALTER TABLE vinhos ADD INDEX idx_vinhos_uva (uva)');
             output += '<p>✓ Índice idx_vinhos_uva criado</p>';
-        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+        } catch (e) { 
+            if (e.errno === 1061) output += '<p>ℹ️ idx_vinhos_uva: já existe</p>';
+            else output += `<p>⚠️ ${e.message}</p>`; 
+        }
 
         try {
-            await connection.execute('CREATE INDEX IF NOT EXISTS idx_vinhos_tipo ON vinhos(tipo)');
+            await connection.execute('ALTER TABLE vinhos ADD INDEX idx_vinhos_tipo (tipo)');
             output += '<p>✓ Índice idx_vinhos_tipo criado</p>';
-        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+        } catch (e) { 
+            if (e.errno === 1061) output += '<p>ℹ️ idx_vinhos_tipo: já existe</p>';
+            else output += `<p>⚠️ ${e.message}</p>`; 
+        }
 
         try {
-            await connection.execute('CREATE INDEX IF NOT EXISTS idx_vinhos_ativo_created ON vinhos(ativo, created_at DESC)');
+            await connection.execute('ALTER TABLE vinhos ADD INDEX idx_vinhos_ativo_created (ativo, created_at)');
             output += '<p>✓ Índice idx_vinhos_ativo_created criado</p>';
-        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+        } catch (e) { 
+            if (e.errno === 1061) output += '<p>ℹ️ idx_vinhos_ativo_created: já existe</p>';
+            else output += `<p>⚠️ ${e.message}</p>`; 
+        }
 
         try {
-            await connection.execute('CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email)');
+            await connection.execute('ALTER TABLE usuarios ADD INDEX idx_usuarios_email (email)');
             output += '<p>✓ Índice idx_usuarios_email criado</p>';
-        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+        } catch (e) { 
+            if (e.errno === 1061) output += '<p>ℹ️ idx_usuarios_email: já existe</p>';
+            else output += `<p>⚠️ ${e.message}</p>`; 
+        }
 
         try {
-            await connection.execute('CREATE INDEX IF NOT EXISTS idx_pedidos_usuario_id ON pedidos(usuario_id)');
+            await connection.execute('ALTER TABLE pedidos ADD INDEX idx_pedidos_usuario_id (usuario_id)');
             output += '<p>✓ Índice idx_pedidos_usuario_id criado</p>';
-        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+        } catch (e) { 
+            if (e.errno === 1061) output += '<p>ℹ️ idx_pedidos_usuario_id: já existe</p>';
+            else output += `<p>⚠️ ${e.message}</p>`; 
+        }
 
         output += '<hr>';
         output += '<p><a href="/">Ir para o site</a> | <a href="/admin">Painel Admin</a></p>';
@@ -242,15 +260,15 @@ router.get('/create-indexes', async (req, res) => {
         let output = '<h1>🔍 Criando Índices no Banco de Dados</h1>';
         
         const indexes = [
-            { name: 'idx_vinhos_nome', query: 'CREATE INDEX IF NOT EXISTS idx_vinhos_nome ON vinhos(nome)' },
-            { name: 'idx_vinhos_uva', query: 'CREATE INDEX IF NOT EXISTS idx_vinhos_uva ON vinhos(uva)' },
-            { name: 'idx_vinhos_tipo', query: 'CREATE INDEX IF NOT EXISTS idx_vinhos_tipo ON vinhos(tipo)' },
-            { name: 'idx_vinhos_ativo_created', query: 'CREATE INDEX IF NOT EXISTS idx_vinhos_ativo_created ON vinhos(ativo, created_at)' },
-            { name: 'idx_usuarios_email', query: 'CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email)' },
-            { name: 'idx_pedidos_usuario_id', query: 'CREATE INDEX IF NOT EXISTS idx_pedidos_usuario_id ON pedidos(usuario_id)' },
-            { name: 'idx_pedidos_status', query: 'CREATE INDEX IF NOT EXISTS idx_pedidos_status ON pedidos(status)' },
-            { name: 'idx_pedidos_itens_pedido', query: 'CREATE INDEX IF NOT EXISTS idx_pedidos_itens_pedido ON pedidos_itens(pedido_id)' },
-            { name: 'idx_pedidos_itens_vinho', query: 'CREATE INDEX IF NOT EXISTS idx_pedidos_itens_vinho ON pedidos_itens(vinho_id)' }
+            { name: 'idx_vinhos_nome', query: 'ALTER TABLE vinhos ADD INDEX idx_vinhos_nome (nome)' },
+            { name: 'idx_vinhos_uva', query: 'ALTER TABLE vinhos ADD INDEX idx_vinhos_uva (uva)' },
+            { name: 'idx_vinhos_tipo', query: 'ALTER TABLE vinhos ADD INDEX idx_vinhos_tipo (tipo)' },
+            { name: 'idx_vinhos_ativo_created', query: 'ALTER TABLE vinhos ADD INDEX idx_vinhos_ativo_created (ativo, created_at)' },
+            { name: 'idx_usuarios_email', query: 'ALTER TABLE usuarios ADD INDEX idx_usuarios_email (email)' },
+            { name: 'idx_pedidos_usuario_id', query: 'ALTER TABLE pedidos ADD INDEX idx_pedidos_usuario_id (usuario_id)' },
+            { name: 'idx_pedidos_status', query: 'ALTER TABLE pedidos ADD INDEX idx_pedidos_status (status)' },
+            { name: 'idx_pedidos_itens_pedido', query: 'ALTER TABLE pedidos_itens ADD INDEX idx_pedidos_itens_pedido (pedido_id)' },
+            { name: 'idx_pedidos_itens_vinho', query: 'ALTER TABLE pedidos_itens ADD INDEX idx_pedidos_itens_vinho (vinho_id)' }
         ];
 
         for (const index of indexes) {
@@ -258,7 +276,12 @@ router.get('/create-indexes', async (req, res) => {
                 await connection.execute(index.query);
                 output += `<p>✓ ${index.name} criado com sucesso</p>`;
             } catch (error) {
-                output += `<p>⚠️ ${index.name}: ${error.message}</p>`;
+                // Ignorar erro se índice já existe (1061 = Duplicate key name)
+                if (error.code === 'ER_DUP_KEYNAME' || error.errno === 1061) {
+                    output += `<p>ℹ️ ${index.name}: já existe</p>`;
+                } else {
+                    output += `<p>⚠️ ${index.name}: ${error.message}</p>`;
+                }
             }
         }
 
