@@ -813,6 +813,87 @@
     color: #721C24;
 }
 
+/* Novos status */
+.status-badge.em_preparacao,
+.status-preparacao {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+.status-badge.em_rota_entrega,
+.status-rota {
+    background: #F3E5F5;
+    color: #6A1B9A;
+}
+
+.status-badge.aguardando_pagamento,
+.status-pagamento {
+    background: #FFF8E1;
+    color: #F57F17;
+}
+
+.status-badge.finalizado,
+.status-finalizado {
+    background: #C8E6C9;
+    color: #2E7D32;
+}
+
+/* Select de Status */
+.pedido-status-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pedido-status-select {
+    padding: 0.5rem 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: white;
+    transition: all 0.3s ease;
+    text-transform: none;
+}
+
+.pedido-status-select:hover {
+    border-color: var(--cor-primaria);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pedido-status-select:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(139, 35, 17, 0.1);
+}
+
+/* Cores do select por status */
+.pedido-status-select.status-pendente {
+    border-color: #FFC107;
+    color: #856404;
+}
+
+.pedido-status-select.status-preparacao {
+    border-color: #2196F3;
+    color: #1565C0;
+}
+
+.pedido-status-select.status-rota {
+    border-color: #9C27B0;
+    color: #6A1B9A;
+}
+
+.pedido-status-select.status-pagamento {
+    border-color: #FF9800;
+    color: #F57F17;
+}
+
+.pedido-status-select.status-finalizado {
+    border-color: #4CAF50;
+    color: #2E7D32;
+}
+
 .pedido-itens {
     margin: 1rem 0;
 }

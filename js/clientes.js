@@ -144,8 +144,10 @@ function limparFiltros() {
 async function abrirModalCliente(clienteId) {
     const modal = document.getElementById('modal-cliente');
     const modalBody = document.getElementById('modal-cliente-body');
+    const modalContent = document.querySelector('.modal-cliente-detalhes');
     
     modal.style.display = 'block';
+    modalContent.setAttribute('data-cliente-id', clienteId);
     modalBody.innerHTML = '<div style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
 
     try {
@@ -240,12 +242,35 @@ function calcularTotalGasto(pedidos) {
 }
 
 function renderizarPedido(pedido) {
+    const statusOptions = [
+        { valor: 'pendente', label: 'Pendente' },
+        { valor: 'em_preparacao', label: 'Em Preparação' },
+        { valor: 'em_rota_entrega', label: 'Em Rota de Entrega' },
+        { valor: 'aguardando_pagamento', label: 'Aguardando Pagamento' },
+        { valor: 'finalizado', label: 'Finalizado' }
+    ];
+
     const statusClass = {
         'pendente': 'status-pendente',
+        'em_preparacao': 'status-preparacao',
+        'em_rota_entrega': 'status-rota',
+        'aguardando_pagamento': 'status-pagamento',
+        'finalizado': 'status-finalizado',
         'confirmado': 'status-confirmado',
         'entregue': 'status-entregue',
         'cancelado': 'status-cancelado'
     }[pedido.status] || 'status-pendente';
+
+    const statusLabel = {
+        'pendente': 'Pendente',
+        'em_preparacao': 'Em Preparação',
+        'em_rota_entrega': 'Em Rota de Entrega',
+        'aguardando_pagamento': 'Aguardando Pagamento',
+        'finalizado': 'Finalizado',
+        'confirmado': 'Confirmado',
+        'entregue': 'Entregue',
+        'cancelado': 'Cancelado'
+    }[pedido.status] || pedido.status;
 
     return `
         <div class="pedido-card">
@@ -254,7 +279,17 @@ function renderizarPedido(pedido) {
                     <span class="pedido-id">#${pedido.id}</span>
                     <span class="pedido-data">${new Date(pedido.created_at).toLocaleString('pt-BR')}</span>
                 </div>
-                <span class="pedido-status ${statusClass}">${pedido.status}</span>
+                <div class="pedido-status-container">
+                    <select class="pedido-status-select ${statusClass}" 
+                            data-pedido-id="${pedido.id}"
+                            onchange="alterarStatusPedido(${pedido.id}, this.value)">
+                        ${statusOptions.map(opt => `
+                            <option value="${opt.valor}" ${pedido.status === opt.valor ? 'selected' : ''}>
+                                ${opt.label}
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
             </div>
             <div class="pedido-itens">
                 ${pedido.itens.map(item => `
@@ -394,6 +429,35 @@ function mostrarMensagem(texto, tipo) {
         mensagem.classList.add('fade-out');
         setTimeout(() => mensagem.remove(), 300);
     }, 4000);
+}
+
+// ===== ALTERAR STATUS DO PEDIDO =====
+async function alterarStatusPedido(pedidoId, novoStatus) {
+    try {
+        const response = await fetch(`${API_URL}/pedidos/${pedidoId}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: novoStatus })
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao atualizar status');
+        }
+
+        const result = await response.json();
+        mostrarMensagem('Status do pedido atualizado com sucesso!', 'sucesso');
+        
+        // Recarregar os dados do cliente para atualizar a exibição
+        const clienteId = parseInt(document.querySelector('.modal-cliente-detalhes').getAttribute('data-cliente-id') || 0);
+        if (clienteId > 0) {
+            abrirModalCliente(clienteId);
+        }
+    } catch (error) {
+        console.error('Erro ao alterar status:', error);
+        mostrarMensagem('Erro ao atualizar status do pedido', 'erro');
+    }
 }
 
 // ===== INICIALIZAÇÃO =====

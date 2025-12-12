@@ -506,6 +506,10 @@ class PerfilManager {
         const statusClass = pedido.status.toLowerCase();
         const statusLabel = {
             'pendente': 'Pendente',
+            'em_preparacao': 'Em Preparação',
+            'em_rota_entrega': 'Em Rota de Entrega',
+            'aguardando_pagamento': 'Aguardando Pagamento',
+            'finalizado': 'Finalizado',
             'confirmado': 'Confirmado',
             'enviado': 'Enviado',
             'entregue': 'Entregue',

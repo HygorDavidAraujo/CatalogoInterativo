@@ -1458,6 +1458,26 @@ body {
     color: #721C24;
 }
 
+.status-badge.em_preparacao {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+.status-badge.em_rota_entrega {
+    background: #F3E5F5;
+    color: #6A1B9A;
+}
+
+.status-badge.aguardando_pagamento {
+    background: #FFF8E1;
+    color: #F57F17;
+}
+
+.status-badge.finalizado {
+    background: #C8E6C9;
+    color: #2E7D32;
+}
+
 /* Badges de status do vinho */
 .badge-ativo,
 .badge-inativo {
