@@ -69,6 +69,9 @@ function renderizarClientes(usuarios) {
                     <button class="btn-icon btn-visualizar" onclick="abrirModalCliente(${usuario.id})" title="Ver detalhes">
                         <i class="fas fa-eye"></i>
                     </button>
+                    <button class="btn-icon btn-editar" onclick="abrirModalEditar(${usuario.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
                 </td>
             </tr>
         `;
@@ -274,16 +277,142 @@ function renderizarPedido(pedido) {
     `;
 }
 
+// ===== MODAL DE EDIÇÃO =====
+function abrirModalEditar(clienteId) {
+    const cliente = todosClientes.find(c => c.id === clienteId);
+    if (!cliente) return;
+
+    const modal = document.getElementById('modal-editar-cliente');
+    
+    // Preencher formulário
+    document.getElementById('edit-usuario-id').value = cliente.id;
+    document.getElementById('edit-nome').value = cliente.nome_completo || '';
+    document.getElementById('edit-email').value = cliente.email || '';
+    document.getElementById('edit-telefone').value = cliente.telefone || '';
+    document.getElementById('edit-cpf').value = cliente.cpf || '';
+    document.getElementById('edit-logradouro').value = cliente.logradouro || '';
+    document.getElementById('edit-numero').value = cliente.numero || '';
+    document.getElementById('edit-complemento').value = cliente.complemento || '';
+    document.getElementById('edit-bairro').value = cliente.bairro || '';
+    document.getElementById('edit-cep').value = cliente.cep || '';
+    document.getElementById('edit-cidade').value = cliente.cidade || '';
+    document.getElementById('edit-estado').value = cliente.estado || '';
+    document.getElementById('edit-is-admin').checked = cliente.is_admin === 1 || cliente.is_admin === true;
+
+    modal.style.display = 'block';
+}
+
+function fecharModalEditar() {
+    const modal = document.getElementById('modal-editar-cliente');
+    modal.style.display = 'none';
+}
+
+// Configurar tabs do modal de edição
+function configurarTabsEditar() {
+    const tabButtons = document.querySelectorAll('.tab-btn-edit');
+    const tabContents = document.querySelectorAll('.tab-content-edit');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tabId = button.getAttribute('data-tab');
+
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            button.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        });
+    });
+}
+
+// Configurar formulário de edição
+function configurarFormEditar() {
+    const form = document.getElementById('form-editar-cliente');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const usuarioId = document.getElementById('edit-usuario-id').value;
+        
+        const dados = {
+            usuario_id: parseInt(usuarioId),
+            nome: document.getElementById('edit-nome').value.trim(),
+            telefone: document.getElementById('edit-telefone').value.trim(),
+            cpf: document.getElementById('edit-cpf').value.trim(),
+            logradouro: document.getElementById('edit-logradouro').value.trim(),
+            numero: document.getElementById('edit-numero').value.trim(),
+            complemento: document.getElementById('edit-complemento').value.trim(),
+            bairro: document.getElementById('edit-bairro').value.trim(),
+            cep: document.getElementById('edit-cep').value.trim(),
+            cidade: document.getElementById('edit-cidade').value.trim(),
+            estado: document.getElementById('edit-estado').value.trim(),
+            is_admin: document.getElementById('edit-is-admin').checked
+        };
+
+        try {
+            const response = await fetch(`${API_URL}/auth/usuarios/${usuarioId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dados)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao atualizar cliente');
+            }
+
+            mostrarMensagem('Cliente atualizado com sucesso!', 'sucesso');
+            fecharModalEditar();
+            await carregarClientes();
+        } catch (error) {
+            console.error('Erro ao salvar:', error);
+            mostrarMensagem(error.message, 'erro');
+        }
+    });
+}
+
+function mostrarMensagem(texto, tipo) {
+    // Remover mensagens anteriores
+    const mensagensAnteriores = document.querySelectorAll('.toast-message');
+    mensagensAnteriores.forEach(msg => msg.remove());
+
+    // Criar nova mensagem
+    const mensagem = document.createElement('div');
+    mensagem.className = `toast-message toast-${tipo}`;
+    mensagem.innerHTML = `
+        <i class="fas fa-${tipo === 'sucesso' ? 'check-circle' : 'exclamation-circle'}"></i>
+        <span>${texto}</span>
+    `;
+
+    document.body.appendChild(mensagem);
+
+    // Remover após 4 segundos
+    setTimeout(() => {
+        mensagem.classList.add('fade-out');
+        setTimeout(() => mensagem.remove(), 300);
+    }, 4000);
+}
+
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
     carregarClientes();
     configurarFiltros();
+    configurarTabsEditar();
+    configurarFormEditar();
     
     // Fechar modal ao clicar fora
     window.onclick = (e) => {
         const modal = document.getElementById('modal-cliente');
+        const modalEditar = document.getElementById('modal-editar-cliente');
+        
         if (e.target === modal) {
             fecharModalCliente();
+        }
+        if (e.target === modalEditar) {
+            fecharModalEditar();
         }
     };
 });

@@ -59,8 +59,14 @@ app.get('/api/check-env', (req, res) => {
     });
 });
 
+// ===== ROTAS DE DEBUG (APENAS EM DESENVOLVIMENTO) =====
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
 // Rota para adicionar coluna 'ativo' na tabela vinhos
 app.get('/api/add-ativo-column', async (req, res) => {
+    if (!isDevelopment) {
+        return res.status(404).json({ error: 'Rota não disponível em produção' });
+    }
     const mysql = require('mysql2/promise');
     
     try {
@@ -98,6 +104,9 @@ app.get('/api/add-ativo-column', async (req, res) => {
 
 // Rota para debug - ver todos os vinhos no banco
 app.get('/api/debug-vinhos', async (req, res) => {
+    if (!isDevelopment) {
+        return res.status(404).json({ error: 'Rota não disponível em produção' });
+    }
     const mysql = require('mysql2/promise');
     
     try {
@@ -141,6 +150,9 @@ app.get('/api/debug-vinhos', async (req, res) => {
 
 // Rota para corrigir vinhos - marcar TODOS como ativos
 app.get('/api/fix-ativo', async (req, res) => {
+    if (!isDevelopment) {
+        return res.status(404).json({ error: 'Rota não disponível em produção' });
+    }
     const mysql = require('mysql2/promise');
     
     try {
@@ -173,6 +185,9 @@ app.get('/api/fix-ativo', async (req, res) => {
 
 // Rota de setup do banco de dados
 app.get('/api/setup', async (req, res) => {
+    if (!isDevelopment) {
+        return res.status(404).json({ error: 'Rota não disponível em produção' });
+    }
     const mysql = require('mysql2/promise');
     
     try {

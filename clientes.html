@@ -94,6 +94,149 @@
         </div>
     </div>
 
+    <!-- Modal Editar Cliente -->
+    <div id="modal-editar-cliente" class="modal">
+        <div class="modal-content modal-editar-cliente">
+            <span class="close" onclick="fecharModalEditar()">&times;</span>
+            <div class="modal-header">
+                <h2><i class="fas fa-user-edit"></i> Editar Cliente</h2>
+            </div>
+            <div class="modal-body">
+                <form id="form-editar-cliente">
+                    <input type="hidden" id="edit-usuario-id">
+                    
+                    <!-- Tabs -->
+                    <div class="tabs-editar">
+                        <button type="button" class="tab-btn-edit active" data-tab="dados-edit">
+                            <i class="fas fa-user"></i> Dados Pessoais
+                        </button>
+                        <button type="button" class="tab-btn-edit" data-tab="endereco-edit">
+                            <i class="fas fa-map-marker-alt"></i> Endereço
+                        </button>
+                        <button type="button" class="tab-btn-edit" data-tab="config-edit">
+                            <i class="fas fa-cog"></i> Configurações
+                        </button>
+                    </div>
+
+                    <!-- Tab: Dados Pessoais -->
+                    <div class="tab-content-edit active" id="dados-edit">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="edit-nome">Nome Completo *</label>
+                                <input type="text" id="edit-nome" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-email">E-mail *</label>
+                                <input type="email" id="edit-email" readonly>
+                                <small>O e-mail não pode ser alterado</small>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="edit-telefone">Telefone</label>
+                                <input type="tel" id="edit-telefone" placeholder="(00) 00000-0000">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-cpf">CPF</label>
+                                <input type="text" id="edit-cpf" placeholder="000.000.000-00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Endereço -->
+                    <div class="tab-content-edit" id="endereco-edit">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 3;">
+                                <label for="edit-logradouro">Logradouro</label>
+                                <input type="text" id="edit-logradouro" placeholder="Rua, Avenida, etc.">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="edit-numero">Número</label>
+                                <input type="text" id="edit-numero" placeholder="123">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="edit-complemento">Complemento</label>
+                                <input type="text" id="edit-complemento" placeholder="Apto, Bloco, etc.">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-bairro">Bairro</label>
+                                <input type="text" id="edit-bairro">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="edit-cep">CEP</label>
+                                <input type="text" id="edit-cep" placeholder="00000-000">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-cidade">Cidade</label>
+                                <input type="text" id="edit-cidade">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-estado">Estado</label>
+                                <select id="edit-estado">
+                                    <option value="">Selecione...</option>
+                                    <option value="AC">Acre</option>
+                                    <option value="AL">Alagoas</option>
+                                    <option value="AP">Amapá</option>
+                                    <option value="AM">Amazonas</option>
+                                    <option value="BA">Bahia</option>
+                                    <option value="CE">Ceará</option>
+                                    <option value="DF">Distrito Federal</option>
+                                    <option value="ES">Espírito Santo</option>
+                                    <option value="GO">Goiás</option>
+                                    <option value="MA">Maranhão</option>
+                                    <option value="MT">Mato Grosso</option>
+                                    <option value="MS">Mato Grosso do Sul</option>
+                                    <option value="MG">Minas Gerais</option>
+                                    <option value="PA">Pará</option>
+                                    <option value="PB">Paraíba</option>
+                                    <option value="PR">Paraná</option>
+                                    <option value="PE">Pernambuco</option>
+                                    <option value="PI">Piauí</option>
+                                    <option value="RJ">Rio de Janeiro</option>
+                                    <option value="RN">Rio Grande do Norte</option>
+                                    <option value="RS">Rio Grande do Sul</option>
+                                    <option value="RO">Rondônia</option>
+                                    <option value="RR">Roraima</option>
+                                    <option value="SC">Santa Catarina</option>
+                                    <option value="SP">São Paulo</option>
+                                    <option value="SE">Sergipe</option>
+                                    <option value="TO">Tocantins</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Configurações -->
+                    <div class="tab-content-edit" id="config-edit">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edit-is-admin">
+                                <span><i class="fas fa-shield-alt"></i> Administrador</span>
+                            </label>
+                            <small class="warning-text">
+                                <i class="fas fa-exclamation-triangle"></i> 
+                                Administradores têm acesso total ao sistema
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalEditar()">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/clientes.js"></script>

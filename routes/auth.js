@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'davini-vinhos-secret-key-2024';
 
 // POST - Login
 router.post('/login', async (req, res) => {
@@ -11,12 +15,12 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Email e senha são obrigatórios' });
         }
 
-        // Buscar usuário por email e senha
+        // Buscar usuário por email
         const [usuarios] = await pool.query(
-            `SELECT id, nome_completo, telefone, email, is_admin, cpf,
+            `SELECT id, nome_completo, telefone, email, senha, is_admin, cpf,
                     logradouro, numero, complemento, bairro, cep, cidade, estado 
-             FROM usuarios WHERE email = ? AND senha = ?`,
-            [email, senha]
+             FROM usuarios WHERE email = ?`,
+            [email]
         );
 
         if (usuarios.length === 0) {
@@ -25,13 +29,41 @@ router.post('/login', async (req, res) => {
 
         const usuario = usuarios[0];
         
-        // Converter is_admin para booleano (MySQL retorna 0 ou 1)
+        // Verificar senha (suporta hash bcrypt e plaintext para transição)
+        let senhaCorreta = false;
+        
+        if (usuario.senha.startsWith('$2b$') || usuario.senha.startsWith('$2a$')) {
+            // Senha com hash bcrypt
+            senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+        } else {
+            // Senha em plaintext (legado) - atualizar para hash
+            senhaCorreta = senha === usuario.senha;
+            
+            if (senhaCorreta) {
+                // Atualizar senha para hash
+                const senhaHash = await bcrypt.hash(senha, 10);
+                await pool.query('UPDATE usuarios SET senha = ? WHERE id = ?', [senhaHash, usuario.id]);
+                console.log(`Senha do usuário ${usuario.id} atualizada para hash`);
+            }
+        }
+
+        if (!senhaCorreta) {
+            return res.status(401).json({ error: 'Email ou senha incorretos' });
+        }
+        
+        // Converter is_admin para booleano
         const isAdmin = usuario.is_admin === 1 || usuario.is_admin === true;
         
-        console.log('Login - is_admin no BD:', usuario.is_admin, 'Convertido:', isAdmin);
+        // Gerar token JWT
+        const token = jwt.sign(
+            { id: usuario.id, email: usuario.email, isAdmin },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
         
         res.json({
             success: true,
+            token,
             usuario: {
                 id: usuario.id,
                 nome: usuario.nome_completo,
@@ -91,10 +123,13 @@ router.post('/cadastro', async (req, res) => {
             return res.status(400).json({ error: 'Email já cadastrado' });
         }
 
+        // Hash da senha
+        const senhaHash = await bcrypt.hash(senha, 10);
+        
         // Inserir novo usuário (nunca é admin por padrão)
         const [result] = await pool.query(
             'INSERT INTO usuarios (nome_completo, telefone, email, senha, is_admin) VALUES (?, ?, ?, ?, FALSE)',
-            [nome_completo, telefone, email, senha]
+            [nome_completo, telefone, email, senhaHash]
         );
 
         const [novoUsuario] = await pool.query(
@@ -250,6 +285,75 @@ router.put('/perfil', async (req, res) => {
     } catch (error) {
         console.error('Erro ao atualizar perfil:', error);
         res.status(500).json({ error: 'Erro ao atualizar perfil' });
+    }
+});
+
+// PUT - Atualizar usuário completo (apenas admin)
+router.put('/usuarios/:id', async (req, res) => {
+    try {
+        const usuarioId = req.params.id;
+        const { 
+            nome, 
+            telefone, 
+            cpf, 
+            logradouro, 
+            numero, 
+            complemento, 
+            bairro, 
+            cep, 
+            cidade, 
+            estado,
+            is_admin
+        } = req.body;
+
+        // Verificar se usuário existe
+        const [usuarioExiste] = await pool.query('SELECT id, is_admin FROM usuarios WHERE id = ?', [usuarioId]);
+        
+        if (usuarioExiste.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+
+        // Se estiver removendo privilégio admin, verificar se não é o último admin
+        if (is_admin === false && usuarioExiste[0].is_admin) {
+            const [admins] = await pool.query('SELECT COUNT(*) as total FROM usuarios WHERE is_admin = TRUE');
+            if (admins[0].total <= 1) {
+                return res.status(400).json({ error: 'Não é possível remover o último administrador do sistema' });
+            }
+        }
+
+        // Atualizar todos os campos
+        await pool.query(
+            `UPDATE usuarios SET 
+                nome_completo = ?, 
+                telefone = ?, 
+                cpf = ?, 
+                logradouro = ?, 
+                numero = ?, 
+                complemento = ?, 
+                bairro = ?, 
+                cep = ?, 
+                cidade = ?, 
+                estado = ?,
+                is_admin = ?
+            WHERE id = ?`,
+            [nome, telefone, cpf, logradouro, numero, complemento, bairro, cep, cidade, estado, is_admin, usuarioId]
+        );
+
+        const [usuarioAtualizado] = await pool.query(
+            `SELECT id, nome_completo, email, telefone, is_admin, cpf,
+                    logradouro, numero, complemento, bairro, cep, cidade, estado, created_at
+             FROM usuarios WHERE id = ?`,
+            [usuarioId]
+        );
+
+        res.json({ 
+            success: true, 
+            message: 'Usuário atualizado com sucesso',
+            usuario: usuarioAtualizado[0]
+        });
+    } catch (error) {
+        console.error('Erro ao atualizar usuário:', error);
+        res.status(500).json({ error: 'Erro ao atualizar usuário' });
     }
 });
 
