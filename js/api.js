@@ -108,9 +108,10 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
         </div>
     `;
 
+    let vinhos = [];
     try {
         await vinhoManager.carregarVinhos();
-        let vinhos = vinhoManager.getVinhos(filtro);
+        vinhos = vinhoManager.getVinhos(filtro);
 
         // Aplicar busca se fornecida
         if (busca) {
