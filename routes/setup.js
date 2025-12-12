@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2/promise');
+const bcrypt = require('bcrypt');
 
 console.log('✅ Rota /api/setup carregada com sucesso!');
 
@@ -176,7 +177,42 @@ router.get('/setup', async (req, res) => {
         output += '<li>Email: <code>hygordavidaraujo@gmail.com</code></li>';
         output += '<li>Senha: <code>79461382</code></li>';
         output += '</ul>';
-        output += '<p><a href="/">Ir para o site</a></p>';
+
+        // Criar índices
+        output += '<hr><h2>🔍 Criando Índices para Performance</h2>';
+        
+        try {
+            await connection.execute('CREATE INDEX IF NOT EXISTS idx_vinhos_nome ON vinhos(nome)');
+            output += '<p>✓ Índice idx_vinhos_nome criado</p>';
+        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+
+        try {
+            await connection.execute('CREATE INDEX IF NOT EXISTS idx_vinhos_uva ON vinhos(uva)');
+            output += '<p>✓ Índice idx_vinhos_uva criado</p>';
+        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+
+        try {
+            await connection.execute('CREATE INDEX IF NOT EXISTS idx_vinhos_tipo ON vinhos(tipo)');
+            output += '<p>✓ Índice idx_vinhos_tipo criado</p>';
+        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+
+        try {
+            await connection.execute('CREATE INDEX IF NOT EXISTS idx_vinhos_ativo_created ON vinhos(ativo, created_at DESC)');
+            output += '<p>✓ Índice idx_vinhos_ativo_created criado</p>';
+        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+
+        try {
+            await connection.execute('CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email)');
+            output += '<p>✓ Índice idx_usuarios_email criado</p>';
+        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+
+        try {
+            await connection.execute('CREATE INDEX IF NOT EXISTS idx_pedidos_usuario_id ON pedidos(usuario_id)');
+            output += '<p>✓ Índice idx_pedidos_usuario_id criado</p>';
+        } catch (e) { output += `<p>⚠️ ${e.message}</p>`; }
+
+        output += '<hr>';
+        output += '<p><a href="/">Ir para o site</a> | <a href="/admin">Painel Admin</a></p>';
 
         await connection.end();
 
@@ -187,6 +223,51 @@ router.get('/setup', async (req, res) => {
             <pre>${error.message}</pre>
             <pre>${error.stack}</pre>
         `);
+    }
+});
+
+// Rota para criar apenas índices (pode ser executada depois)
+router.get('/create-indexes', async (req, res) => {
+    try {
+        const dbConfig = {
+            host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+            user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
+            database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
+            port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306')
+        };
+
+        const connection = await mysql.createConnection(dbConfig);
+        
+        let output = '<h1>🔍 Criando Índices no Banco de Dados</h1>';
+        
+        const indexes = [
+            { name: 'idx_vinhos_nome', query: 'CREATE INDEX IF NOT EXISTS idx_vinhos_nome ON vinhos(nome)' },
+            { name: 'idx_vinhos_uva', query: 'CREATE INDEX IF NOT EXISTS idx_vinhos_uva ON vinhos(uva)' },
+            { name: 'idx_vinhos_tipo', query: 'CREATE INDEX IF NOT EXISTS idx_vinhos_tipo ON vinhos(tipo)' },
+            { name: 'idx_vinhos_ativo_created', query: 'CREATE INDEX IF NOT EXISTS idx_vinhos_ativo_created ON vinhos(ativo, created_at)' },
+            { name: 'idx_usuarios_email', query: 'CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email)' },
+            { name: 'idx_pedidos_usuario_id', query: 'CREATE INDEX IF NOT EXISTS idx_pedidos_usuario_id ON pedidos(usuario_id)' },
+            { name: 'idx_pedidos_status', query: 'CREATE INDEX IF NOT EXISTS idx_pedidos_status ON pedidos(status)' },
+            { name: 'idx_pedidos_itens_pedido', query: 'CREATE INDEX IF NOT EXISTS idx_pedidos_itens_pedido ON pedidos_itens(pedido_id)' },
+            { name: 'idx_pedidos_itens_vinho', query: 'CREATE INDEX IF NOT EXISTS idx_pedidos_itens_vinho ON pedidos_itens(vinho_id)' }
+        ];
+
+        for (const index of indexes) {
+            try {
+                await connection.execute(index.query);
+                output += `<p>✓ ${index.name} criado com sucesso</p>`;
+            } catch (error) {
+                output += `<p>⚠️ ${index.name}: ${error.message}</p>`;
+            }
+        }
+
+        await connection.end();
+        
+        output += '<hr><p><a href="/admin">Voltar ao Admin</a></p>';
+        res.send(output);
+    } catch (error) {
+        res.status(500).send(`<h1>❌ Erro</h1><pre>${error.message}</pre>`);
     }
 });
 

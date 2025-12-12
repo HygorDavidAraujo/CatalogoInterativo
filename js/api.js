@@ -1,8 +1,10 @@
 // ===== CONFIGURAÇÃO DA API =====
-// Detecta automaticamente se está em produção ou local
-const API_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3000/api'
-    : window.location.origin + '/api';
+// Usar configuração centralizada se disponível, senão fallback
+const API_URL = window.APP_CONFIG 
+    ? `${window.APP_CONFIG.API_URL}/api`
+    : (window.location.hostname === 'localhost' 
+        ? 'http://localhost:3000/api'
+        : window.location.origin + '/api');
 
 // ===== GERENCIAMENTO DE DADOS COM API =====
 class VinhoManager {
@@ -14,12 +16,27 @@ class VinhoManager {
     async carregarVinhos(admin = false) {
         try {
             const url = admin ? `${API_URL}/vinhos?admin=true` : `${API_URL}/vinhos`;
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Erro ao carregar vinhos');
+            const response = await (window.fetchWithTimeout 
+                ? window.fetchWithTimeout(url) 
+                : fetch(url));
+            
+            if (!response.ok) throw new Error(`Erro ao carregar vinhos: ${response.status}`);
+            
             this.vinhos = await response.json();
+            
+            // Otimizar URLs do Cloudinary
+            if (window.optimizeCloudinaryUrl) {
+                this.vinhos = this.vinhos.map(vinho => ({
+                    ...vinho,
+                    imagem: window.optimizeCloudinaryUrl(vinho.imagem, 'card'),
+                    imagemOriginal: vinho.imagem
+                }));
+            }
+            
             return this.vinhos;
         } catch (error) {
             console.error('Erro ao carregar vinhos:', error);
+            this.vinhos = [];
             return [];
         }
     }
@@ -77,23 +94,44 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
     const container = document.getElementById('vinhos-container');
     if (!container) return;
 
-    await vinhoManager.carregarVinhos();
-    let vinhos = vinhoManager.getVinhos(filtro);
+    // Loading state
+    container.innerHTML = `
+        <div class="loading-container" role="status" aria-live="polite">
+            <div class="loading-spinner"></div>
+            <p>Carregando vinhos...</p>
+        </div>
+    `;
 
-    // Aplicar busca se fornecida
-    if (busca) {
-        const buscaLower = busca.toLowerCase();
-        vinhos = vinhos.filter(v => 
-            v.nome.toLowerCase().includes(buscaLower) || 
-            v.uva.toLowerCase().includes(buscaLower)
-        );
-    }
+    try {
+        await vinhoManager.carregarVinhos();
+        let vinhos = vinhoManager.getVinhos(filtro);
 
-    if (vinhos.length === 0) {
+        // Aplicar busca se fornecida
+        if (busca) {
+            const buscaLower = busca.toLowerCase();
+            vinhos = vinhos.filter(v => 
+                v.nome.toLowerCase().includes(buscaLower) || 
+                v.uva.toLowerCase().includes(buscaLower)
+            );
+        }
+
+        if (vinhos.length === 0) {
+            container.innerHTML = `
+                <div class="mensagem-vazio" role="status">
+                    <i class="fas fa-wine-bottle" aria-hidden="true"></i>
+                    <p>Nenhum vinho encontrado nesta categoria.</p>
+                </div>
+            `;
+            return;
+        }
+    } catch (error) {
         container.innerHTML = `
-            <div class="mensagem-vazio">
-                <i class="fas fa-wine-bottle"></i>
-                <p>Nenhum vinho encontrado nesta categoria.</p>
+            <div class="mensagem-erro" role="alert">
+                <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                <p>Erro ao carregar vinhos. Tente novamente.</p>
+                <button class="btn btn-primary" onclick="renderizarVinhos('${filtro}', '${busca}')">
+                    <i class="fas fa-redo"></i> Tentar Novamente
+                </button>
             </div>
         `;
         return;

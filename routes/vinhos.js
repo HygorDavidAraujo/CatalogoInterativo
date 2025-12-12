@@ -7,16 +7,45 @@ const { upload, cloudinary } = require('../config/cloudinary');
 router.get('/', async (req, res) => {
     try {
         const mostrarInativos = req.query.admin === 'true';
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = (page - 1) * limit;
+        const orderBy = req.query.orderBy || 'created_at';
+        const order = req.query.order || 'DESC';
         
-        let query = 'SELECT * FROM vinhos';
+        // Validar orderBy para prevenir SQL injection
+        const validOrderBy = ['created_at', 'nome', 'preco', 'ano'];
+        const validOrder = ['ASC', 'DESC'];
+        
+        const safeOrderBy = validOrderBy.includes(orderBy) ? orderBy : 'created_at';
+        const safeOrder = validOrder.includes(order.toUpperCase()) ? order.toUpperCase() : 'DESC';
+        
+        // Query base
+        let whereClause = '';
         if (!mostrarInativos) {
-            // Mostra vinhos ativos ou NULL (NULL = ativo por padrão)
-            query += ' WHERE (ativo = TRUE OR ativo IS NULL)';
+            whereClause = ' WHERE (ativo = TRUE OR ativo IS NULL)';
         }
-        query += ' ORDER BY created_at DESC';
         
-        const [vinhos] = await pool.query(query);
-        res.json(vinhos);
+        // Contar total
+        const countQuery = `SELECT COUNT(*) as total FROM vinhos${whereClause}`;
+        const [countResult] = await pool.query(countQuery);
+        const total = countResult[0].total;
+        
+        // Buscar vinhos com paginação
+        const query = `SELECT * FROM vinhos${whereClause} ORDER BY ${safeOrderBy} ${safeOrder} LIMIT ? OFFSET ?`;
+        const [vinhos] = await pool.query(query, [limit, offset]);
+        
+        res.json({
+            data: vinhos,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+                hasNext: page < Math.ceil(total / limit),
+                hasPrev: page > 1
+            }
+        });
     } catch (error) {
         console.error('Erro ao buscar vinhos:', error);
         res.status(500).json({ error: 'Erro ao buscar vinhos' });
