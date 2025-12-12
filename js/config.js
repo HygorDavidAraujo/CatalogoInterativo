@@ -26,10 +26,10 @@ const CONFIG = {
     
     // Cloudinary
     CLOUDINARY_TRANSFORMS: {
-        thumbnail: 'c_fill,w_300,h_300,q_auto,f_auto',
-        card: 'c_fill,w_400,h_400,q_auto,f_auto',
+        thumbnail: 'c_fit,w_300,h_300,q_auto,f_auto',
+        card: 'c_fit,w_400,h_400,q_auto,f_auto',
         detail: 'c_fit,w_800,h_800,q_auto,f_auto',
-        admin: 'c_fill,w_80,h_80,q_auto,f_auto'
+        admin: 'c_fit,w_80,h_80,q_auto,f_auto'
     },
     
     // Timeouts
