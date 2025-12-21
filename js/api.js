@@ -293,6 +293,10 @@ function configurarNavegacao() {
             
             // Só prevenir default para âncoras internas (que começam com #)
             if (href && href.startsWith('#')) {
+                // Ignorar '#', pois não referencia um alvo válido
+                if (href === '#') {
+                    return;
+                }
                 e.preventDefault();
                 navLinks.forEach(l => l.classList.remove('active'));
                 link.classList.add('active');
@@ -435,8 +439,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Scroll suave para seções
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            // Ignorar href '#' (sem alvo)
+            if (!href || href === '#') {
+                return;
+            }
             e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
+            const target = document.querySelector(href);
             if (target) {
                 target.scrollIntoView({ behavior: 'smooth' });
             }
