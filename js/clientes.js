@@ -3,7 +3,11 @@ async function carregarClientes() {
     try {
         console.log('Carregando clientes...');
         
-        const response = await fetch(`${API_URL}/auth/usuarios`);
+        const response = await fetch(`${API_URL}/auth/usuarios`, {
+            headers: (typeof obterHeadersComAutenticacao === 'function') 
+                ? obterHeadersComAutenticacao() 
+                : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${window.authManager?.obterToken?.() || localStorage.getItem('jwt_token') || ''}` }
+        });
         
         if (!response.ok) {
             throw new Error('Erro ao carregar clientes');
@@ -85,7 +89,11 @@ function renderizarClientes(usuarios) {
 
 async function carregarQuantidadePedidos(clienteId) {
     try {
-        const response = await fetch(`${API_URL}/pedidos/cliente/${clienteId}`);
+        const response = await fetch(`${API_URL}/pedidos/cliente/${clienteId}`, {
+            headers: (typeof obterHeadersComAutenticacao === 'function') 
+                ? obterHeadersComAutenticacao() 
+                : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${window.authManager?.obterToken?.() || localStorage.getItem('jwt_token') || ''}` }
+        });
         if (response.ok) {
             const pedidos = await response.json();
             const badge = document.getElementById(`pedidos-${clienteId}`);
@@ -388,9 +396,9 @@ function configurarFormEditar() {
         try {
             const response = await fetch(`${API_URL}/auth/usuarios/${usuarioId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: (typeof obterHeadersComAutenticacao === 'function')
+                    ? obterHeadersComAutenticacao()
+                    : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${window.authManager?.obterToken?.() || localStorage.getItem('jwt_token') || ''}` },
                 body: JSON.stringify(dados)
             });
 
@@ -436,9 +444,9 @@ async function alterarStatusPedido(pedidoId, novoStatus) {
     try {
         const response = await fetch(`${API_URL}/pedidos/${pedidoId}/status`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: (typeof obterHeadersComAutenticacao === 'function')
+                ? obterHeadersComAutenticacao()
+                : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${window.authManager?.obterToken?.() || localStorage.getItem('jwt_token') || ''}` },
             body: JSON.stringify({ status: novoStatus })
         });
 
