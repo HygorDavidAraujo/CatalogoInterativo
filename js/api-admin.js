@@ -6,8 +6,19 @@ let imagemUpload = null;
 function getAuthHeaders() {
     const token = window.authManager?.obterToken?.() || localStorage.getItem('jwt_token');
     const headers = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
     return headers;
+}
+
+function exigirTokenOuAvisar() {
+    const token = window.authManager?.obterToken?.() || localStorage.getItem('jwt_token');
+    if (!token) {
+        alert('Sua sessão expirou. Faça login como administrador novamente para cadastrar vinhos.');
+        throw new Error('Token ausente - faça login novamente');
+    }
+    return token;
 }
 
 // ===== GERENCIAMENTO DE CONFIGURAÇÕES =====
@@ -260,6 +271,7 @@ function configurarFormulario() {
         }
 
         try {
+            exigirTokenOuAvisar();
             let response;
             if (vinhoEmEdicao) {
                 // Atualizar vinho existente
