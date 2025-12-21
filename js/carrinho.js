@@ -5,6 +5,13 @@ class CarrinhoManager {
         this.carregarCarrinho();
     }
 
+    getAuthHeaders() {
+        const token = window.authManager?.obterToken?.() || localStorage.getItem('jwt_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    }
+
     carregarCarrinho() {
         const carrinhoSalvo = localStorage.getItem('carrinho');
         if (carrinhoSalvo) {
@@ -151,14 +158,19 @@ class CarrinhoManager {
         }
 
         const usuario = authManager.usuarioLogado;
+        const token = window.authManager?.obterToken?.() || localStorage.getItem('jwt_token');
+        if (!token) {
+            this.fecharCarrinho();
+            alert('Sua sessão expirou. Faça login novamente para finalizar o pedido.');
+            abrirModalAuth();
+            return;
+        }
         
         try {
             // Salvar pedido no banco de dados
             const response = await fetch(`${API_URL}/pedidos`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify({
                     usuario_id: usuario.id,
                     total: this.getTotal(),
