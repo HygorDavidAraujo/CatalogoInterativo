@@ -1,11 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
 
 // GET - Listar pedidos de um cliente
-router.get('/cliente/:clienteId', async (req, res) => {
+router.get('/cliente/:clienteId', verificarAutenticacao, async (req, res) => {
     try {
         const { clienteId } = req.params;
+        
+        // Apenas o próprio usuário ou admin pode ver seus pedidos
+        if (req.usuario.id !== Number(clienteId) && !req.usuario.isAdmin) {
+            return res.status(403).json({ error: 'Acesso negado' });
+        }
+        
         console.log('🔍 Buscando pedidos do cliente:', clienteId);
         
         // Buscar pedidos
@@ -34,10 +41,15 @@ router.get('/cliente/:clienteId', async (req, res) => {
     }
 });
 
-// POST - Criar novo pedido
-router.post('/', async (req, res) => {
+// POST - Criar novo pedido (autenticado)
+router.post('/', verificarAutenticacao, async (req, res) => {
     try {
         const { usuario_id, total, itens, observacoes } = req.body;
+        
+        // Apenas o próprio usuário pode criar pedido para si
+        if (req.usuario.id !== Number(usuario_id)) {
+            return res.status(403).json({ error: 'Acesso negado: você só pode criar pedidos para sua conta' });
+        }
 
         // Inserir pedido
         const [result] = await pool.query(
@@ -61,8 +73,8 @@ router.post('/', async (req, res) => {
             message: 'Pedido criado com sucesso' 
         });
     } catch (error) {
-        console.error('Erro ao criar pedido:', error);
-        res.status(500).json({ error: 'Erro ao criar pedido' });
+        console.error('Erro ao criapenas admin)
+router.get('/', verificarAdminAuthatus(500).json({ error: 'Erro ao criar pedido' });
     }
 });
 
@@ -91,8 +103,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// PUT - Atualizar status do pedido
-router.put('/:id/status', async (req, res) => {
+// PUT - Atualizar status do pedido (apenas admin)
+router.put('/:id/status', verificarAdminAuth, async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;

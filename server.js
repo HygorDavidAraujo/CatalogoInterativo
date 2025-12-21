@@ -73,7 +73,7 @@ app.get('/api/add-ativo-column', async (req, res) => {
         const dbConfig = {
             host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
             user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
-            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '79461382',
+            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
             database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
             port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306')
         };
@@ -113,7 +113,7 @@ app.get('/api/debug-vinhos', async (req, res) => {
         const dbConfig = {
             host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
             user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
-            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '79461382',
+            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
             database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
             port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306')
         };
@@ -159,7 +159,7 @@ app.get('/api/fix-ativo', async (req, res) => {
         const dbConfig = {
             host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
             user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
-            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '79461382',
+            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
             database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
             port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306')
         };
@@ -214,7 +214,7 @@ app.get('/api/setup', async (req, res) => {
         const dbConfig = {
             host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
             user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
-            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '79461382',
+            password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
             database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
             port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306')
         };

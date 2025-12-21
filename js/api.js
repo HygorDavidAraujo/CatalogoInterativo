@@ -6,6 +6,23 @@ const API_URL = window.APP_CONFIG
         ? 'http://localhost:3000/api'
         : window.location.origin + '/api');
 
+// Helper para obter headers com autenticação JWT
+function obterHeadersComAutenticacao(headers = {}) {
+    const token = window.authManager ? window.authManager.obterToken() : 
+                  (sessionStorage.getItem('jwt_token') || localStorage.getItem('jwt_token'));
+    
+    const headersCompletos = {
+        'Content-Type': 'application/json',
+        ...headers
+    };
+    
+    if (token) {
+        headersCompletos['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headersCompletos;
+}
+
 // ===== GERENCIAMENTO DE DADOS COM API =====
 class VinhoManager {
     constructor() {
@@ -66,9 +83,7 @@ class VinhoManager {
         try {
             const response = await fetch(`${API_URL}/configuracoes`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: obterHeadersComAutenticacao(),
                 body: JSON.stringify(configuracoes)
             });
             if (!response.ok) throw new Error('Erro ao salvar configurações');
@@ -83,6 +98,12 @@ class VinhoManager {
     getVinhos(filtro = 'todos') {
         if (filtro === 'todos') {
             return this.vinhos;
+        }
+        // Se filtro é 'suco_integral', retorna ambos tinto e branco de suco integral
+        if (filtro === 'suco_integral') {
+            return this.vinhos.filter(vinho => 
+                vinho.tipo === 'suco_integral_tinto' || vinho.tipo === 'suco_integral_branco'
+            );
         }
         return this.vinhos.filter(vinho => vinho.tipo === filtro);
     }
@@ -370,6 +391,10 @@ async function atualizarInformacoesContato() {
 
 // ===== FUNÇÕES UTILITÁRIAS =====
 function capitalizar(str) {
+    // Tratamento especial para tipos de suco integral
+    if (str === 'suco_integral_tinto') return 'Suco Integral - Tinto';
+    if (str === 'suco_integral_branco') return 'Suco Integral - Branco';
+    
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 

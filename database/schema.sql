@@ -7,7 +7,7 @@ USE catalogo_vinhos;
 CREATE TABLE IF NOT EXISTS vinhos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
-    tipo ENUM('tinto', 'branco', 'rose', 'espumante') NOT NULL,
+    tipo ENUM('tinto', 'branco', 'rose', 'espumante', 'suco_integral_tinto', 'suco_integral_branco') NOT NULL,
     uva VARCHAR(255) NOT NULL,
     ano INT NOT NULL,
     guarda VARCHAR(100),

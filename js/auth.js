@@ -5,9 +5,13 @@ class AuthManager {
         this.carregarUsuarioSessao();
     }
 
-    salvarUsuarioSessao(usuario) {
+    salvarUsuarioSessao(usuario, token) {
         this.usuarioLogado = usuario;
         sessionStorage.setItem('usuario', JSON.stringify(usuario));
+        if (token) {
+            sessionStorage.setItem('jwt_token', token);
+            localStorage.setItem('jwt_token', token);
+        }
         this.atualizarInterface();
     }
 
@@ -17,6 +21,10 @@ class AuthManager {
             this.usuarioLogado = JSON.parse(usuarioSalvo);
             this.atualizarInterface();
         }
+    }
+
+    obterToken() {
+        return sessionStorage.getItem('jwt_token') || localStorage.getItem('jwt_token');
     }
 
     logout() {
@@ -101,7 +109,8 @@ class AuthManager {
             }
 
             console.log('Dados do usuário recebidos:', data.usuario);
-            this.salvarUsuarioSessao(data.usuario);
+            // Agora passa o token JWT se fornecido pela API
+            this.salvarUsuarioSessao(data.usuario, data.token);
             return { success: true };
         } catch (error) {
             console.error('Erro no login:', error);

@@ -217,6 +217,16 @@ body {
     color: var(--cor-escura);
 }
 
+.tipo-suco_integral_tinto {
+    background-color: #6B3B2C;
+    color: var(--cor-branca);
+}
+
+.tipo-suco_integral_branco {
+    background-color: #D4AF85;
+    color: var(--cor-escura);
+}
+
 .vinho-nome {
     font-size: 1.4rem;
     color: var(--cor-primaria);

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { upload, cloudinary } = require('../config/cloudinary');
+const { verificarAdminAuth } = require('../middleware/auth');
 
 // GET - Listar todos os vinhos (área pública mostra apenas ativos)
 router.get('/', async (req, res) => {
@@ -68,8 +69,8 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// POST - Criar novo vinho (com upload de imagem no Cloudinary)
-router.post('/', upload.single('imagem'), async (req, res) => {
+// POST - Criar novo vinho (admin only, com upload de imagem no Cloudinary)
+router.post('/', verificarAdminAuth, upload.single('imagem'), async (req, res) => {
     try {
         const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
 
@@ -102,8 +103,8 @@ router.post('/', upload.single('imagem'), async (req, res) => {
     }
 });
 
-// PUT - Atualizar vinho (com upload no Cloudinary)
-router.put('/:id', upload.single('imagem'), async (req, res) => {
+// PUT - Atualizar vinho (admin only, com upload no Cloudinary)
+router.put('/:id', verificarAdminAuth, upload.single('imagem'), async (req, res) => {
     try {
         const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
         const id = req.params.id;
@@ -167,8 +168,8 @@ router.put('/:id', upload.single('imagem'), async (req, res) => {
     }
 });
 
-// DELETE - Deletar vinho (e imagem do Cloudinary)
-router.delete('/:id', async (req, res) => {
+// DELETE - Deletar vinho (admin only, e imagem do Cloudinary)
+router.delete('/:id', verificarAdminAuth, async (req, res) => {
     try {
         const id = req.params.id;
 

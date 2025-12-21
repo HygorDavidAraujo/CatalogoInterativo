@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'davini-vinhos-secret-key-2024';
 
@@ -30,22 +31,12 @@ router.post('/login', async (req, res) => {
         const usuario = usuarios[0];
         
         // Verificar senha (suporta hash bcrypt e plaintext para transição)
-        let senhaCorreta = false;
-        
-        if (usuario.senha.startsWith('$2b$') || usuario.senha.startsWith('$2a$')) {
-            // Senha com hash bcrypt
-            senhaCorreta = await bcrypt.compare(senha, usuario.senha);
-        } else {
-            // Senha em plaintext (legado) - atualizar para hash
-            senhaCorreta = senha === usuario.senha;
-            
-            if (senhaCorreta) {
-                // Atualizar senha para hash
-                const senhaHash = await bcrypt.hash(senha, 10);
-                await pool.query('UPDATE usuarios SET senha = ? WHERE id = ?', [senhaHash, usuario.id]);
-                console.log(`Senha do usuário ${usuario.id} atualizada para hash`);
-            }
+        // Apenas senhas com hash são aceitas; força redefinição se legado
+        if (!usuario.senha.startsWith('$2')) {
+            return res.status(400).json({ error: 'Senha precisa ser redefinida. Contate um administrador para resetar seu acesso.' });
         }
+
+        const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
 
         if (!senhaCorreta) {
             return res.status(401).json({ error: 'Email ou senha incorretos' });
@@ -83,6 +74,43 @@ router.post('/login', async (req, res) => {
     } catch (error) {
         console.error('Erro ao fazer login:', error);
         res.status(500).json({ error: 'Erro ao fazer login' });
+    }
+});
+
+// GET - Dados do usuário autenticado
+router.get('/me', verificarAutenticacao, async (req, res) => {
+    try {
+        const [usuarios] = await pool.query(
+            `SELECT id, nome_completo, telefone, email, is_admin, cpf,
+                    logradouro, numero, complemento, bairro, cep, cidade, estado, created_at
+             FROM usuarios WHERE id = ?`,
+            [req.usuario.id]
+        );
+
+        if (usuarios.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+
+        const usuario = usuarios[0];
+        res.json({
+            id: usuario.id,
+            nome: usuario.nome_completo,
+            telefone: usuario.telefone,
+            email: usuario.email,
+            isAdmin: Boolean(usuario.is_admin),
+            cpf: usuario.cpf,
+            logradouro: usuario.logradouro,
+            numero: usuario.numero,
+            complemento: usuario.complemento,
+            bairro: usuario.bairro,
+            cep: usuario.cep,
+            cidade: usuario.cidade,
+            estado: usuario.estado,
+            created_at: usuario.created_at
+        });
+    } catch (error) {
+        console.error('Erro ao buscar usuário autenticado:', error);
+        res.status(500).json({ error: 'Erro ao buscar usuário' });
     }
 });
 
@@ -190,7 +218,7 @@ router.get('/verificar', async (req, res) => {
 });
 
 // GET - Listar todos os usuários (apenas para admin)
-router.get('/usuarios', async (req, res) => {
+router.get('/usuarios', verificarAdminAuth, async (req, res) => {
     try {
         const [usuarios] = await pool.query(
             `SELECT id, nome_completo, email, telefone, is_admin, created_at, 
@@ -206,7 +234,7 @@ router.get('/usuarios', async (req, res) => {
 });
 
 // PUT - Atualizar perfil do usuário
-router.put('/perfil', async (req, res) => {
+router.put('/perfil', verificarAutenticacao, async (req, res) => {
     try {
         const { 
             usuario_id, 
@@ -224,6 +252,11 @@ router.put('/perfil', async (req, res) => {
 
         if (!usuario_id) {
             return res.status(400).json({ error: 'ID do usuário é obrigatório' });
+        }
+
+        // Apenas o próprio usuário ou um admin pode alterar
+        if (req.usuario.id !== Number(usuario_id) && !req.usuario.isAdmin) {
+            return res.status(403).json({ error: 'Acesso negado' });
         }
 
         // Montar query de atualização dinamicamente
@@ -289,7 +322,7 @@ router.put('/perfil', async (req, res) => {
 });
 
 // PUT - Atualizar usuário completo (apenas admin)
-router.put('/usuarios/:id', async (req, res) => {
+router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
     try {
         const usuarioId = req.params.id;
         const { 

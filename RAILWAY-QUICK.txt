@@ -1,0 +1,67 @@
+# ⚡ ATUALIZAR BANCO NO RAILWAY - QUICK GUIDE
+
+## 🎯 O QUE FAZER
+
+Executar este SQL no banco do Railway:
+
+```sql
+ALTER TABLE vinhos 
+MODIFY COLUMN tipo ENUM(
+    'tinto',
+    'branco', 
+    'rose',
+    'espumante',
+    'suco_integral_tinto',
+    'suco_integral_branco'
+) NOT NULL;
+```
+
+---
+
+## 🚀 MÉTODO MAIS RÁPIDO (Railway Web)
+
+```
+1. Acessar https://railway.app
+2. Login → Seu Projeto → Serviço MySQL
+3. Clicar em "Query" ou "Data"
+4. Copiar e colar o SQL acima
+5. Clicar "Run" ou "Execute"
+6. ✅ PRONTO!
+```
+
+---
+
+## 🔍 VALIDAR QUE FUNCIONOU
+
+```sql
+-- Deve mostrar os 6 tipos incluindo suco_integral
+SELECT COLUMN_TYPE 
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_NAME='vinhos' AND COLUMN_NAME='tipo';
+```
+
+**Resultado esperado:**
+```
+enum('tinto','branco','rose','espumante','suco_integral_tinto','suco_integral_branco')
+```
+
+---
+
+## 📋 ARQUIVOS CRIADOS
+
+1. **database/migration-suco-integral.sql** - Script SQL completo
+2. **RAILWAY-MIGRATION-GUIDE.md** - Guia detalhado (4 métodos)
+3. **Este arquivo** - Quick reference
+
+---
+
+## ✅ DEPOIS DA MIGRAÇÃO
+
+1. Reiniciar app no Railway (se necessário)
+2. Testar cadastro de "Suco Integral" no admin
+3. Verificar filtro "Suco Integral" no site
+
+---
+
+**Tempo:** ~2 minutos
+**Risco:** Baixo (só adiciona tipos novos)

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const { verificarAdminAuth } = require('../middleware/auth');
 
 // GET - Buscar todas as configurações
 router.get('/', async (req, res) => {
@@ -47,8 +48,8 @@ router.get('/:chave', async (req, res) => {
     }
 });
 
-// POST/PUT - Atualizar ou criar configuração
-router.post('/', async (req, res) => {
+// POST/PUT - Atualizar ou criar configuração (apenas admin)
+router.post('/', verificarAdminAuth, async (req, res) => {
     try {
         console.log('===== RECEBENDO CONFIGURAÇÕES =====');
         console.log('Body recebido:', req.body);
@@ -117,8 +118,8 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT - Atualizar configuração específica
-router.put('/:chave', async (req, res) => {
+// PUT - Atualizar configuração específica (apenas admin)
+router.put('/:chave', verificarAdminAuth, async (req, res) => {
     try {
         const { valor } = req.body;
         const { chave } = req.params;

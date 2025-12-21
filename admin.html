@@ -100,10 +100,16 @@
                                 <label for="tipo">Tipo *</label>
                                 <select id="tipo" name="tipo" required>
                                     <option value="">Selecione...</option>
-                                    <option value="tinto">Tinto</option>
-                                    <option value="branco">Branco</option>
-                                    <option value="rose">Rosé</option>
-                                    <option value="espumante">Espumante</option>
+                                    <optgroup label="Vinhos">
+                                        <option value="tinto">Tinto</option>
+                                        <option value="branco">Branco</option>
+                                        <option value="rose">Rosé</option>
+                                        <option value="espumante">Espumante</option>
+                                    </optgroup>
+                                    <optgroup label="Suco Integral">
+                                        <option value="suco_integral_tinto">Suco Integral - Tinto</option>
+                                        <option value="suco_integral_branco">Suco Integral - Branco</option>
+                                    </optgroup>
                                 </select>
                             </div>
 
@@ -191,6 +197,7 @@
                                 <option value="branco">Brancos</option>
                                 <option value="rose">Rosés</option>
                                 <option value="espumante">Espumantes</option>
+                                <option value="suco_integral">Suco Integral</option>
                             </select>
                         </div>
                     </div>

@@ -84,7 +84,14 @@ async function renderizarListaAdmin(filtros = {}) {
     }
 
     if (filtros.tipo && filtros.tipo !== 'todos') {
-        vinhos = vinhos.filter(v => v.tipo === filtros.tipo);
+        if (filtros.tipo === 'suco_integral') {
+            // Filtrar ambos os tipos de suco integral
+            vinhos = vinhos.filter(v => 
+                v.tipo === 'suco_integral_tinto' || v.tipo === 'suco_integral_branco'
+            );
+        } else {
+            vinhos = vinhos.filter(v => v.tipo === filtros.tipo);
+        }
     }
 
     if (vinhos.length === 0) {
@@ -484,6 +491,10 @@ function configurarModais() {
 
 // ===== FUNÇÕES UTILITÁRIAS =====
 function capitalizar(str) {
+    // Tratamento especial para tipos de suco integral
+    if (str === 'suco_integral_tinto') return 'Suco Integral - Tinto';
+    if (str === 'suco_integral_branco') return 'Suco Integral - Branco';
+    
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
