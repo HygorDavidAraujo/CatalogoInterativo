@@ -178,10 +178,14 @@ function mostrarFormCadastro() {
 }
 
 function limparFormsAuth() {
-    document.getElementById('form-login').reset();
-    document.getElementById('form-cadastro').reset();
-    document.getElementById('login-erro').style.display = 'none';
-    document.getElementById('cadastro-erro').style.display = 'none';
+    const formLogin = document.getElementById('form-login');
+    const formCadastro = document.getElementById('form-cadastro');
+    const loginErro = document.getElementById('login-erro');
+    const cadastroErro = document.getElementById('cadastro-erro');
+    if (formLogin) formLogin.reset();
+    if (formCadastro) formCadastro.reset();
+    if (loginErro) loginErro.style.display = 'none';
+    if (cadastroErro) cadastroErro.style.display = 'none';
 }
 
 function mostrarErro(elementId, mensagem) {
@@ -206,6 +210,7 @@ function formatarTelefone(input) {
 // ===== FORMULÁRIO DE LOGIN =====
 function configurarFormLogin() {
     const form = document.getElementById('form-login');
+    if (!form) return; // página sem modal de login
     
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -228,11 +233,14 @@ function configurarFormLogin() {
 function configurarFormCadastro() {
     const form = document.getElementById('form-cadastro');
     const telefoneInput = document.getElementById('cadastro-telefone');
+    if (!form) return; // página sem modal de cadastro
 
     // Formatar telefone enquanto digita
-    telefoneInput.addEventListener('input', function() {
-        formatarTelefone(this);
-    });
+    if (telefoneInput) {
+        telefoneInput.addEventListener('input', function() {
+            formatarTelefone(this);
+        });
+    }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -323,7 +331,7 @@ function configurarAuth() {
         });
     }
 
-    // Configurar formulários
+    // Configurar formulários quando existirem na página
     configurarFormLogin();
     configurarFormCadastro();
 }
