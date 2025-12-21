@@ -73,13 +73,13 @@ router.post('/', verificarAutenticacao, async (req, res) => {
             message: 'Pedido criado com sucesso' 
         });
     } catch (error) {
-        console.error('Erro ao criapenas admin)
-router.get('/', verificarAdminAuthatus(500).json({ error: 'Erro ao criar pedido' });
+        console.error('Erro ao criar pedido:', error);
+        res.status(500).json({ error: 'Erro ao criar pedido' });
     }
 });
 
 // GET - Listar todos os pedidos (admin)
-router.get('/', async (req, res) => {
+router.get('/', verificarAdminAuth, async (req, res) => {
     try {
         const [pedidos] = await pool.query(`
             SELECT p.*, u.nome_completo, u.email, u.telefone 
