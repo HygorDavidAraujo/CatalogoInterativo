@@ -50,8 +50,10 @@ class AuthManager {
         const menuAdmin = document.getElementById('menu-admin');
         const usuarioNome = document.getElementById('usuario-nome');
 
-        if (!menuLogin || !menuUsuario || !menuAdmin) {
-            console.error('Elementos do menu não encontrados');
+        // Alguns layouts (admin.html, clientes.html) não possuem esses elementos
+        // Apenas ignore silenciosamente nesses contextos para evitar ruído no console
+        if (!menuLogin || !menuUsuario || !menuAdmin || !usuarioNome) {
+            console.debug('Interface simplificada: elementos de menu não presentes nesta página.');
             return;
         }
 
