@@ -30,13 +30,20 @@ router.post('/login', async (req, res) => {
 
         const usuario = usuarios[0];
         
-        // Verificar senha (suporta hash bcrypt e plaintext para transição)
-        // Apenas senhas com hash são aceitas; força redefinição se legado
-        if (!usuario.senha.startsWith('$2')) {
-            return res.status(400).json({ error: 'Senha precisa ser redefinida. Contate um administrador para resetar seu acesso.' });
+        // Verificar senha (hash bcrypt preferido; opcionalmente aceita plaintext durante migração)
+        let senhaCorreta = false;
+        if (usuario.senha && usuario.senha.startsWith('$2')) {
+            senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+        } else {
+            // Fallback controlado por variável de ambiente
+            const allowPlain = String(process.env.ALLOW_PLAINTEXT_PASSWORDS || '').toLowerCase() === 'true';
+            if (allowPlain && senha === usuario.senha) {
+                console.warn('⚠️ Login usando senha plaintext habilitado temporariamente. Atualize para bcrypt o quanto antes.');
+                senhaCorreta = true;
+            } else {
+                return res.status(400).json({ error: 'Senha precisa ser redefinida. Contate um administrador para resetar seu acesso.' });
+            }
         }
-
-        const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
 
         if (!senhaCorreta) {
             return res.status(401).json({ error: 'Email ou senha incorretos' });
