@@ -2,6 +2,14 @@
 let vinhoEmEdicao = null;
 let imagemUpload = null;
 
+// Recupera cabeçalhos com JWT do authManager
+function getAuthHeaders() {
+    const token = window.authManager?.obterToken?.() || localStorage.getItem('jwt_token');
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+}
+
 // ===== GERENCIAMENTO DE CONFIGURAÇÕES =====
 async function carregarConfiguracoes() {
     try {
@@ -258,6 +266,7 @@ function configurarFormulario() {
                 console.log('Atualizando vinho com ID:', vinhoEmEdicao);
                 response = await fetch(`${API_URL}/vinhos/${vinhoEmEdicao}`, {
                     method: 'PUT',
+                    headers: getAuthHeaders(),
                     body: formData
                 });
                 console.log('Resposta da atualização:', response.status);
@@ -267,6 +276,7 @@ function configurarFormulario() {
                 console.log('Adicionando novo vinho');
                 response = await fetch(`${API_URL}/vinhos`, {
                     method: 'POST',
+                    headers: getAuthHeaders(),
                     body: formData
                 });
                 console.log('Resposta do cadastro:', response.status);
@@ -396,6 +406,7 @@ async function toggleVisibilidade(id, ativo) {
 
         const response = await fetch(`${API_URL}/vinhos/${id}`, {
             method: 'PUT',
+            headers: getAuthHeaders(),
             body: formData
         });
 
@@ -421,7 +432,8 @@ async function excluirVinho() {
     if (vinhoParaExcluir) {
         try {
             const response = await fetch(`${API_URL}/vinhos/${vinhoParaExcluir}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
