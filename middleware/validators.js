@@ -135,6 +135,14 @@ const validateId = [
     handleValidationErrors
 ];
 
+// Validação para clienteId em parâmetros
+const validateClienteId = [
+    param('clienteId')
+        .isInt({ min: 1 }).withMessage('ID do cliente inválido')
+        .toInt(),
+    handleValidationErrors
+];
+
 module.exports = {
     validateLogin,
     validateCadastro,
@@ -143,5 +151,6 @@ module.exports = {
     validatePedidoStatus,
     validatePerfil,
     validateId,
+    validateClienteId,
     handleValidationErrors
 };

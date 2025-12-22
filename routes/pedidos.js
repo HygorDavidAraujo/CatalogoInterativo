@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
-const { validatePedido, validatePedidoStatus, validateId } = require('../middleware/validators');
+const { validatePedido, validatePedidoStatus, validateId, validateClienteId } = require('../middleware/validators');
 
 // GET - Listar pedidos de um cliente
-router.get('/cliente/:clienteId', verificarAutenticacao, validateId, async (req, res) => {
+router.get('/cliente/:clienteId', verificarAutenticacao, validateClienteId, async (req, res) => {
     try {
         const { clienteId } = req.params;
         
