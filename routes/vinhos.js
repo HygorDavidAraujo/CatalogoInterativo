@@ -3,6 +3,8 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { upload, cloudinary } = require('../config/cloudinary');
 const { verificarAdminAuth } = require('../middleware/auth');
+const { uploadLimiter } = require('../middleware/rateLimiter');
+const { validateVinho, validateId } = require('../middleware/validators');
 
 // GET - Listar todos os vinhos (área pública mostra apenas ativos)
 router.get('/', async (req, res) => {
@@ -70,7 +72,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST - Criar novo vinho (admin only, com upload de imagem no Cloudinary)
-router.post('/', verificarAdminAuth, upload.single('imagem'), async (req, res) => {
+router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), validateVinho, async (req, res) => {
     try {
         const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
 
@@ -104,7 +106,7 @@ router.post('/', verificarAdminAuth, upload.single('imagem'), async (req, res) =
 });
 
 // PUT - Atualizar vinho (admin only, com upload no Cloudinary)
-router.put('/:id', verificarAdminAuth, upload.single('imagem'), async (req, res) => {
+router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single('imagem'), validateVinho, async (req, res) => {
     try {
         const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
         const id = req.params.id;
@@ -169,7 +171,7 @@ router.put('/:id', verificarAdminAuth, upload.single('imagem'), async (req, res)
 });
 
 // DELETE - Deletar vinho (admin only, e imagem do Cloudinary)
-router.delete('/:id', verificarAdminAuth, async (req, res) => {
+router.delete('/:id', verificarAdminAuth, validateId, async (req, res) => {
     try {
         const id = req.params.id;
 

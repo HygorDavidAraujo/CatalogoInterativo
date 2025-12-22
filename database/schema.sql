@@ -28,6 +28,20 @@ CREATE TABLE IF NOT EXISTS configuracoes (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabela de Itens do Pedido
+CREATE TABLE IF NOT EXISTS pedidos_itens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pedido_id INT NOT NULL,
+    vinho_id INT NOT NULL,
+    vinho_nome VARCHAR(255) NOT NULL,
+    quantidade INT NOT NULL,
+    preco_unitario DECIMAL(10, 2) NOT NULL,
+    subtotal DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
+    INDEX idx_pedido_id (pedido_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Inserir dados iniciais de vinhos
 INSERT INTO vinhos (nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagem) VALUES
 ('Château Margaux', 'tinto', 'Cabernet Sauvignon', 2015, '10 a 20 anos', 'Carnes vermelhas, cordeiro, queijos maturados', 'Um vinho elegante e complexo, com notas de frutas negras, especiarias e taninos sedosos.', 450.00, 'https://images.unsplash.com/photo-1547595628-c61a29f496f0?w=500'),

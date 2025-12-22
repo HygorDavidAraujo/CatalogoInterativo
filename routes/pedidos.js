@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
+const { validatePedido, validatePedidoStatus, validateId } = require('../middleware/validators');
 
 // GET - Listar pedidos de um cliente
-router.get('/cliente/:clienteId', verificarAutenticacao, async (req, res) => {
+router.get('/cliente/:clienteId', verificarAutenticacao, validateId, async (req, res) => {
     try {
         const { clienteId } = req.params;
         
@@ -42,7 +43,7 @@ router.get('/cliente/:clienteId', verificarAutenticacao, async (req, res) => {
 });
 
 // POST - Criar novo pedido (autenticado)
-router.post('/', verificarAutenticacao, async (req, res) => {
+router.post('/', verificarAutenticacao, validatePedido, async (req, res) => {
     try {
         const { usuario_id, total, itens, observacoes } = req.body;
         
@@ -104,7 +105,7 @@ router.get('/', verificarAdminAuth, async (req, res) => {
 });
 
 // PUT - Atualizar status do pedido (apenas admin)
-router.put('/:id/status', verificarAdminAuth, async (req, res) => {
+router.put('/:id/status', verificarAdminAuth, validateId, validatePedidoStatus, async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;

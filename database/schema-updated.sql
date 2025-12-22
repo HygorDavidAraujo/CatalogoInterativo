@@ -72,7 +72,6 @@ CREATE TABLE IF NOT EXISTS pedidos (
     usuario_id INT NOT NULL,
     total DECIMAL(10, 2) NOT NULL,
     status ENUM('pendente', 'processando', 'enviado', 'entregue', 'cancelado') DEFAULT 'pendente',
-    itens JSON,
     observacoes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -80,6 +79,21 @@ CREATE TABLE IF NOT EXISTS pedidos (
     INDEX idx_usuario_id (usuario_id),
     INDEX idx_status (status),
     INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela de Itens do Pedido
+CREATE TABLE IF NOT EXISTS pedidos_itens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pedido_id INT NOT NULL,
+    vinho_id INT NOT NULL,
+    vinho_nome VARCHAR(255) NOT NULL,
+    quantidade INT NOT NULL,
+    preco_unitario DECIMAL(10, 2) NOT NULL,
+    subtotal DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
+    INDEX idx_pedido_id (pedido_id),
+    INDEX idx_vinho_id (vinho_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ===== DADOS INICIAIS =====
