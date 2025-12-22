@@ -163,7 +163,11 @@ async function abrirModalCliente(clienteId) {
         const cliente = todosClientes.find(c => c.id === clienteId);
         
         // Buscar histórico de pedidos
-        const response = await fetch(`${API_URL}/pedidos/cliente/${clienteId}`);
+        const response = await fetch(`${API_URL}/pedidos/cliente/${clienteId}`, {
+            headers: (typeof obterHeadersComAutenticacao === 'function')
+                ? obterHeadersComAutenticacao()
+                : { 'Content-Type': 'application/json' }
+        });
         const pedidos = response.ok ? await response.json() : [];
 
         console.log('Pedidos do cliente:', pedidos);
