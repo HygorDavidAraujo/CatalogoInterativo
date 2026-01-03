@@ -27,9 +27,10 @@ body {
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 0 20px;
+    width: 100%;
 }
 
 /* ===== HEADER ===== */
@@ -149,9 +150,10 @@ body {
 
 .vinhos-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 2rem;
     margin-top: 2rem;
+    width: 100%;
 }
 
 /* ===== CARD DO VINHO ===== */
@@ -164,6 +166,9 @@ body {
     cursor: pointer;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
 }
 
 .vinho-card:hover {
@@ -655,6 +660,48 @@ body {
 }
 
 /* ===== RESPONSIVIDADE ===== */
+/* Telas muito grandes (1920px+) - mantém 4 colunas com espaço controlado */
+@media (min-width: 1920px) {
+    .container {
+        max-width: 1600px;
+    }
+    
+    .vinhos-grid {
+        gap: 2.5rem;
+    }
+}
+
+/* Telas médias/grandes (1200px - 1919px) - 4 colunas padrão */
+@media (min-width: 1200px) and (max-width: 1919px) {
+    .vinhos-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Tablets landscape e desktops pequenos (900px - 1199px) - 3 colunas */
+@media (min-width: 900px) and (max-width: 1199px) {
+    .vinhos-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+}
+
+/* Tablets portrait (600px - 899px) - 2 colunas */
+@media (min-width: 600px) and (max-width: 899px) {
+    .vinhos-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .vinho-imagem {
+        height: 250px;
+    }
+    
+    .container {
+        padding: 0 15px;
+    }
+}
+
 @media (max-width: 768px) {
     .header .container {
         flex-direction: column;
@@ -676,7 +723,7 @@ body {
     }
 
     .vinhos-grid {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-template-columns: repeat(3, 1fr);
         gap: 1.5rem;
     }
 
@@ -692,6 +739,14 @@ body {
 }
 
 @media (max-width: 480px) {
+    .container {
+        padding: 0 10px;
+    }
+    
+    .catalogo {
+        padding: 3rem 0;
+    }
+    
     .logo h1 {
         font-size: 1.4rem;
     }
@@ -710,7 +765,40 @@ body {
     }
 
     .vinhos-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    
+    .vinho-imagem {
+        height: 200px;
+        padding: 0.5rem;
+    }
+    
+    .vinho-info {
+        padding: 1rem;
+    }
+    
+    .vinho-nome {
+        font-size: 1rem;
+        line-height: 1.3;
+        margin-bottom: 0.4rem;
+    }
+    
+    .vinho-uva,
+    .vinho-ano,
+    .vinho-pais {
+        font-size: 0.8rem;
+        margin-bottom: 0.3rem;
+    }
+    
+    .vinho-preco {
+        font-size: 1.4rem;
+        margin-bottom: 0.6rem;
+    }
+    
+    .btn-adicionar-carrinho {
+        padding: 0.6rem;
+        font-size: 0.85rem;
     }
 }
 
