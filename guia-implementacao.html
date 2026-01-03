@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guia de Implementacao e Atualizacao - Davini Vinhos Finos</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body { background: #f7f4f2; color: #2c1810; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; padding: 24px; }
+    h1, h2, h3 { color: #6b1c40; margin-top: 24px; }
+    h1 { margin-bottom: 8px; }
+    .card { background: #fff; border: 1px solid #e5d7d0; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.04); }
+    .tag { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-right: 8px; }
+    .critico { background: #ffe8e6; color: #b30000; }
+    .alto { background: #fff2cc; color: #8a5800; }
+    .medio { background: #e8f4ff; color: #0a4ea3; }
+    .baixo { background: #e8f7ee; color: #1c6b3e; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    ul { padding-left: 18px; }
+    .step { font-weight: 600; color: #2c1810; }
+    .mono { font-family: Consolas, 'Courier New', monospace; }
+    .phase { border-left: 4px solid #6b1c40; padding-left: 12px; margin-bottom: 12px; }
+    .small { color: #555; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Guia de Implementacao e Atualizacao</h1>
+  <p class="small">Catalogo Interativo - Davini Vinhos Finos</p>
+
+  <div class="card">
+    <h2>Escopo</h2>
+    <p>Guia pratico para evoluir o sistema com foco em seguranca, performance, arquitetura, UX e banco de dados, sem perder dados existentes.</p>
+  </div>
+
+  <div class="card">
+    <h2>Pre-requisitos (executar antes de cada fase)</h2>
+    <ul>
+      <li>Confirmar variaveis de ambiente no Railway: MYSQL*, DB_*, JWT_SECRET.</li>
+      <li>Gerar backup do banco: <span class="mono">mysqldump --no-tablespaces -h $HOST -u $USER -p$PASS $DB &gt; backup.sql</span>.</li>
+      <li>Cria branch de entrega e rodar smoke tests (login, listar vinhos, cadastro vinho).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Fase 1 - Seguranca (prioridade)</h2>
+    <div class="phase">
+      <span class="tag critico">Critico</span> JWT secret obrigatorio: remover fallback hardcoded, validar presenca de <span class="mono">JWT_SECRET</span> no boot.
+    </div>
+    <div class="phase">
+      <span class="tag critico">Critico</span> Remover rotas de debug de producao (server.js). Se precisar, isolar em feature flag interna.
+    </div>
+    <div class="phase">
+      <span class="tag alto">Alto</span> Adicionar <span class="mono">rel="noopener noreferrer"</span> em todos os links <span class="mono">target="_blank"</span>.
+    </div>
+    <div class="phase">
+      <span class="tag alto">Alto</span> Validacao de envs na subida: interromper start se faltar DB ou JWT.
+    </div>
+    <div class="phase">
+      <span class="tag medio">Medio</span> Rate limit global + rotas sensiveis (login, upload).
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Fase 2 - Performance e Observabilidade</h2>
+    <div class="phase">
+      <span class="tag alto">Alto</span> Cache de catalogo (Redis ou in-memory com TTL 10 min).
+    </div>
+    <div class="phase">
+      <span class="tag alto">Alto</span> Compressao HTTP (<span class="mono">compression</span>). 
+    </div>
+    <div class="phase">
+      <span class="tag medio">Medio</span> Logging estruturado (Winston ou Pino) com correlaction id por request.
+    </div>
+    <div class="phase">
+      <span class="tag medio">Medio</span> Healthcheck /ready e /health para Railway.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Fase 3 - Arquitetura e Qualidade</h2>
+    <div class="phase">
+      <span class="tag alto">Alto</span> Service layer para vinhos, auth, pedidos (rotas finas + testes unitarios).
+    </div>
+    <div class="phase">
+      <span class="tag alto">Alto</span> Migrations automatizadas (Knex/Prisma) + pipeline CI para aplicar.
+    </div>
+    <div class="phase">
+      <span class="tag medio">Medio</span> Middleware de erro global com mascaramento em producao.
+    </div>
+    <div class="phase">
+      <span class="tag medio">Medio</span> Testes: Jest + Supertest (auth, CRUD vinhos, pedidos).
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Fase 4 - UX e Frontend</h2>
+    <div class="phase">
+      <span class="tag medio">Medio</span> Debounce na busca (300ms) e loading states (skeleton).
+    </div>
+    <div class="phase">
+      <span class="tag medio">Medio</span> Paginacao real / scroll infinito usando a paginacao do backend.
+    </div>
+    <div class="phase">
+      <span class="tag baixo">Baixo</span> PWA basico (manifest + service worker cache de assets).
+    </div>
+    <div class="phase">
+      <span class="tag baixo">Baixo</span> Lazy loading de imagens (<span class="mono">loading="lazy"</span>) e toggle dark mode.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Fase 5 - Banco de Dados</h2>
+    <div class="phase">
+      <span class="tag alto">Alto</span> Novos campos: pais_origem, pais_codigo (ISO2), bandeira_url em vinhos (sem perda de dados).
+    </div>
+    <div class="phase">
+      <span class="tag medio">Medio</span> Indices: <span class="mono">vinhos(tipo, ativo)</span>, <span class="mono">pedidos(usuario_id)</span>, <span class="mono">usuarios(email)</span>.
+    </div>
+    <div class="phase">
+      <span class="tag baixo">Baixo</span> Soft delete (deleted_at) e auditoria (created_by/updated_by) para admins.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Passo a Passo Seguro (Railway)</h2>
+    <ol>
+      <li class="step">Aplicar migration em staging: executar script SQL de pais_origem; validar schema.</li>
+      <li class="step">Deploy app em staging; smoke test CRUD vinhos e login.</li>
+      <li class="step">Backfill opcional de pais/bandeira nos vinhos existentes via UPDATE manual.</li>
+      <li class="step">Deploy em producao; rodar smoke test (listar vinhos, modal, admin toggle, carrinho).</li>
+      <li class="step">Monitorar logs/erros 24h (Winston + Railway logs).</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Checklist de Validacao</h2>
+    <div class="grid">
+      <div>
+        <h3>Seguranca</h3>
+        <ul>
+          <li>JWT_SECRET presente e diferente do fallback.</li>
+          <li>Rotas de debug desligadas em producao.</li>
+          <li>Rate limit ativo (login/upload).</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Catalogo</h3>
+        <ul>
+          <li>Listagem paginada ou com cache.</li>
+          <li>Modal exibe pais e bandeira.</li>
+          <li>Filtro/busca inclui pais.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Admin</h3>
+        <ul>
+          <li>CRUD salva pais, codigo ISO e bandeira.</li>
+          <li>Toggle visibilidade preserva pais/bandeira.</li>
+          <li>Upload/URL de imagem continua ok.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Banco</h3>
+        <ul>
+          <li>Colunas novas presentes e com valor nulo nos registros antigos.</li>
+          <li>Indices criados conforme plano.</li>
+          <li>Backup salvo antes do deploy.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Proximo passo imediato</h2>
+    <ul>
+      <li>Aplicar migration de pais_origem/bandeira.</li>
+      <li>Atualizar API, validadores e frontend (admin + catalogo) para usar os novos campos.</li>
+      <li>Testar fim-a-fim em staging no Railway.</li>
+    </ul>
+  </div>
+</body>
+</html>

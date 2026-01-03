@@ -54,6 +54,17 @@ const validateVinho = [
     body('uva')
         .trim()
         .isLength({ min: 2, max: 255 }).withMessage('Tipo de uva deve ter entre 2 e 255 caracteres'),
+    body('pais_origem')
+        .optional({ nullable: true })
+        .trim()
+        .isLength({ min: 2, max: 100 }).withMessage('País deve ter entre 2 e 100 caracteres'),
+    body('pais_codigo')
+        .optional({ nullable: true })
+        .trim()
+        .isLength({ min: 2, max: 2 }).withMessage('Código do país deve ter 2 letras (ISO 3166-1 alfa-2)'),
+    body('bandeira_url')
+        .optional({ nullable: true })
+        .isURL().withMessage('URL da bandeira inválida'),
     body('ano')
         .isInt({ min: 1900, max: new Date().getFullYear() + 1 })
         .withMessage('Ano inválido'),

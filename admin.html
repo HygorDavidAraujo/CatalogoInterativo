@@ -121,6 +121,35 @@
 
                         <div class="form-row">
                             <div class="form-group">
+                                <label for="pais-origem">País de Origem</label>
+                                <select id="pais-origem" name="pais_origem" data-flag-base="https://flagcdn.com/w40/">
+                                    <option value="" data-code="" data-flag="">Selecione o país</option>
+                                    <option value="Brasil" data-code="BR" data-flag="https://flagcdn.com/w80/br.png">Brasil</option>
+                                    <option value="Argentina" data-code="AR" data-flag="https://flagcdn.com/w80/ar.png">Argentina</option>
+                                    <option value="Chile" data-code="CL" data-flag="https://flagcdn.com/w80/cl.png">Chile</option>
+                                    <option value="Uruguai" data-code="UY" data-flag="https://flagcdn.com/w80/uy.png">Uruguai</option>
+                                    <option value="Estados Unidos" data-code="US" data-flag="https://flagcdn.com/w80/us.png">Estados Unidos</option>
+                                    <option value="Portugal" data-code="PT" data-flag="https://flagcdn.com/w80/pt.png">Portugal</option>
+                                    <option value="Espanha" data-code="ES" data-flag="https://flagcdn.com/w80/es.png">Espanha</option>
+                                    <option value="França" data-code="FR" data-flag="https://flagcdn.com/w80/fr.png">França</option>
+                                    <option value="Itália" data-code="IT" data-flag="https://flagcdn.com/w80/it.png">Itália</option>
+                                    <option value="Outro" data-code="" data-flag="">Outro (preencher manualmente)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="pais-codigo">Código ISO do País</label>
+                                <input type="text" id="pais-codigo" name="pais_codigo" placeholder="BR" maxlength="2" style="text-transform: uppercase;" readonly>
+                                <input type="hidden" id="bandeira-url" name="bandeira_url">
+                                <div class="flag-preview" id="flag-preview" style="display: none;">
+                                    <img id="flag-img" alt="Bandeira" width="32" height="20">
+                                    <span id="flag-label"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
                                 <label for="ano">Ano de Safra *</label>
                                 <input type="number" id="ano" name="ano" required min="1900" max="2025" placeholder="Ex: 2020">
                             </div>

@@ -21,6 +21,53 @@ function exigirTokenOuAvisar() {
     return token;
 }
 
+// ===== PAÍS E BANDEIRA =====
+function atualizarPreviewBandeira(paisNome, paisCodigo, bandeiraUrl) {
+    const preview = document.getElementById('flag-preview');
+    const img = document.getElementById('flag-img');
+    const label = document.getElementById('flag-label');
+    const inputCodigo = document.getElementById('pais-codigo');
+    const inputBandeira = document.getElementById('bandeira-url');
+
+    const codigo = (paisCodigo || '').toUpperCase();
+    const url = bandeiraUrl || (codigo ? `https://flagcdn.com/w80/${codigo.toLowerCase()}.png` : '');
+
+    inputCodigo.value = codigo;
+    inputBandeira.value = url;
+
+    if (preview && img && label && url) {
+        img.src = url;
+        img.alt = `Bandeira de ${paisNome || codigo}`;
+        label.textContent = paisNome || codigo;
+        preview.style.display = 'inline-flex';
+    } else if (preview) {
+        preview.style.display = 'none';
+    }
+}
+
+function configurarSelecaoPais() {
+    const selectPais = document.getElementById('pais-origem');
+    const inputCodigo = document.getElementById('pais-codigo');
+    if (!selectPais) return;
+
+    selectPais.addEventListener('change', () => {
+        const option = selectPais.options[selectPais.selectedIndex];
+        const paisNome = option.value;
+        const paisCodigo = option.dataset.code || '';
+        const bandeiraUrl = option.dataset.flag || '';
+
+        // Permitir edição manual apenas se o país não estiver na lista
+        if (inputCodigo) {
+            inputCodigo.readOnly = !!paisCodigo;
+            if (!paisCodigo) {
+                inputCodigo.value = '';
+            }
+        }
+
+        atualizarPreviewBandeira(paisNome, paisCodigo, bandeiraUrl);
+    });
+}
+
 // ===== GERENCIAMENTO DE CONFIGURAÇÕES =====
 async function carregarConfiguracoes() {
     try {
@@ -127,6 +174,8 @@ async function renderizarListaAdmin(filtros = {}) {
         const imagemSrc = vinho.imagem ? 
             (vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`) :
             'https://via.placeholder.com/80x80?text=Vinho';
+        const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
+        const paisHtml = vinho.pais_origem ? ` | <span class="vinho-item-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14">` : ''}${vinho.pais_origem}</span>` : '';
         
         return `
             <div class="vinho-item-admin ${vinho.ativo === 0 || vinho.ativo === false ? 'vinho-inativo' : ''}" data-id="${vinho.id}">
@@ -134,7 +183,7 @@ async function renderizarListaAdmin(filtros = {}) {
                 <div class="vinho-item-info">
                     <div class="vinho-item-nome">${vinho.nome}</div>
                     <div class="vinho-item-detalhes">
-                        ${capitalizar(vinho.tipo)} | ${vinho.uva} | ${vinho.ano}
+                        ${capitalizar(vinho.tipo)} | ${vinho.uva} | ${vinho.ano}${paisHtml}
                     </div>
                     <div class="vinho-item-preco">R$ ${formatarPreco(vinho.preco)}</div>
                 </div>
@@ -239,6 +288,9 @@ function configurarFormulario() {
             nome: document.getElementById('nome').value.trim(),
             tipo: document.getElementById('tipo').value,
             uva: document.getElementById('uva').value.trim(),
+            pais_origem: document.getElementById('pais-origem').value,
+            pais_codigo: document.getElementById('pais-codigo').value.trim().toUpperCase(),
+            bandeira_url: document.getElementById('bandeira-url').value.trim(),
             ano: document.getElementById('ano').value,
             guarda: document.getElementById('guarda').value.trim(),
             harmonizacao: document.getElementById('harmonizacao').value.trim(),
@@ -250,6 +302,9 @@ function configurarFormulario() {
         formData.append('nome', dadosVinho.nome);
         formData.append('tipo', dadosVinho.tipo);
         formData.append('uva', dadosVinho.uva);
+        formData.append('pais_origem', dadosVinho.pais_origem);
+        formData.append('pais_codigo', dadosVinho.pais_codigo);
+        formData.append('bandeira_url', dadosVinho.bandeira_url);
         formData.append('ano', dadosVinho.ano);
         formData.append('guarda', dadosVinho.guarda);
         formData.append('harmonizacao', dadosVinho.harmonizacao);
@@ -324,6 +379,8 @@ function limparFormulario() {
     
     vinhoEmEdicao = null;
     imagemUpload = null;
+
+    atualizarPreviewBandeira('', '', '');
     
     // Resetar preview
     document.getElementById('preview-imagem').style.display = 'none';
@@ -346,6 +403,8 @@ async function editarVinho(id) {
     document.getElementById('nome').value = vinho.nome;
     document.getElementById('tipo').value = vinho.tipo;
     document.getElementById('uva').value = vinho.uva;
+    document.getElementById('pais-origem').value = vinho.pais_origem || '';
+    atualizarPreviewBandeira(vinho.pais_origem || '', vinho.pais_codigo || '', vinho.bandeira_url || '');
     document.getElementById('ano').value = vinho.ano;
     document.getElementById('guarda').value = vinho.guarda || '';
     document.getElementById('harmonizacao').value = vinho.harmonizacao || '';
@@ -404,6 +463,9 @@ async function toggleVisibilidade(id, ativo) {
         formData.append('nome', vinho.nome);
         formData.append('tipo', vinho.tipo);
         formData.append('uva', vinho.uva);
+        formData.append('pais_origem', vinho.pais_origem || '');
+        formData.append('pais_codigo', vinho.pais_codigo || '');
+        formData.append('bandeira_url', vinho.bandeira_url || '');
         formData.append('ano', vinho.ano);
         formData.append('guarda', vinho.guarda || '');
         formData.append('harmonizacao', vinho.harmonizacao || '');
@@ -554,6 +616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     configurarFormularioConfig();
     await renderizarListaAdmin();
     configurarFormulario();
+    configurarSelecaoPais();
     configurarUploadImagem();
     configurarModais();
     configurarFiltrosAdmin();

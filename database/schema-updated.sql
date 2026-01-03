@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS vinhos (
     nome VARCHAR(255) NOT NULL,
     tipo ENUM('tinto', 'branco', 'rose', 'espumante', 'suco_integral_tinto', 'suco_integral_branco') NOT NULL,
     uva VARCHAR(255) NOT NULL,
+    pais_origem VARCHAR(100),
+    pais_codigo CHAR(2),
+    bandeira_url VARCHAR(500),
     ano INT NOT NULL,
     guarda VARCHAR(100),
     harmonizacao TEXT,
@@ -24,7 +27,8 @@ CREATE TABLE IF NOT EXISTS vinhos (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_ativo (ativo),
-    INDEX idx_tipo (tipo)
+    INDEX idx_tipo (tipo),
+    INDEX idx_vinhos_pais (pais_origem, pais_codigo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Configurações (ATUALIZADA: Corrigidas para usar colunas específicas)

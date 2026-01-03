@@ -74,7 +74,7 @@ router.get('/:id', async (req, res) => {
 // POST - Criar novo vinho (admin only, com upload de imagem no Cloudinary)
 router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), validateVinho, async (req, res) => {
     try {
-        const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
+        const { nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
 
         // Verificar campos obrigatórios
         if (!nome || !tipo || !uva || !ano || !preco) {
@@ -92,8 +92,8 @@ router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), val
         const ativoBoolean = ativo === 'true' || ativo === true || ativo === '1';
 
         const [result] = await pool.query(
-            'INSERT INTO vinhos (nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagem, ativo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [nome, tipo, uva, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean]
+            'INSERT INTO vinhos (nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagem, ativo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [nome, tipo, uva, pais_origem || null, pais_codigo || null, bandeira_url || null, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean]
         );
 
         const [novoVinho] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [result.insertId]);
@@ -108,7 +108,7 @@ router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), val
 // PUT - Atualizar vinho (admin only, com upload no Cloudinary)
 router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single('imagem'), validateVinho, async (req, res) => {
     try {
-        const { nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
+        const { nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
         const id = req.params.id;
 
         // Buscar vinho atual
@@ -155,8 +155,8 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
         console.log('Atualizando vinho:', { id, ativo: ativoBoolean, ativoOriginal: ativo, tipoAtivo: typeof ativo });
 
         await pool.query(
-            'UPDATE vinhos SET nome = ?, tipo = ?, uva = ?, ano = ?, guarda = ?, harmonizacao = ?, descricao = ?, preco = ?, imagem = ?, ativo = ? WHERE id = ?',
-            [nome, tipo, uva, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean, id]
+            'UPDATE vinhos SET nome = ?, tipo = ?, uva = ?, pais_origem = ?, pais_codigo = ?, bandeira_url = ?, ano = ?, guarda = ?, harmonizacao = ?, descricao = ?, preco = ?, imagem = ?, ativo = ? WHERE id = ?',
+            [nome, tipo, uva, pais_origem || null, pais_codigo || null, bandeira_url || null, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean, id]
         );
 
         const [vinhoAtualizado] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [id]);

@@ -139,7 +139,8 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
             const buscaLower = busca.toLowerCase();
             vinhos = vinhos.filter(v => 
                 v.nome.toLowerCase().includes(buscaLower) || 
-                v.uva.toLowerCase().includes(buscaLower)
+                v.uva.toLowerCase().includes(buscaLower) ||
+                (v.pais_origem && v.pais_origem.toLowerCase().includes(buscaLower))
             );
         }
 
@@ -169,6 +170,8 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
         const imagemSrc = vinho.imagem ? 
             (vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`) :
             'https://via.placeholder.com/300x300?text=Vinho';
+        const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
+        const pais = vinho.pais_origem || '';
         
         return `
             <div class="vinho-card" data-id="${vinho.id}">
@@ -178,6 +181,7 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
                     <h3 class="vinho-nome">${vinho.nome}</h3>
                     <p class="vinho-uva"><i class="fas fa-grape-alt"></i> ${vinho.uva}</p>
                     <p class="vinho-ano"><i class="fas fa-calendar"></i> Safra ${vinho.ano}</p>
+                    ${pais ? `<p class="vinho-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14">` : ''}<span>${pais}</span></p>` : ''}
                     <p class="vinho-preco">R$ ${formatarPreco(vinho.preco)}</p>
                     <button class="btn btn-adicionar-carrinho" onclick="event.stopPropagation(); window.carrinhoManager.adicionarItem(${JSON.stringify(vinho).replace(/"/g, '&quot;')})">
                         <i class="fas fa-shopping-cart"></i> Adicionar
@@ -221,6 +225,15 @@ function abrirModal(id) {
                         <span class="detalhe-label"><i class="fas fa-grape-alt"></i> Tipo de Uva:</span>
                         <span class="detalhe-valor">${vinho.uva}</span>
                     </div>
+                    ${vinho.pais_origem ? `
+                    <div class="detalhe-item">
+                        <span class="detalhe-label"><i class="fas fa-flag"></i> País de Origem:</span>
+                        <span class="detalhe-valor detalhe-pais">
+                            ${vinho.bandeira_url || vinho.pais_codigo ? `<img src="${vinho.bandeira_url || `https://flagcdn.com/w40/${vinho.pais_codigo?.toLowerCase()}.png`}" alt="Bandeira" width="24" height="16">` : ''}
+                            ${vinho.pais_origem}
+                        </span>
+                    </div>
+                    ` : ''}
                     <div class="detalhe-item">
                         <span class="detalhe-label"><i class="fas fa-calendar"></i> Ano de Safra:</span>
                         <span class="detalhe-valor">${vinho.ano}</span>

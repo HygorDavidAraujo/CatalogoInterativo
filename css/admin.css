@@ -120,6 +120,22 @@
     transition: var(--transicao);
 }
 
+#pais-codigo[readonly] {
+    background-color: #f7f7f7;
+    cursor: not-allowed;
+}
+
+.flag-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid #e3e3e3;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
@@ -249,6 +265,17 @@
     font-weight: 700;
     color: var(--cor-destaque);
     margin-top: 0.3rem;
+}
+
+.vinho-item-pais {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.vinho-item-pais img {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
 }
 
 .vinho-item-acoes {

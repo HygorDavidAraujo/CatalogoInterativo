@@ -246,6 +246,20 @@ body {
     margin-bottom: 1rem;
 }
 
+.vinho-pais {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--cor-texto-claro);
+    font-size: 0.9rem;
+    margin-bottom: 0.6rem;
+}
+
+.vinho-pais img {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
 .vinho-preco {
     font-size: 1.8rem;
     color: var(--cor-destaque);
@@ -462,6 +476,17 @@ body {
     margin-bottom: 1rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid #eee;
+}
+
+.detalhe-pais {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.detalhe-pais img {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
 }
 
 .detalhe-item:last-child {
