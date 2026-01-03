@@ -101,6 +101,12 @@ router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), val
         res.status(201).json(novoVinho[0]);
     } catch (error) {
         console.error('Erro ao criar vinho:', error);
+        
+        // Verificar se é erro de rate limiting do Cloudinary
+        if (error.message && error.message.includes('Rate limit')) {
+            return res.status(429).json({ error: 'Muitos uploads. Aguarde 15 minutos.' });
+        }
+        
         res.status(500).json({ error: 'Erro ao criar vinho', details: error.message });
     }
 });

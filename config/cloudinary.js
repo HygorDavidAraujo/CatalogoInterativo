@@ -23,7 +23,7 @@ const storage = new CloudinaryStorage({
     }
 });
 
-// Configurar multer com Cloudinary
+// Configurar multer com Cloudinary e tratamento de erros
 const upload = multer({ 
     storage: storage,
     limits: {

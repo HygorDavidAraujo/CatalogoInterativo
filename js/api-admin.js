@@ -353,6 +353,17 @@ function configurarFormulario() {
             if (!response.ok) {
                 const erro = await response.text();
                 console.error('Erro na resposta:', response.status, erro);
+                
+                // Tratamento específico para rate limiting do Cloudinary
+                if (response.status === 429) {
+                    try {
+                        const errorData = JSON.parse(erro);
+                        throw new Error(errorData.error || 'Limite de uploads excedido');
+                    } catch (e) {
+                        throw new Error('Limite de uploads excedido. Aguarde alguns minutos.');
+                    }
+                }
+                
                 throw new Error('Erro ao salvar vinho');
             }
 
@@ -362,7 +373,8 @@ function configurarFormulario() {
             await renderizarListaAdmin();
         } catch (error) {
             console.error('Erro ao salvar vinho:', error);
-            mostrarMensagem('Erro ao salvar vinho. Tente novamente.', 'erro');
+            const mensagem = error.message || 'Erro ao salvar vinho. Tente novamente.';
+            mostrarMensagem(mensagem, 'erro');
         }
     });
 
