@@ -77,6 +77,57 @@ body {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
+/* Badge VIP Header */
+.badge-vip-header {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.badge-vip-prata {
+    background: linear-gradient(135deg, #C0C0C0, #E8E8E8);
+    color: #333;
+}
+
+.badge-vip-ouro {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #333;
+}
+
+.badge-vip-diamante {
+    background: linear-gradient(135deg, #B9F2FF, #00CED1);
+    color: #0F4C75;
+}
+
+/* Badge VIP - Catálogo e Carrinho */
+.badge-vip {
+    display: inline-block;
+    padding: 0.25rem 0.4rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.badge-vip.badge-prata {
+    background: linear-gradient(135deg, #C0C0C0, #E8E8E8);
+    color: #333;
+}
+
+.badge-vip.badge-ouro {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #333;
+}
+
+.badge-vip.badge-diamante {
+    background: linear-gradient(135deg, #B9F2FF, #00CED1);
+    color: #0F4C75;
+}
+
 /* ===== HERO SECTION ===== */
 .hero {
     background: linear-gradient(rgba(107, 28, 64, 0.7), rgba(44, 24, 16, 0.8)),

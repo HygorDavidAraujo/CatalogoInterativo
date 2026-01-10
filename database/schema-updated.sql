@@ -63,6 +63,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
     cep VARCHAR(10),
     cidade VARCHAR(100),
     estado VARCHAR(2),
+        is_vip BOOLEAN DEFAULT FALSE,
+        vip_tipo ENUM('prata', 'ouro', 'diamante') DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
@@ -110,7 +112,7 @@ CREATE TABLE IF NOT EXISTS pedidos_itens (
 
 -- Inserir configurações padrão (ATUALIZADA: Usar nova estrutura de colunas)
 INSERT INTO configuracoes (nome_site, titulo, descricao, telefone, email, endereco, whatsapp, instagram, facebook) VALUES
-('Davini Vinhos', 'Catálogo Interativo de Vinhos', 'Explore nossa seleção premium de vinhos', '(54) 3299-1234', 'contato@davinivinhos.com.br', 'Jolimont, RS', '5554999999999', 'https://instagram.com/davinivinhos', 'https://facebook.com/davinivinhos')
+('Davini Vinhos Finos', 'Catálogo Interativo de Vinhos', 'Explore nossa seleção premium de vinhos', '(62) 98183-1483', 'hygordavidaraujo@gmail.com', 'Goiânia, GO', '5562981831483', 'https://instagram.com/davinivinhos', 'https://facebook.com/davinivinhos')
 ON DUPLICATE KEY UPDATE
     titulo = VALUES(titulo),
     descricao = VALUES(descricao),

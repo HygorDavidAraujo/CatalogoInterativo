@@ -49,10 +49,19 @@ class AuthManager {
         const menuUsuario = document.getElementById('menu-usuario');
         const menuAdmin = document.getElementById('menu-admin');
         const usuarioNome = document.getElementById('usuario-nome');
+        const badgeVipHeader = document.getElementById('badge-vip-header');
 
-        // Alguns layouts (admin.html, clientes.html) não possuem esses elementos
-        // Apenas ignore silenciosamente nesses contextos para evitar ruído no console
-        if (!menuLogin || !menuUsuario || !menuAdmin || !usuarioNome) {
+        // Verificar se é página com menu simplificado (como meu-perfil.html)
+        const isPaginaSimplificada = !menuLogin && !menuAdmin;
+        
+        // Se não tem elemento de usuário em nenhuma página, não faz nada
+        if (!usuarioNome && !badgeVipHeader) {
+            console.debug('Interface não encontrada nesta página.');
+            return;
+        }
+
+        // Se não é página simplificada e faltam elementos principais, ignore
+        if (!isPaginaSimplificada && (!menuLogin || !menuUsuario || !menuAdmin)) {
             console.debug('Interface simplificada: elementos de menu não presentes nesta página.');
             return;
         }
@@ -63,32 +72,58 @@ class AuthManager {
             // Usuário logado
             console.log('Usuário está logado:', this.usuarioLogado.nome);
             console.log('É admin?', this.isAdmin());
-            console.log('isAdmin valor:', this.usuarioLogado.isAdmin, typeof this.usuarioLogado.isAdmin);
             
-            menuLogin.style.display = 'none';
-            menuUsuario.style.display = 'flex';
+            // Atualizar menus (se existirem)
+            if (menuLogin) menuLogin.style.display = 'none';
+            if (menuUsuario) menuUsuario.style.display = 'flex';
             
             // Mostrar nome do usuário
-            const primeiroNome = this.usuarioLogado.nome.split(' ')[0];
-            usuarioNome.textContent = primeiroNome;
+            if (usuarioNome) {
+                const primeiroNome = this.usuarioLogado.nome.split(' ')[0];
+                usuarioNome.textContent = primeiroNome;
+            }
 
-            // Mostrar menu admin se for admin
-            if (this.isAdmin()) {
-                console.log('Mostrando menu admin');
-                menuAdmin.style.display = 'block';
-                if (menuPerfil) menuPerfil.style.display = 'none';
-            } else {
-                console.log('Ocultando menu admin');
-                menuAdmin.style.display = 'none';
-                if (menuPerfil) menuPerfil.style.display = 'block';
+            // Mostrar badge VIP se aplicável
+            if (badgeVipHeader && this.usuarioLogado.is_vip && this.usuarioLogado.vip_tipo) {
+                const vipTipo = this.usuarioLogado.vip_tipo;
+                let badgeHTML = '';
+                if (vipTipo === 'prata') {
+                    badgeHTML = '<i class="fas fa-star"></i> VIP Prata';
+                    badgeVipHeader.className = 'badge-vip-header badge-vip-prata';
+                } else if (vipTipo === 'ouro') {
+                    badgeHTML = '<i class="fas fa-star"></i> VIP Ouro';
+                    badgeVipHeader.className = 'badge-vip-header badge-vip-ouro';
+                } else if (vipTipo === 'diamante') {
+                    badgeHTML = '<i class="fas fa-gem"></i> VIP Diamante';
+                    badgeVipHeader.className = 'badge-vip-header badge-vip-diamante';
+                }
+                badgeVipHeader.innerHTML = badgeHTML;
+                badgeVipHeader.style.display = 'inline-block';
+                console.log('Badge VIP exibido:', vipTipo);
+            } else if (badgeVipHeader) {
+                badgeVipHeader.style.display = 'none';
+            }
+
+            // Mostrar menu admin se for admin (apenas se elementos existirem)
+            if (menuAdmin) {
+                if (this.isAdmin()) {
+                    console.log('Mostrando menu admin');
+                    menuAdmin.style.display = 'block';
+                    if (menuPerfil) menuPerfil.style.display = 'none';
+                } else {
+                    console.log('Ocultando menu admin');
+                    menuAdmin.style.display = 'none';
+                    if (menuPerfil) menuPerfil.style.display = 'block';
+                }
             }
         } else {
             // Usuário não logado
             console.log('Usuário não está logado');
-            menuLogin.style.display = 'block';
-            menuUsuario.style.display = 'none';
-            menuAdmin.style.display = 'none';
+            if (menuLogin) menuLogin.style.display = 'block';
+            if (menuUsuario) menuUsuario.style.display = 'none';
+            if (menuAdmin) menuAdmin.style.display = 'none';
             if (menuPerfil) menuPerfil.style.display = 'none';
+            if (badgeVipHeader) badgeVipHeader.style.display = 'none';
         }
     }
 
@@ -149,6 +184,61 @@ window.authManager = new AuthManager();
 console.log('✓ authManager criado e disponível globalmente');
 
 // ===== MODAL DE AUTENTICAÇÃO =====
+// ===== MODAL DE ATUALIZAÇÃO DE SENHA FORÇADA =====
+document.addEventListener('DOMContentLoaded', function() {
+    const modalAtualizarSenha = document.getElementById('modal-atualizar-senha');
+    const closeAtualizarSenha = document.querySelector('.close-atualizar-senha');
+    if (closeAtualizarSenha) {
+        closeAtualizarSenha.addEventListener('click', function() {
+            modalAtualizarSenha.style.display = 'none';
+            document.getElementById('modal-auth').style.display = 'block';
+        });
+    }
+
+    const formAtualizarSenha = document.getElementById('form-atualizar-senha');
+    if (formAtualizarSenha) {
+        formAtualizarSenha.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const novaSenha = document.getElementById('atualizar-nova-senha').value;
+            const confirmarSenha = document.getElementById('atualizar-confirmar-senha').value;
+            const erroDiv = document.getElementById('atualizar-senha-erro');
+            erroDiv.style.display = 'none';
+            if (novaSenha.length < 6) {
+                erroDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+                erroDiv.style.display = 'block';
+                return;
+            }
+            if (novaSenha !== confirmarSenha) {
+                erroDiv.textContent = 'As senhas não coincidem.';
+                erroDiv.style.display = 'block';
+                return;
+            }
+            // Enviar nova senha ao backend
+            try {
+                const email = window.emailParaAtualizarSenha;
+                const response = await fetch(`${API_URL}/auth/atualizar-senha`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, novaSenha })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    erroDiv.textContent = data.error || 'Erro ao atualizar senha.';
+                    erroDiv.style.display = 'block';
+                    return;
+                }
+                // Senha atualizada, tentar login automaticamente
+                modalAtualizarSenha.style.display = 'none';
+                document.getElementById('modal-auth').style.display = 'block';
+                document.getElementById('login-senha').value = novaSenha;
+                mostrarErro('login-erro', 'Senha atualizada! Faça login novamente.');
+            } catch (err) {
+                erroDiv.textContent = 'Erro ao atualizar senha.';
+                erroDiv.style.display = 'block';
+            }
+        });
+    }
+});
 function abrirModalAuth() {
     console.log('Abrindo modal de autenticação...');
     const modal = document.getElementById('modal-auth');
@@ -226,7 +316,16 @@ function configurarFormLogin() {
             fecharModalAuth();
             location.reload(); // Recarregar para atualizar interface
         } else {
-            mostrarErro('login-erro', resultado.error);
+            if (resultado.error && resultado.error.includes('precisa ser atualizada')) {
+                // Exibir modal de atualização de senha forçada
+                document.getElementById('modal-auth').style.display = 'none';
+                document.getElementById('modal-atualizar-senha').style.display = 'block';
+                document.getElementById('atualizar-senha-erro').style.display = 'none';
+                // Salvar email temporariamente para atualização
+                window.emailParaAtualizarSenha = document.getElementById('login-email').value.trim();
+            } else {
+                mostrarErro('login-erro', resultado.error);
+            }
         }
     });
 }

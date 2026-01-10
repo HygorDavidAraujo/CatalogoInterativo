@@ -1,4 +1,22 @@
 class PerfilManager {
+        getDescontoVip(preco) {
+            let usuario = window.authManager?.usuarioLogado;
+            let isVip = usuario?.is_vip;
+            let vipTipo = usuario?.vip_tipo;
+            let desconto = 0;
+            if (isVip && vipTipo) {
+                if (vipTipo === 'prata') desconto = 0.03;
+                else if (vipTipo === 'ouro') desconto = 0.07;
+                else if (vipTipo === 'diamante') desconto = 0.11;
+            }
+            let precoFinal = preco;
+            if (desconto > 0) {
+                precoFinal = preco * (1 - desconto);
+                precoFinal = Math.ceil(precoFinal * 100) / 100;
+                precoFinal = Math.floor(precoFinal) + 0.90;
+            }
+            return precoFinal;
+        }
     constructor() {
         this.pedidoParaRefazer = null;
         console.log('PerfilManager constructor chamado');
@@ -103,28 +121,34 @@ class PerfilManager {
             console.log('📥 Carregando dados do usuário ID:', window.authManager.usuarioLogado.id);
             
             // Buscar dados atualizados do banco
-            const response = await fetch(`${API_URL}/auth/usuarios`);
+            const token = window.authManager.obterToken();
+            const response = await fetch(`${API_URL}/auth/me`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             
             if (!response.ok) {
-                throw new Error('Erro ao buscar usuários');
+                throw new Error('Erro ao buscar dados do usuário');
             }
             
-            const usuarios = await response.json();
-            console.log('📋 Total de usuários recebidos:', usuarios.length);
+            const usuarioAtual = await response.json();
+            console.log('📋 Usuário recebido:', usuarioAtual);
             
-            const usuarioAtual = usuarios.find(u => u.id === window.authManager.usuarioLogado.id);
-            
-            if (!usuarioAtual) {
-                console.error('❌ Usuário não encontrado na lista');
+            if (!usuarioAtual || !usuarioAtual.id) {
+                console.error('❌ Usuário não encontrado');
                 return;
             }
             
             console.log('✓ Usuário encontrado:', usuarioAtual);
             
-            // Atualizar dados na sessão
+            // Atualizar dados na sessão com campos do endpoint /me
             window.authManager.usuarioLogado = {
                 ...window.authManager.usuarioLogado,
-                nome: usuarioAtual.nome_completo || window.authManager.usuarioLogado.nome,
+                id: usuarioAtual.id,
+                nome: usuarioAtual.nome || window.authManager.usuarioLogado.nome,
+                email: usuarioAtual.email || window.authManager.usuarioLogado.email,
                 telefone: usuarioAtual.telefone || '',
                 cpf: usuarioAtual.cpf || '',
                 logradouro: usuarioAtual.logradouro || '',
@@ -133,7 +157,10 @@ class PerfilManager {
                 bairro: usuarioAtual.bairro || '',
                 cep: usuarioAtual.cep || '',
                 cidade: usuarioAtual.cidade || '',
-                estado: usuarioAtual.estado || ''
+                estado: usuarioAtual.estado || '',
+                isAdmin: usuarioAtual.isAdmin || false,
+                is_vip: usuarioAtual.is_vip || false,
+                vip_tipo: usuarioAtual.vip_tipo || null
             };
             sessionStorage.setItem('usuario', JSON.stringify(window.authManager.usuarioLogado));
             
@@ -244,6 +271,12 @@ class PerfilManager {
             }
             
             console.log('✅ Todos os campos preenchidos com sucesso!');
+            
+            // Atualizar interface de auth para mostrar badge VIP
+            if (window.authManager && typeof window.authManager.atualizarInterface === 'function') {
+                window.authManager.atualizarInterface();
+                console.log('✓ Interface de auth atualizada com dados VIP');
+            }
             
         } catch (error) {
             console.error('❌ Erro ao carregar dados do usuário:', error);
@@ -429,7 +462,13 @@ class PerfilManager {
             console.log('📡 Fazendo requisição para:', url);
             console.log('Cliente ID:', clienteId);
             
-            const response = await fetch(url);
+            const token = window.authManager.obterToken();
+            const response = await fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             
             console.log('📥 Response status:', response.status);
             console.log('📥 Response ok:', response.ok);
@@ -518,21 +557,39 @@ class PerfilManager {
 
         const itensHtml = (pedido.itens && pedido.itens.length > 0) 
             ? pedido.itens.map(item => {
-                const subtotal = parseFloat(item.subtotal) || 0;
+                const precoOriginal = parseFloat(item.preco_unitario) || 0;
                 const quantidade = parseInt(item.quantidade) || 0;
+                const precoFinal = this.getDescontoVip(precoOriginal);
+                let usuario = window.authManager?.usuarioLogado;
+                let isVip = usuario?.is_vip;
+                let vipTipo = usuario?.vip_tipo;
+                let badge = '';
+                if (isVip && vipTipo) {
+                    if (vipTipo === 'prata') badge = '<span class="badge-vip badge-prata">-4% Prata</span>';
+                    else if (vipTipo === 'ouro') badge = '<span class="badge-vip badge-ouro">-8% Ouro</span>';
+                    else if (vipTipo === 'diamante') badge = '<span class="badge-vip badge-diamante">-12% Diamante</span>';
+                }
                 return `
                     <div class="produto-item">
                         <div>
                             <div class="produto-nome">${item.vinho_nome}</div>
                             <div class="produto-quantidade">${quantidade}x</div>
                         </div>
-                        <div class="produto-preco">R$ ${subtotal.toFixed(2).replace('.', ',')}</div>
+                        ${precoFinal !== precoOriginal ? `<div class='produto-preco'><span class='preco-original' style='text-decoration:line-through;color:#888;'>R$ ${precoOriginal.toFixed(2).replace('.', ',')}</span> ${badge} <span class='preco-final' style='color:#1976d2;font-weight:bold;'>R$ ${(precoFinal * quantidade).toFixed(2).replace('.', ',')}</span></div>` : `<div class="produto-preco">R$ ${(precoFinal * quantidade).toFixed(2).replace('.', ',')}</div>`}
                     </div>
                 `;
             }).join('')
             : '<p>Nenhum item encontrado</p>';
 
-        const total = parseFloat(pedido.total) || 0;
+        // Calcular total com desconto VIP
+        const total = (pedido.itens && pedido.itens.length > 0)
+            ? pedido.itens.reduce((sum, item) => {
+                const precoOriginal = parseFloat(item.preco_unitario) || 0;
+                const quantidade = parseInt(item.quantidade) || 0;
+                const precoFinal = this.getDescontoVip(precoOriginal);
+                return sum + (precoFinal * quantidade);
+            }, 0)
+            : 0;
 
         return `
             <div class="pedido-item">

@@ -345,6 +345,8 @@ function abrirModalEditar(clienteId) {
     document.getElementById('edit-cidade').value = cliente.cidade || '';
     document.getElementById('edit-estado').value = cliente.estado || '';
     document.getElementById('edit-is-admin').checked = cliente.is_admin === 1 || cliente.is_admin === true;
+    document.getElementById('edit-is-vip').checked = cliente.is_vip === 1 || cliente.is_vip === true;
+    document.getElementById('edit-vip-tipo').value = cliente.vip_tipo || '';
 
     modal.style.display = 'block';
 }
@@ -382,6 +384,12 @@ function configurarFormEditar() {
 
         const usuarioId = document.getElementById('edit-usuario-id').value;
         
+        const usuarioSalvo = sessionStorage.getItem('usuario');
+        let isAdmin = false;
+        if (usuarioSalvo) {
+            const usuario = JSON.parse(usuarioSalvo);
+            isAdmin = usuario.isAdmin === true;
+        }
         const dados = {
             usuario_id: parseInt(usuarioId),
             nome: document.getElementById('edit-nome').value.trim(),
@@ -396,6 +404,11 @@ function configurarFormEditar() {
             estado: document.getElementById('edit-estado').value.trim(),
             is_admin: document.getElementById('edit-is-admin').checked
         };
+        // Só admin pode editar VIP
+        if (isAdmin) {
+            dados.is_vip = document.getElementById('edit-is-vip').checked;
+            dados.vip_tipo = document.getElementById('edit-vip-tipo').value;
+        }
 
         try {
             const response = await fetch(`${API_URL}/auth/usuarios/${usuarioId}`, {

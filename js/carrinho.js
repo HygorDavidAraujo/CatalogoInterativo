@@ -67,9 +67,28 @@ class CarrinhoManager {
         this.salvarCarrinho();
     }
 
+    getDescontoVip(preco) {
+        let usuario = window.authManager?.usuarioLogado;
+        let isVip = usuario?.is_vip;
+        let vipTipo = usuario?.vip_tipo;
+        let desconto = 0;
+        if (isVip && vipTipo) {
+            if (vipTipo === 'prata') desconto = 0.03;
+            else if (vipTipo === 'ouro') desconto = 0.07;
+            else if (vipTipo === 'diamante') desconto = 0.11;
+        }
+        let precoFinal = preco;
+        if (desconto > 0) {
+            precoFinal = preco * (1 - desconto);
+            precoFinal = Math.ceil(precoFinal * 100) / 100;
+            precoFinal = Math.floor(precoFinal) + 0.90;
+        }
+        return precoFinal;
+    }
+
     getTotal() {
         return this.itens.reduce((total, item) => {
-            return total + (item.preco * item.quantidade);
+            return total + (this.getDescontoVip(item.preco) * item.quantidade);
         }, 0);
     }
 
@@ -98,14 +117,29 @@ class CarrinhoManager {
             `;
             if (carrinhoFooter) carrinhoFooter.style.display = 'none';
         } else {
-            carrinhoBody.innerHTML = this.itens.map(item => `
+
+            carrinhoBody.innerHTML = this.itens.map(item => {
+                let precoOriginal = parseFloat(item.preco);
+                let precoFinal = this.getDescontoVip(precoOriginal);
+                let usuario = window.authManager?.usuarioLogado;
+                let isVip = usuario?.is_vip;
+                let vipTipo = usuario?.vip_tipo;
+                let badge = '';
+                if (isVip && vipTipo) {
+                    const labels = {prata: 'Prata', ouro: 'Ouro', diamante: 'Diamante'};
+                    const icons = {prata: '<i class="fas fa-star"></i>', ouro: '<i class="fas fa-star"></i>', diamante: '<i class="fas fa-gem"></i>'};
+                    const label = labels[vipTipo] || '';
+                    const icon = icons[vipTipo] || '';
+                    badge = `<span class="badge-vip badge-${vipTipo}">${icon} VIP ${label}</span>`;
+                }
+                return `
                 <div class="carrinho-item" data-id="${item.id}">
                     <img src="${item.imagem || 'https://via.placeholder.com/60x80?text=Vinho'}" 
                          alt="${item.nome}" 
                          class="carrinho-item-img">
                     <div class="carrinho-item-info">
                         <div class="carrinho-item-nome">${item.nome}</div>
-                        <div class="carrinho-item-preco">R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
+                        ${precoFinal !== precoOriginal ? `<div class='carrinho-item-preco'><span class='preco-original' style='text-decoration:line-through;color:#888;'>R$ ${precoOriginal.toFixed(2).replace('.', ',')}</span> ${badge} <span class='preco-final' style='color:#1976d2;font-weight:bold;'>R$ ${precoFinal.toFixed(2).replace('.', ',')}</span></div>` : `<div class="carrinho-item-preco">R$ ${precoOriginal.toFixed(2).replace('.', ',')}</div>`}
                         <div class="carrinho-item-qtd">
                             <button class="btn-qtd" onclick="window.carrinhoManager.atualizarQuantidade(${item.id}, ${item.quantidade - 1})">
                                 <i class="fas fa-minus"></i>
@@ -120,7 +154,8 @@ class CarrinhoManager {
                         </div>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             if (carrinhoFooter) {
                 carrinhoFooter.style.display = 'block';

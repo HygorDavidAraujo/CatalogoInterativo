@@ -173,6 +173,25 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
         const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
         const pais = vinho.pais_origem || '';
         
+        // VIP desconto logic
+        let usuario = window.authManager?.usuarioLogado;
+        let isVip = usuario?.is_vip;
+        let vipTipo = usuario?.vip_tipo;
+        let desconto = 0;
+        let badge = '';
+        if (isVip && vipTipo) {
+            if (vipTipo === 'prata') { desconto = 0.03; badge = '<span class="badge-vip badge-prata"><i class="fas fa-star"></i> VIP Prata</span>'; }
+            else if (vipTipo === 'ouro') { desconto = 0.07; badge = '<span class="badge-vip badge-ouro"><i class="fas fa-star"></i> VIP Ouro</span>'; }
+            else if (vipTipo === 'diamante') { desconto = 0.11; badge = '<span class="badge-vip badge-diamante"><i class="fas fa-gem"></i> VIP Diamante</span>'; }
+        }
+        let precoOriginal = parseFloat(vinho.preco);
+        let precoFinal = precoOriginal;
+        if (desconto > 0) {
+            precoFinal = precoOriginal * (1 - desconto);
+            precoFinal = Math.ceil(precoFinal * 100) / 100;
+            precoFinal = Math.floor(precoFinal) + 0.90;
+        }
+        
         return `
             <div class="vinho-card" data-id="${vinho.id}">
                 <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-imagem" onerror="this.src='https://via.placeholder.com/300x300?text=Vinho'">
@@ -182,7 +201,7 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
                     <p class="vinho-uva"><i class="fas fa-grape-alt"></i> ${vinho.uva}</p>
                     <p class="vinho-ano"><i class="fas fa-calendar"></i> Safra ${vinho.ano}</p>
                     ${pais ? `<p class="vinho-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14">` : ''}<span>${pais}</span></p>` : ''}
-                    <p class="vinho-preco">R$ ${formatarPreco(vinho.preco)}</p>
+                    ${precoFinal !== precoOriginal ? `<p class='vinho-preco'><span class='preco-original' style='text-decoration:line-through;color:#888;'>R$ ${formatarPreco(precoOriginal)}</span> ${badge} <span class='preco-final' style='color:#1976d2;font-weight:bold;'>R$ ${formatarPreco(precoFinal)}</span></p>` : `<p class="vinho-preco">R$ ${formatarPreco(precoOriginal)}</p>`}
                     <button class="btn btn-adicionar-carrinho" onclick="event.stopPropagation(); window.carrinhoManager.adicionarItem(${JSON.stringify(vinho).replace(/"/g, '&quot;')})">
                         <i class="fas fa-shopping-cart"></i> Adicionar
                     </button>
@@ -388,7 +407,6 @@ async function atualizarInformacoesContato() {
     // Atualizar links das redes sociais
     const socialLinks = document.querySelectorAll('.social-link');
     console.log('Social links encontrados:', socialLinks.length);
-    
     if (socialLinks[0] && config.instagram) {
         console.log('Atualizando Instagram:', config.instagram);
         socialLinks[0].href = config.instagram;

@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
@@ -8,6 +9,33 @@ const { loginLimiter, cadastroLimiter } = require('../middleware/rateLimiter');
 const { validateLogin, validateCadastro, validatePerfil, validateId } = require('../middleware/validators');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'davini-vinhos-secret-key-2024';
+
+// POST - Atualizar senha antiga para bcrypt
+router.post('/atualizar-senha', async (req, res) => {
+    try {
+        const { email, novaSenha } = req.body;
+        if (!email || !novaSenha) {
+            return res.status(400).json({ error: 'Email e nova senha são obrigatórios.' });
+        }
+        // Buscar usuário
+        const [usuarios] = await pool.query('SELECT id, senha FROM usuarios WHERE email = ?', [email]);
+        if (usuarios.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado.' });
+        }
+        const usuario = usuarios[0];
+        // Só permite atualizar se a senha antiga não for bcrypt
+        if (usuario.senha && usuario.senha.startsWith('$2')) {
+            return res.status(400).json({ error: 'Senha já está atualizada.' });
+        }
+        // Gerar hash bcrypt
+        const hash = await bcrypt.hash(novaSenha, 10);
+        await pool.query('UPDATE usuarios SET senha = ? WHERE id = ?', [hash, usuario.id]);
+        res.json({ success: true, message: 'Senha atualizada com sucesso.' });
+    } catch (error) {
+        console.error('Erro ao atualizar senha:', error);
+        res.status(500).json({ error: 'Erro ao atualizar senha.' });
+    }
+});
 
 // POST - Login
 router.post('/login', loginLimiter, validateLogin, async (req, res) => {
@@ -20,7 +48,7 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
 
         // Buscar usuário por email
         const [usuarios] = await pool.query(
-            `SELECT id, nome_completo, telefone, email, senha, is_admin, cpf,
+            `SELECT id, nome_completo, telefone, email, senha, is_admin, is_vip, vip_tipo, cpf,
                     logradouro, numero, complemento, bairro, cep, cidade, estado 
              FROM usuarios WHERE email = ?`,
             [email]
@@ -64,6 +92,8 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
                 telefone: usuario.telefone,
                 email: usuario.email,
                 isAdmin: isAdmin,
+                is_vip: usuario.is_vip === 1 || usuario.is_vip === true,
+                vip_tipo: usuario.vip_tipo,
                 cpf: usuario.cpf,
                 logradouro: usuario.logradouro,
                 numero: usuario.numero,
@@ -84,7 +114,7 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
 router.get('/me', verificarAutenticacao, async (req, res) => {
     try {
         const [usuarios] = await pool.query(
-            `SELECT id, nome_completo, telefone, email, is_admin, cpf,
+            `SELECT id, nome_completo, telefone, email, is_admin, is_vip, vip_tipo, cpf,
                     logradouro, numero, complemento, bairro, cep, cidade, estado, created_at
              FROM usuarios WHERE id = ?`,
             [req.usuario.id]
@@ -101,6 +131,8 @@ router.get('/me', verificarAutenticacao, async (req, res) => {
             telefone: usuario.telefone,
             email: usuario.email,
             isAdmin: Boolean(usuario.is_admin),
+            is_vip: Boolean(usuario.is_vip),
+            vip_tipo: usuario.vip_tipo,
             cpf: usuario.cpf,
             logradouro: usuario.logradouro,
             numero: usuario.numero,
@@ -224,7 +256,7 @@ router.get('/verificar', async (req, res) => {
 router.get('/usuarios', verificarAdminAuth, async (req, res) => {
     try {
         const [usuarios] = await pool.query(
-            `SELECT id, nome_completo, email, telefone, is_admin, created_at, 
+            `SELECT id, nome_completo, email, telefone, is_admin, is_vip, vip_tipo, created_at, 
              cpf, logradouro, numero, complemento, bairro, cep, cidade, estado 
              FROM usuarios ORDER BY created_at DESC`
         );
@@ -339,7 +371,9 @@ router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
             cep, 
             cidade, 
             estado,
-            is_admin
+            is_admin,
+            is_vip,
+            vip_tipo
         } = req.body;
 
         // Verificar se usuário existe
@@ -370,13 +404,15 @@ router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
                 cep = ?, 
                 cidade = ?, 
                 estado = ?,
-                is_admin = ?
+                is_admin = ?,
+                is_vip = ?,
+                vip_tipo = ?
             WHERE id = ?`,
-            [nome, telefone, cpf, logradouro, numero, complemento, bairro, cep, cidade, estado, is_admin, usuarioId]
+            [nome, telefone, cpf, logradouro, numero, complemento, bairro, cep, cidade, estado, is_admin, is_vip ? 1 : 0, vip_tipo || null, usuarioId]
         );
 
         const [usuarioAtualizado] = await pool.query(
-            `SELECT id, nome_completo, email, telefone, is_admin, cpf,
+            `SELECT id, nome_completo, email, telefone, is_admin, is_vip, vip_tipo, cpf,
                     logradouro, numero, complemento, bairro, cep, cidade, estado, created_at
              FROM usuarios WHERE id = ?`,
             [usuarioId]

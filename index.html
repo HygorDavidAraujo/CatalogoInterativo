@@ -23,6 +23,7 @@
                     <li id="menu-admin" style="display: none;"><a href="admin.html" class="nav-link" id="link-admin" onclick="console.log('Link Painel ADM clicado!')">Painel ADM</a></li>
                     <li id="menu-login"><a href="#" class="nav-link" id="btn-login"><i class="fas fa-user"></i> Login</a></li>
                     <li id="menu-usuario" style="display: none;">
+                        <span id="badge-vip-header" class="badge-vip-header" style="display: none;"></span>
                         <a href="#" class="nav-link" id="usuario-nome"></a>
                         <a href="#" class="nav-link" id="btn-logout"><i class="fas fa-sign-out-alt"></i> Sair</a>
                     </li>
@@ -36,6 +37,28 @@
         <div class="hero-content">
             <h2>Descubra Vinhos Excepcionais</h2>
             <p>Uma seleção especial dos melhores vinhos para você</p>
+
+            <!-- Modal Atualizar Senha -->
+            <div id="modal-atualizar-senha" class="modal" style="display:none;">
+                <div class="modal-content modal-auth">
+                    <span class="close close-atualizar-senha">&times;</span>
+                    <h2><i class="fas fa-key"></i> Atualizar Senha</h2>
+                    <form id="form-atualizar-senha" class="auth-form">
+                        <div class="form-group">
+                            <label for="atualizar-nova-senha">Nova Senha</label>
+                            <input type="password" id="atualizar-nova-senha" name="nova_senha" required placeholder="Digite a nova senha">
+                        </div>
+                        <div class="form-group">
+                            <label for="atualizar-confirmar-senha">Confirmar Nova Senha</label>
+                            <input type="password" id="atualizar-confirmar-senha" name="confirmar_senha" required placeholder="Confirme a nova senha">
+                        </div>
+                        <div id="atualizar-senha-erro" class="mensagem-erro-auth" style="display: none;"></div>
+                        <button type="submit" class="btn btn-primary btn-auth">
+                            <i class="fas fa-save"></i> Atualizar Senha
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -74,21 +97,21 @@
                         <i class="fas fa-phone"></i>
                         <div>
                             <h3>Telefone</h3>
-                            <p id="contato-telefone">(54) 99999-9999</p>
+                            <p id="contato-telefone">(62) 98183-1483</p>
                         </div>
                     </div>
                     <div class="info-item">
                         <i class="fas fa-envelope"></i>
                         <div>
                             <h3>E-mail</h3>
-                            <p id="contato-email">contato@davinivinhos.com.br</p>
+                            <p id="contato-email">hygordavidaraujo@gmail.com</p>
                         </div>
                     </div>
                     <div class="info-item">
                         <i class="fas fa-map-marker-alt"></i>
                         <div>
                             <h3>Endereço</h3>
-                            <p id="contato-endereco">Jolimont, RS</p>
+                            <p id="contato-endereco">Goiânia, GO</p>
                         </div>
                     </div>
                 </div>
@@ -103,7 +126,7 @@
                             <i class="fab fa-facebook"></i>
                             <span>Facebook</span>
                         </a>
-                        <a href="https://wa.me/5554999999999" target="_blank" class="social-link">
+                        <a href="https://wa.me/5562981831483" target="_blank" class="social-link">
                             <i class="fab fa-whatsapp"></i>
                             <span>WhatsApp</span>
                         </a>
@@ -116,7 +139,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2025 Davini Vinhos Finos. Todos os direitos reservados.</p>
+            <p>&copy; 2026 Davini Vinhos Finos. Todos os direitos reservados.</p>
         </div>
     </footer>
 

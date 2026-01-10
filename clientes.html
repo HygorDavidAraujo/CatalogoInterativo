@@ -223,6 +223,36 @@
                                 Administradores têm acesso total ao sistema
                             </small>
                         </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edit-is-vip">
+                                <span><i class="fas fa-star"></i> Cliente VIP</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-vip-tipo">Tipo de VIP</label>
+                            <select id="edit-vip-tipo">
+                                <option value="">Selecione...</option>
+                                <option value="prata">Prata - 3% desconto</option>
+                                <option value="ouro">Ouro - 7% desconto</option>
+                                <option value="diamante">Diamante - 11% desconto</option>
+                            </select>
+                        </div>
+                        <script>
+                        // Bloquear edição VIP para não-admins
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const usuarioSalvo = sessionStorage.getItem('usuario');
+                            let isAdmin = false;
+                            if (usuarioSalvo) {
+                                const usuario = JSON.parse(usuarioSalvo);
+                                isAdmin = usuario.isAdmin === true;
+                            }
+                            if (!isAdmin) {
+                                document.getElementById('edit-is-vip').disabled = true;
+                                document.getElementById('edit-vip-tipo').disabled = true;
+                            }
+                        });
+                        </script>
                     </div>
 
                     <div class="modal-actions">
