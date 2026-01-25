@@ -52,6 +52,7 @@ function renderizarClientes(usuarios) {
         return;
     }
 
+    const headers = ['ID', 'Nome', 'Email', 'Telefone', 'Cadastro', 'Pedidos', 'Admin', 'Ações'];
     tbody.innerHTML = usuarios.map(usuario => {
         const dataCadastro = usuario.created_at ? 
             new Date(usuario.created_at).toLocaleDateString('pt-BR') : 
@@ -62,14 +63,14 @@ function renderizarClientes(usuarios) {
         
         return `
             <tr>
-                <td>${usuario.id}</td>
-                <td><strong>${usuario.nome_completo || '-'}</strong></td>
-                <td>${usuario.email}</td>
-                <td>${usuario.telefone || '-'}</td>
-                <td>${dataCadastro}</td>
-                <td style="text-align: center;"><span class="badge-pedidos" id="pedidos-${usuario.id}">-</span></td>
-                <td style="text-align: center;">${isAdmin}</td>
-                <td style="text-align: center;">
+                <td data-label="${headers[0]}">${usuario.id}</td>
+                <td data-label="${headers[1]}"><strong>${usuario.nome_completo || '-'}</strong></td>
+                <td data-label="${headers[2]}">${usuario.email}</td>
+                <td data-label="${headers[3]}">${usuario.telefone || '-'}</td>
+                <td data-label="${headers[4]}">${dataCadastro}</td>
+                <td data-label="${headers[5]}" style="text-align: center;"><span class="badge-pedidos" id="pedidos-${usuario.id}">-</span></td>
+                <td data-label="${headers[6]}" style="text-align: center;">${isAdmin}</td>
+                <td data-label="${headers[7]}" style="text-align: center;">
                     <button class="btn-icon btn-visualizar" onclick="abrirModalCliente(${usuario.id})" title="Ver detalhes">
                         <i class="fas fa-eye"></i>
                     </button>

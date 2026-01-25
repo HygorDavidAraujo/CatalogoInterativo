@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teste de Atualização</title>
+    <meta name="theme-color" content="#6B1C40">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- Registro do Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(() => console.log('Service Worker registrado'))
+                    .catch(err => console.error('SW registro falhou:', err));
+            });
+        }
+    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -38,6 +52,8 @@
     </style>
 </head>
 <body>
+    <!-- Skip to content para acessibilidade -->
+    <a href="#main" class="skip-to-content">Pular para o conteúdo</a>
     <h1>🧪 Teste de Configurações</h1>
     
     <div class="info">

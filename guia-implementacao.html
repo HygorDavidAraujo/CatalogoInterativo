@@ -5,6 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Guia de Implementacao e Atualizacao - Davini Vinhos Finos</title>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/mobile-first.css">
+  <meta name="theme-color" content="#6B1C40">
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(() => console.log('Service Worker registrado'))
+          .catch(err => console.error('SW registro falhou:', err));
+      });
+    }
+  </script>
   <style>
     body { background: #f7f4f2; color: #2c1810; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; padding: 24px; }
     h1, h2, h3 { color: #6b1c40; margin-top: 24px; }
@@ -24,6 +38,8 @@
   </style>
 </head>
 <body>
+  <!-- Skip to content para acessibilidade -->
+  <a href="#conteudo" class="skip-to-content">Pular para o conteúdo</a>
   <h1>Guia de Implementacao e Atualizacao</h1>
   <p class="small">Catalogo Interativo - Davini Vinhos Finos</p>
 
@@ -39,7 +55,7 @@
       <li>Gerar backup do banco: <span class="mono">mysqldump --no-tablespaces -h $HOST -u $USER -p$PASS $DB &gt; backup.sql</span>.</li>
       <li>Cria branch de entrega e rodar smoke tests (login, listar vinhos, cadastro vinho).</li>
     </ul>
-  </div>
+      </div>
 
   <div class="card">
     <h2>Fase 1 - Seguranca (prioridade)</h2>
@@ -142,7 +158,7 @@
           <li>Rotas de debug desligadas em producao.</li>
           <li>Rate limit ativo (login/upload).</li>
         </ul>
-      </div>
+          </div>
       <div>
         <h3>Catalogo</h3>
         <ul>
@@ -177,6 +193,7 @@
       <li>Atualizar API, validadores e frontend (admin + catalogo) para usar os novos campos.</li>
       <li>Testar fim-a-fim em staging no Railway.</li>
     </ul>
-  </div>
+      </div>
+      <script src="js/mobile.js"></script>
 </body>
 </html>

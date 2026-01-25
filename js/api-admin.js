@@ -1,6 +1,7 @@
 // ===== VARIÁVEIS GLOBAIS =====
 let vinhoEmEdicao = null;
 let imagemUpload = null;
+let removerImagem = false;
 
 // Recupera cabeçalhos com JWT do authManager
 function getAuthHeaders() {
@@ -173,13 +174,13 @@ async function renderizarListaAdmin(filtros = {}) {
     container.innerHTML = vinhos.map(vinho => {
         const imagemSrc = vinho.imagem ? 
             (vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`) :
-            'https://via.placeholder.com/80x80?text=Vinho';
+            '/images/placeholder-80x80.svg';
         const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
         const paisHtml = vinho.pais_origem ? ` | <span class="vinho-item-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14">` : ''}${vinho.pais_origem}</span>` : '';
         
         return `
             <div class="vinho-item-admin ${vinho.ativo === 0 || vinho.ativo === false ? 'vinho-inativo' : ''}" data-id="${vinho.id}">
-                <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-item-imagem" onerror="this.src='https://via.placeholder.com/80x80?text=Vinho'">
+                <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-item-imagem" onerror="this.src='/images/placeholder-80x80.svg'">
                 <div class="vinho-item-info">
                     <div class="vinho-item-nome">${vinho.nome}</div>
                     <div class="vinho-item-detalhes">
@@ -189,10 +190,10 @@ async function renderizarListaAdmin(filtros = {}) {
                 </div>
                 <div class="vinho-item-acoes">
                     <button class="btn-icon-small btn-editar" onclick="editarVinho(${vinho.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
+                        <i class="fa-solid fa-pen-to-square"></i>
                     </button>
                     <button class="btn-icon-small btn-excluir" onclick="confirmarExclusao(${vinho.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
+                        <i class="fa-solid fa-trash"></i>
                     </button>
                     <label class="toggle-switch" title="${vinho.ativo === 0 || vinho.ativo === false ? 'Clique para mostrar no site' : 'Clique para ocultar do site'}">
                         <input type="checkbox" ${vinho.ativo === 1 || vinho.ativo === true ? 'checked' : ''} onchange="toggleVisibilidade(${vinho.id}, this.checked)">
@@ -210,6 +211,40 @@ function configurarUploadImagem() {
     const fileInput = document.getElementById('imagem');
     const uploadPreview = document.getElementById('upload-preview');
     const previewImg = document.getElementById('preview-imagem');
+    const uploadActions = document.getElementById('upload-actions');
+    const btnRemoverImagem = document.getElementById('btn-remover-imagem');
+    const imagemUrlInput = document.getElementById('imagem-url');
+
+    if (btnRemoverImagem) {
+        btnRemoverImagem.addEventListener('click', () => {
+            removerImagem = true;
+            imagemUpload = null;
+            fileInput.value = '';
+            if (imagemUrlInput) imagemUrlInput.value = '';
+            previewImg.src = '';
+            previewImg.style.display = 'none';
+            uploadPreview.style.display = 'block';
+            if (uploadActions) uploadActions.style.display = 'none';
+        });
+    }
+
+    if (imagemUrlInput) {
+        imagemUrlInput.addEventListener('input', () => {
+            if (vinhoEmEdicao) {
+                removerImagem = true;
+            }
+        });
+
+        imagemUrlInput.addEventListener('change', () => {
+            const url = imagemUrlInput.value.trim();
+            if (url) {
+                previewImg.src = url;
+                previewImg.style.display = 'block';
+                uploadPreview.style.display = 'none';
+                if (uploadActions) uploadActions.style.display = 'flex';
+            }
+        });
+    }
 
     // Click no preview abre o seletor
     uploadPreview.addEventListener('click', () => {
@@ -221,6 +256,9 @@ function configurarUploadImagem() {
         const file = e.target.files[0];
         if (file) {
             imagemUpload = file;
+            if (vinhoEmEdicao) {
+                removerImagem = true;
+            }
             
             // Validar tamanho
             if (file.size > 5 * 1024 * 1024) {
@@ -242,6 +280,7 @@ function configurarUploadImagem() {
                 previewImg.src = e.target.result;
                 previewImg.style.display = 'block';
                 uploadPreview.style.display = 'none';
+                if (uploadActions) uploadActions.style.display = 'flex';
             };
             reader.readAsDataURL(file);
         }
@@ -263,8 +302,12 @@ function configurarUploadImagem() {
         
         const file = e.dataTransfer.files[0];
         if (file) {
+            if (vinhoEmEdicao) {
+                removerImagem = true;
+            }
             fileInput.files = e.dataTransfer.files;
             fileInput.dispatchEvent(new Event('change'));
+            if (uploadActions) uploadActions.style.display = 'flex';
         }
     });
 }
@@ -323,6 +366,10 @@ function configurarFormulario() {
             formData.append('imagem', imagemUpload);
         } else if (imagemUrl) {
             formData.append('imagemUrl', imagemUrl);
+        }
+
+        if (vinhoEmEdicao && removerImagem) {
+            formData.append('removerImagem', true);
         }
 
         try {
@@ -391,12 +438,33 @@ function limparFormulario() {
     
     vinhoEmEdicao = null;
     imagemUpload = null;
+    removerImagem = false;
 
     atualizarPreviewBandeira('', '', '');
     
     // Resetar preview
-    document.getElementById('preview-imagem').style.display = 'none';
-    document.getElementById('upload-preview').style.display = 'block';
+    const preview = document.getElementById('preview-imagem');
+    const uploadPreview = document.getElementById('upload-preview');
+    const uploadActions = document.getElementById('upload-actions');
+    const fileInput = document.getElementById('imagem');
+    const imagemUrlInput = document.getElementById('imagem-url');
+
+    if (preview) {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+    if (uploadPreview) {
+        uploadPreview.style.display = 'block';
+    }
+    if (uploadActions) {
+        uploadActions.style.display = 'none';
+    }
+    if (fileInput) {
+        fileInput.value = '';
+    }
+    if (imagemUrlInput) {
+        imagemUrlInput.value = '';
+    }
     
     const titulo = document.querySelector('.admin-card h2');
     if (titulo) {
@@ -410,6 +478,19 @@ async function editarVinho(id) {
     if (!vinho) return;
 
     vinhoEmEdicao = id;
+    removerImagem = false;
+    imagemUpload = null;
+
+    const fileInput = document.getElementById('imagem');
+    const previewImg = document.getElementById('preview-imagem');
+    const uploadPreview = document.getElementById('upload-preview');
+    const uploadActions = document.getElementById('upload-actions');
+    if (fileInput) {
+        fileInput.value = '';
+    }
+    if (uploadActions) {
+        uploadActions.style.display = 'none';
+    }
 
     // Preencher formulário
     document.getElementById('nome').value = vinho.nome;
@@ -427,13 +508,20 @@ async function editarVinho(id) {
     // Mostrar imagem atual
     if (vinho.imagem) {
         const imagemSrc = vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`;
-        document.getElementById('preview-imagem').src = imagemSrc;
-        document.getElementById('preview-imagem').style.display = 'block';
-        document.getElementById('upload-preview').style.display = 'none';
+        previewImg.src = imagemSrc;
+        previewImg.style.display = 'block';
+        uploadPreview.style.display = 'none';
+        if (uploadActions) {
+            uploadActions.style.display = 'flex';
+        }
         
         if (vinho.imagem.startsWith('http')) {
             document.getElementById('imagem-url').value = vinho.imagem;
         }
+    } else {
+        previewImg.src = '';
+        previewImg.style.display = 'none';
+        uploadPreview.style.display = 'block';
     }
 
     // Alterar título do formulário

@@ -8,18 +8,41 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="theme-color" content="#6B1C40">
+    <!-- Preconnect para otimizar imagens Cloudinary -->
+    <link rel="preconnect" href="https://res.cloudinary.com">
+    <link rel="dns-prefetch" href="https://res.cloudinary.com">
+    <!-- CSS Mobile-First para melhorar experiência em dispositivos móveis -->
+    <link rel="stylesheet" href="css/mobile-first.css">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Registro do Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(() => console.log('Service Worker registrado'))
+                    .catch(err => console.error('SW registro falhou:', err));
+            });
+        }
+    </script>
 </head>
 <body class="admin-body">
+    <!-- Skip to content para acessibilidade -->
+    <a href="#main" class="skip-to-content">Pular para o conteúdo</a>
     <!-- Header Admin -->
     <header class="admin-header">
         <div class="container">
-            <h1><i class="fas fa-wine-bottle"></i> Painel Administrativo</h1>
+            <h1><i class="fa-solid fa-wine-bottle"></i> Painel Administrativo</h1>
             <div class="admin-nav">
                 <a href="clientes.html" class="btn btn-secondary">
-                    <i class="fas fa-users"></i> Gerenciar Clientes
+                    <i class="fa-solid fa-users"></i> Gerenciar Clientes
                 </a>
                 <a href="index.html" class="btn-voltar">
-                    <i class="fas fa-home"></i> Ver Site
+                    <i class="fa-solid fa-house"></i> Ver Site
                 </a>
             </div>
         </div>
@@ -30,7 +53,7 @@
         <div class="container">
             <!-- Configurações de Contato -->
             <div class="admin-card admin-card-full">
-                <h2><i class="fas fa-cog"></i> Configurações do Site</h2>
+                <h2><i class="fa-solid fa-gear"></i> Configurações do Site</h2>
                 <form id="form-configuracoes" class="form-config">
                     <h3>Informações do Site</h3>
                     <div class="form-group">
@@ -80,7 +103,7 @@
 
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Salvar Configurações
+                            <i class="fa-solid fa-floppy-disk"></i> Salvar Configurações
                         </button>
                     </div>
                 </form>
@@ -89,7 +112,7 @@
             <div class="admin-grid">
                 <!-- Formulário de Cadastro -->
                 <div class="admin-card">
-                    <h2><i class="fas fa-plus-circle"></i> Cadastrar Novo Vinho</h2>
+                    <h2><i class="fa-solid fa-circle-plus"></i> Cadastrar Novo Vinho</h2>
                     <form id="form-vinho" class="form-vinho">
                         <div class="form-group">
                             <label for="nome">Nome do Vinho *</label>
@@ -181,16 +204,22 @@
                             <div class="upload-container">
                                 <input type="file" id="imagem" name="imagem" accept="image/*" class="file-input">
                                 <div class="upload-preview" id="upload-preview">
-                                    <i class="fas fa-image"></i>
+                                    <i class="fa-solid fa-image"></i>
                                     <p>Clique ou arraste uma imagem aqui</p>
                                     <span class="upload-info">Formatos: JPG, PNG, GIF (Max: 5MB)</span>
                                 </div>
                                 <img id="preview-imagem" class="preview-img" style="display: none;">
+                                <div class="upload-actions" id="upload-actions" style="display: none;">
+                                    <button type="button" class="btn btn-danger" id="btn-remover-imagem">
+                                        <i class="fas fa-trash"></i> Remover imagem atual
+                                    </button>
+                                    <p class="upload-note">Remova para subir outra imagem ou usar uma URL.</p>
+                                </div>
                             </div>
                             <small>Ou use uma URL externa:</small>
                             <input type="text" id="imagem-url" name="imagemUrl" placeholder="https://exemplo.com/imagem.jpg">
                             <small class="text-info" style="display: block; margin-top: 5px; color: #0066cc;">
-                                <i class="fas fa-info-circle"></i> Se houver limite de uploads, use uma URL externa (recomendado: imgur.com, imgbb.com)
+                                <i class="fa-solid fa-circle-info"></i> Se houver limite de uploads, use uma URL externa (recomendado: imgur.com, imgbb.com)
                             </small>
                         </div>
 
@@ -204,10 +233,10 @@
 
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Salvar Vinho
+                                <i class="fa-solid fa-floppy-disk"></i> Salvar Vinho
                             </button>
                             <button type="button" class="btn btn-secondary" id="btn-cancelar">
-                                <i class="fas fa-times"></i> Cancelar
+                                <i class="fa-solid fa-xmark"></i> Cancelar
                             </button>
                         </div>
                     </form>
@@ -215,12 +244,12 @@
 
                 <!-- Lista de Vinhos Cadastrados -->
                 <div class="admin-card">
-                    <h2><i class="fas fa-list"></i> Vinhos Cadastrados</h2>
+                    <h2><i class="fa-solid fa-list"></i> Vinhos Cadastrados</h2>
                     
                     <!-- Filtros de Busca -->
                     <div class="filtros-admin">
                         <div class="busca-admin">
-                            <i class="fas fa-search"></i>
+                            <i class="fa-solid fa-magnifying-glass"></i>
                             <input type="text" id="busca-admin" placeholder="Buscar por nome ou tipo de uva..." class="input-busca-admin">
                         </div>
                         <div class="filtro-tipo-admin">
@@ -257,6 +286,8 @@
 
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>
+    <!-- Scripts Mobile (menu hamburguer, lazyload, web vitals) -->
+    <script src="js/mobile.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/api-admin.js"></script>
     <script>

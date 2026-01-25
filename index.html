@@ -7,8 +7,31 @@
     <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="theme-color" content="#6B1C40">
+    <!-- Preconnect para otimizar imagens Cloudinary -->
+    <link rel="preconnect" href="https://res.cloudinary.com">
+    <link rel="dns-prefetch" href="https://res.cloudinary.com">
+    <!-- CSS Mobile-First para melhorar experiência em dispositivos móveis -->
+    <link rel="stylesheet" href="css/mobile-first.css">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Registro do Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(() => console.log('Service Worker registrado'))
+                    .catch(err => console.error('SW registro falhou:', err));
+            });
+        }
+    </script>
 </head>
 <body>
+    <!-- Skip to content para acessibilidade -->
+    <a href="#catalogo" class="skip-to-content">Pular para o conteúdo</a>
     <!-- Header -->
     <header class="header">
         <div class="container">
@@ -62,6 +85,8 @@
         </div>
     </section>
 
+                        <!-- Scripts Mobile (menu hamburguer, lazyload, web vitals) -->
+                        <script src="js/mobile.js"></script>
     <!-- Catálogo Section -->
     <section id="catalogo" class="catalogo">
         <div class="container">

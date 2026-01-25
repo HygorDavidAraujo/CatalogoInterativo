@@ -53,7 +53,7 @@ function renderizarListaAdmin() {
 
     container.innerHTML = vinhos.map(vinho => `
         <div class="vinho-item-admin ${vinho.ativo === false ? 'vinho-inativo' : ''}" data-id="${vinho.id}">
-            <img src="${vinho.imagem}" alt="${vinho.nome}" class="vinho-item-imagem" onerror="this.src='https://via.placeholder.com/80x80?text=Vinho'">
+            <img src="${vinho.imagem || '/images/placeholder-80x80.svg'}" alt="${vinho.nome}" class="vinho-item-imagem" onerror="this.src='/images/placeholder-80x80.svg'">
             <div class="vinho-item-info">
                 <div class="vinho-item-nome">
                     ${vinho.nome}
@@ -66,10 +66,10 @@ function renderizarListaAdmin() {
             </div>
             <div class="vinho-item-acoes">
                 <button class="btn-icon btn-editar" onclick="editarVinho(${vinho.id})">
-                    <i class="fas fa-edit"></i> Editar
+                    <i class="fa-solid fa-pen-to-square"></i> Editar
                 </button>
                 <button class="btn-icon btn-excluir" onclick="confirmarExclusao(${vinho.id})">
-                    <i class="fas fa-trash"></i> Excluir
+                    <i class="fa-solid fa-trash"></i> Excluir
                 </button>
             </div>
         </div>
@@ -120,7 +120,7 @@ function configurarFormulario() {
             vinhoEmEdicao = null;
             const titulo = document.querySelector('.admin-card h2');
             if (titulo) {
-                titulo.innerHTML = '<i class="fas fa-plus-circle"></i> Cadastrar Novo Vinho';
+                titulo.innerHTML = '<i class="fa-solid fa-circle-plus"></i> Cadastrar Novo Vinho';
             }
         });
     }
@@ -148,7 +148,7 @@ function editarVinho(id) {
     // Alterar título do formulário
     const titulo = document.querySelector('.admin-card h2');
     if (titulo) {
-        titulo.innerHTML = '<i class="fas fa-edit"></i> Editar Vinho';
+        titulo.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Vinho';
     }
 
     // Scroll para o formulário

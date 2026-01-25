@@ -1,0 +1,617 @@
+/* ===== MOBILE-FIRST CSS =====
+   Abordagem: Mobile (320px) → Tablet (768px) → Desktop (1024px+)
+   Sempre use min-width para escalar para cima!
+===== */
+
+/* ===== RESET E VARIÁVEIS ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --cor-primaria: #6B1C40;
+    --cor-secundaria: #8B2E5A;
+    --cor-destaque: #C19A6B;
+    --cor-escura: #2C1810;
+    --cor-clara: #F5F5F0;
+    --cor-texto: #333;
+    --cor-texto-claro: #666;
+    --cor-branca: #FFF;
+    --sombra: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --sombra-hover: 0 8px 12px rgba(0, 0, 0, 0.15);
+    --transicao: all 0.3s ease;
+    
+    /* Touch targets */
+    --min-touch-size: 44px;
+    
+    /* Espaçamentos responsivos */
+    --space-xs: 0.5rem;
+    --space-sm: 1rem;
+    --space-md: 1.5rem;
+    --space-lg: 2rem;
+    --space-xl: 3rem;
+}
+
+html {
+    /* Prevenir zoom em inputs iOS */
+    -webkit-text-size-adjust: 100%;
+    /* Scroll suave */
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: var(--cor-texto);
+    background-color: var(--cor-clara);
+    /* Prevenir bounce scroll no iOS */
+    overscroll-behavior-y: contain;
+    /* Font-size base mobile */
+    font-size: 16px; /* Evita auto-zoom iOS */
+}
+
+/* Container Mobile-First */
+.container {
+    width: 100%;
+    padding: 0 var(--space-sm);
+    margin: 0 auto;
+}
+
+/* ===== HEADER MOBILE FIRST ===== */
+.header {
+    background: linear-gradient(135deg, var(--cor-primaria), var(--cor-secundaria));
+    color: var(--cor-branca);
+    padding: var(--space-sm) 0;
+    box-shadow: var(--sombra);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: var(--min-touch-size);
+}
+
+.logo h1 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* ===== MENU HAMBURGUER (Mobile) ===== */
+.menu-toggle {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    width: var(--min-touch-size);
+    height: var(--min-touch-size);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    z-index: 1001;
+}
+
+.menu-toggle span {
+    width: 100%;
+    height: 3px;
+    background: var(--cor-branca);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+.menu-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(8px, 8px);
+}
+
+.menu-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.menu-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -7px);
+}
+
+/* Mobile Navigation */
+.nav {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 80%;
+    max-width: 300px;
+    height: 100vh;
+    background: var(--cor-primaria);
+    padding: 80px var(--space-lg) var(--space-lg);
+    transition: right 0.3s ease;
+    z-index: 999;
+    overflow-y: auto;
+}
+
+.nav.active {
+    right: 0;
+}
+
+/* Overlay quando menu aberto */
+.nav-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+}
+
+.nav-overlay.active {
+    display: block;
+}
+
+.nav ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.nav-link {
+    color: var(--cor-branca);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1.1rem;
+    transition: var(--transicao);
+    padding: var(--space-sm);
+    border-radius: 5px;
+    display: block;
+    min-height: var(--min-touch-size);
+    display: flex;
+    align-items: center;
+}
+
+.nav-link:hover,
+.nav-link.active,
+.nav-link:active {
+    background-color: rgba(255, 255, 255, 0.2);
+    /* Feedback tátil */
+    transform: scale(0.98);
+}
+
+/* Badge VIP */
+.badge-vip-header {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.badge-vip-prata {
+    background: linear-gradient(135deg, #C0C0C0, #E8E8E8);
+    color: #333;
+}
+
+.badge-vip-ouro {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #333;
+}
+
+/* ===== HERO MOBILE ===== */
+.hero {
+    background: linear-gradient(135deg, rgba(107, 28, 64, 0.9), rgba(139, 46, 90, 0.9)),
+                url('../images/hero-bg.jpg') center/cover no-repeat;
+    color: var(--cor-branca);
+    padding: var(--space-xl) 0;
+    text-align: center;
+}
+
+.hero-content h2 {
+    font-size: 1.75rem;
+    margin-bottom: var(--space-sm);
+    line-height: 1.2;
+}
+
+.hero-content p {
+    font-size: 1rem;
+    margin-bottom: var(--space-md);
+}
+
+/* ===== CATÁLOGO MOBILE ===== */
+.catalogo {
+    padding: var(--space-lg) 0;
+}
+
+.section-title {
+    font-size: 1.75rem;
+    text-align: center;
+    margin-bottom: var(--space-lg);
+    color: var(--cor-primaria);
+}
+
+/* Filtros Mobile */
+.filtros {
+    display: flex;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+    overflow-x: auto;
+    padding-bottom: var(--space-xs);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+}
+
+.filtros::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+
+.filtro-btn {
+    padding: 0.75rem 1.25rem;
+    min-height: var(--min-touch-size);
+    border: 2px solid var(--cor-primaria);
+    background: var(--cor-branca);
+    color: var(--cor-primaria);
+    border-radius: 25px;
+    cursor: pointer;
+    transition: var(--transicao);
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.filtro-btn:active {
+    transform: scale(0.95);
+}
+
+.filtro-btn.active {
+    background: var(--cor-primaria);
+    color: var(--cor-branca);
+}
+
+/* Grid de Vinhos Mobile (2 colunas) */
+.vinhos-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+}
+
+.vinho-card {
+    background: var(--cor-branca);
+    border-radius: 10px;
+    box-shadow: var(--sombra);
+    overflow: hidden;
+    transition: var(--transicao);
+    cursor: pointer;
+}
+
+.vinho-card:active {
+    transform: scale(0.98);
+}
+
+.vinho-imagem {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+    background: #f9f9f9;
+    padding: var(--space-xs);
+}
+
+.vinho-info {
+    padding: var(--space-sm);
+}
+
+.vinho-nome {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: var(--cor-texto);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.3;
+}
+
+.vinho-uva,
+.vinho-ano,
+.vinho-pais {
+    font-size: 0.8rem;
+    color: var(--cor-texto-claro);
+    margin-bottom: 0.3rem;
+}
+
+.vinho-preco {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--cor-primaria);
+    margin: var(--space-xs) 0;
+}
+
+/* Botões Mobile */
+.btn-adicionar-carrinho,
+.btn-adicionar {
+    width: 100%;
+    min-height: var(--min-touch-size);
+    padding: var(--space-sm);
+    background: var(--cor-primaria);
+    color: var(--cor-branca);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transicao);
+    font-size: 0.95rem;
+}
+
+.btn-adicionar-carrinho:active,
+.btn-adicionar:active {
+    transform: scale(0.95);
+    background: var(--cor-secundaria);
+}
+
+/* ===== MODAL MOBILE ===== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    -webkit-overflow-scrolling: touch;
+}
+
+.modal-content {
+    background-color: var(--cor-branca);
+    margin: 5% auto;
+    padding: var(--space-md);
+    border-radius: 12px;
+    width: 95%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1;
+    min-width: var(--min-touch-size);
+    min-height: var(--min-touch-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus,
+.close:active {
+    color: #000;
+}
+
+/* ===== FORMS MOBILE-OPTIMIZED ===== */
+.form-group {
+    margin-bottom: var(--space-md);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--cor-texto);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: var(--space-sm);
+    min-height: var(--min-touch-size);
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px; /* Previne zoom iOS */
+    transition: var(--transicao);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(107, 28, 64, 0.1);
+}
+
+/* ===== FOOTER MOBILE ===== */
+.footer {
+    background: var(--cor-escura);
+    color: var(--cor-branca);
+    padding: var(--space-lg) 0;
+    text-align: center;
+}
+
+.footer-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.redes-sociais {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+}
+
+.social-link {
+    color: var(--cor-branca);
+    font-size: 1.5rem;
+    min-width: var(--min-touch-size);
+    min-height: var(--min-touch-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transicao);
+}
+
+.social-link:active {
+    transform: scale(1.1);
+    color: var(--cor-destaque);
+}
+
+/* ===== TABLET (768px+) ===== */
+@media (min-width: 768px) {
+    :root {
+        --space-sm: 1.5rem;
+        --space-md: 2rem;
+        --space-lg: 3rem;
+        --space-xl: 4rem;
+    }
+    
+    .container {
+        padding: 0 var(--space-md);
+    }
+    
+    .logo h1 {
+        font-size: 1.6rem;
+    }
+    
+    .menu-toggle {
+        display: none;
+    }
+    
+    .nav {
+        position: static;
+        width: auto;
+        max-width: none;
+        height: auto;
+        background: transparent;
+        padding: 0;
+    }
+    
+    .nav ul {
+        flex-direction: row;
+        gap: var(--space-md);
+    }
+    
+    .nav-link {
+        padding: 0.5rem 1rem;
+    }
+    
+    .hero-content h2 {
+        font-size: 2.5rem;
+    }
+    
+    .hero-content p {
+        font-size: 1.2rem;
+    }
+    
+    .vinhos-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-md);
+    }
+    
+    .vinho-imagem {
+        height: 220px;
+    }
+    
+    .vinho-nome {
+        font-size: 1.1rem;
+    }
+    
+    .modal-content {
+        width: 90%;
+        padding: var(--space-lg);
+    }
+    
+    .footer-content {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+}
+
+/* ===== DESKTOP (1024px+) ===== */
+@media (min-width: 1024px) {
+    .container {
+        max-width: 1400px;
+    }
+    
+    .logo h1 {
+        font-size: 1.8rem;
+    }
+    
+    .hero-content h2 {
+        font-size: 3rem;
+    }
+    
+    .vinhos-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--space-lg);
+    }
+    
+    .vinho-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--sombra-hover);
+    }
+    
+    .vinho-imagem {
+        height: 250px;
+    }
+    
+    .modal-content {
+        width: 70%;
+        max-width: 900px;
+    }
+}
+
+/* ===== LARGE DESKTOP (1440px+) ===== */
+@media (min-width: 1440px) {
+    .vinhos-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+/* ===== ACESSIBILIDADE ===== */
+/* Foco visível */
+*:focus-visible {
+    outline: 3px solid var(--cor-primaria);
+    outline-offset: 2px;
+}
+
+/* Prefers Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --cor-clara: #1a1a1a;
+        --cor-texto: #e0e0e0;
+        --cor-texto-claro: #b0b0b0;
+    }
+    
+    .vinho-card {
+        background: #2a2a2a;
+    }
+    
+    .vinho-imagem {
+        background: #333;
+    }
+}

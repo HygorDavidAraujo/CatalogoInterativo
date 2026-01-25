@@ -66,7 +66,7 @@ router.get('/:id', validateId, cacheService.cacheMiddleware(600), catchAsync(asy
 
 // POST - Criar novo vinho (admin only, com upload de imagem no Cloudinary)
 router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), validateVinho, catchAsync(async (req, res) => {
-    const { nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo, estoque } = req.body;
+    const { nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
 
     // Usar imagem do Cloudinary, URL fornecida ou vazio
     let imagemPath = imagemUrl || '';
@@ -78,8 +78,8 @@ router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), val
     const ativoBoolean = ativo === 'true' || ativo === true || ativo === '1';
 
     const [result] = await pool.query(
-        'INSERT INTO vinhos (nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagem, ativo, estoque) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [nome, tipo, uva, pais_origem || null, pais_codigo || null, bandeira_url || null, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean, estoque || 0]
+        'INSERT INTO vinhos (nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagem, ativo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [nome, tipo, uva, pais_origem || null, pais_codigo || null, bandeira_url || null, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean]
     );
 
     const [novoVinho] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [result.insertId]);
@@ -93,7 +93,7 @@ router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), val
 
 // PUT - Atualizar vinho (admin only, com upload no Cloudinary)
 router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single('imagem'), validateVinhoUpdate, catchAsync(async (req, res) => {
-    const { nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo, estoque } = req.body;
+    const { nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo, removerImagem } = req.body;
     const id = req.params.id;
 
     // Buscar vinho atual
@@ -103,14 +103,32 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
         throw new AppError('Vinho não encontrado', 404);
     }
 
+    const deveRemoverImagem = removerImagem === true || removerImagem === 'true' || removerImagem === '1';
+
     // Determinar qual imagem usar
     let imagemPath = vinhoAtual[0].imagem;
-    
+
+    // Remoção explícita da imagem atual
+    if (deveRemoverImagem && vinhoAtual[0].imagem && vinhoAtual[0].imagem.includes('cloudinary.com')) {
+        try {
+            const urlParts = vinhoAtual[0].imagem.split('/');
+            const publicIdWithExt = urlParts[urlParts.length - 1];
+            const publicId = `vinhos/${publicIdWithExt.split('.')[0]}`;
+            await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+            logger.warn('Erro ao deletar imagem antiga do Cloudinary:', err.message);
+        }
+    }
+
+    if (deveRemoverImagem) {
+        imagemPath = null; // guardar NULL no banco quando remover
+    }
+
     if (req.file) {
         imagemPath = req.file.path;
         
-        // Deletar imagem antiga do Cloudinary se existir
-        if (vinhoAtual[0].imagem && vinhoAtual[0].imagem.includes('cloudinary.com')) {
+        // Deletar imagem antiga do Cloudinary se existir e ainda não removida
+        if (!deveRemoverImagem && vinhoAtual[0].imagem && vinhoAtual[0].imagem.includes('cloudinary.com')) {
             try {
                 const urlParts = vinhoAtual[0].imagem.split('/');
                 const publicIdWithExt = urlParts[urlParts.length - 1];
@@ -131,7 +149,7 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
     }
 
     await pool.query(
-        'UPDATE vinhos SET nome = ?, tipo = ?, uva = ?, pais_origem = ?, pais_codigo = ?, bandeira_url = ?, ano = ?, guarda = ?, harmonizacao = ?, descricao = ?, preco = ?, imagem = ?, ativo = ?, estoque = ? WHERE id = ?',
+        'UPDATE vinhos SET nome = ?, tipo = ?, uva = ?, pais_origem = ?, pais_codigo = ?, bandeira_url = ?, ano = ?, guarda = ?, harmonizacao = ?, descricao = ?, preco = ?, imagem = ?, ativo = ? WHERE id = ?',
         [
             nome || vinhoAtual[0].nome,
             tipo || vinhoAtual[0].tipo,
@@ -144,9 +162,8 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
             harmonizacao !== undefined ? harmonizacao : vinhoAtual[0].harmonizacao,
             descricao !== undefined ? descricao : vinhoAtual[0].descricao,
             preco !== undefined ? preco : vinhoAtual[0].preco,
-            imagemPath,
+            imagemPath !== undefined ? imagemPath : vinhoAtual[0].imagem,
             ativoBoolean,
-            estoque !== undefined ? estoque : vinhoAtual[0].estoque,
             id
         ]
     );

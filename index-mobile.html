@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#6B1C40">
+    <meta name="description" content="Catálogo Interativo de Vinhos - Davini Vinhos Finos. Descubra vinhos excepcionais.">
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/images/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Preconnect para performance -->
+    <link rel="preconnect" href="https://res.cloudinary.com">
+    <link rel="dns-prefetch" href="https://res.cloudinary.com">
+    
+    <title>Davini Vinhos Finos - Catálogo Interativo</title>
+    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+    
+    <!-- CSS Mobile-First -->
+    <link rel="stylesheet" href="css/mobile-first.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Registro do Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('✅ Service Worker registrado'))
+                    .catch(err => console.error('❌ Service Worker falhou:', err));
+            });
+        }
+    </script>
+</head>
+<body>
+    <!-- Skip to content para acessibilidade -->
+    <a href="#catalogo" class="skip-to-content">Pular para o conteúdo</a>
+
+    <!-- Header com Menu Mobile -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1>Davini Vinhos Finos</h1>
+            </div>
+            <!-- Menu hamburguer será inserido aqui pelo JS -->
+            <nav class="nav">
+                <ul>
+                    <li><a href="#catalogo" class="nav-link active">Catálogo</a></li>
+                    <li><a href="#contato" class="nav-link">Contato</a></li>
+                    <li id="menu-perfil" style="display: none;">
+                        <a href="meu-perfil.html" class="nav-link">
+                            <i class="fas fa-user-circle"></i> Meu Perfil
+                        </a>
+                    </li>
+                    <li id="menu-admin" style="display: none;">
+                        <a href="admin.html" class="nav-link">Painel ADM</a>
+                    </li>
+                    <li id="menu-login">
+                        <a href="#" class="nav-link" id="btn-login">
+                            <i class="fas fa-user"></i> Login
+                        </a>
+                    </li>
+                    <li id="menu-usuario" style="display: none;">
+                        <span id="badge-vip-header" class="badge-vip-header" style="display: none;"></span>
+                        <a href="#" class="nav-link" id="usuario-nome"></a>
+                        <a href="#" class="nav-link" id="btn-logout">
+                            <i class="fas fa-sign-out-alt"></i> Sair
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h2>Descubra Vinhos Excepcionais</h2>
+            <p>Uma seleção especial dos melhores vinhos para você</p>
+        </div>
+    </section>
+
+    <!-- Catálogo -->
+    <section class="catalogo" id="catalogo">
+        <div class="container">
+            <h2 class="section-title">Nossos Vinhos</h2>
+            
+            <!-- Filtros -->
+            <div class="filtros">
+                <button class="filtro-btn active" data-filtro="todos">Todos</button>
+                <button class="filtro-btn" data-filtro="tinto">Tintos</button>
+                <button class="filtro-btn" data-filtro="branco">Brancos</button>
+                <button class="filtro-btn" data-filtro="rose">Rosés</button>
+                <button class="filtro-btn" data-filtro="espumante">Espumantes</button>
+            </div>
+
+            <!-- Grid de Vinhos (será preenchido via JS) -->
+            <div class="vinhos-grid" id="vinhos-grid">
+                <!-- Cards serão inseridos aqui -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" id="contato">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <h3>Davini Vinhos Finos</h3>
+                    <p id="footer-endereco">Jolimont, RS</p>
+                    <p id="footer-telefone">(54) 99999-9999</p>
+                    <p id="footer-email">contato@davinivinhos.com.br</p>
+                </div>
+                
+                <div class="redes-sociais">
+                    <a href="#" class="social-link" id="link-instagram" target="_blank" rel="noopener" aria-label="Instagram">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                    <a href="#" class="social-link" id="link-facebook" target="_blank" rel="noopener" aria-label="Facebook">
+                        <i class="fab fa-facebook"></i>
+                    </a>
+                    <a href="#" class="social-link" id="link-whatsapp" target="_blank" rel="noopener" aria-label="WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <p style="text-align: center; margin-top: 2rem; opacity: 0.8;">
+                © 2026 Davini Vinhos Finos. Todos os direitos reservados.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/mobile.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/carrinho.js"></script>
+    <script src="js/api.js"></script>
+</body>
+</html>

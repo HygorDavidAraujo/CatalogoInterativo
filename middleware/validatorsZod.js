@@ -33,23 +33,25 @@ const cadastroSchema = z.object({
 });
 
 // Schema para vinho
+const tiposPermitidos = ['tinto', 'branco', 'rose', 'espumante', 'suco_integral', 'suco_integral_tinto', 'suco_integral_branco'];
+
 const vinhoSchema = z.object({
     nome: z.string()
         .min(3, 'Nome deve ter no mínimo 3 caracteres')
         .max(200, 'Nome deve ter no máximo 200 caracteres'),
-    tipo: z.enum(['tinto', 'branco', 'rose', 'espumante', 'suco_integral'], {
-        errorMap: () => ({ message: 'Tipo deve ser: tinto, branco, rose, espumante ou suco_integral' })
+    tipo: z.enum(tiposPermitidos, {
+        errorMap: () => ({ message: 'Tipo deve ser: tinto, branco, rose, espumante ou suco integral' })
     }),
     uva: z.string()
         .max(100, 'Tipo de uva deve ter no máximo 100 caracteres')
         .optional(),
-    ano: z.number()
+    ano: z.coerce.number()
         .int('Ano deve ser um número inteiro')
         .min(1900, 'Ano deve ser maior que 1900')
         .max(new Date().getFullYear() + 1, 'Ano inválido')
         .optional()
         .nullable(),
-    preco: z.number()
+    preco: z.coerce.number()
         .positive('Preço deve ser um valor positivo')
         .max(999999.99, 'Preço muito alto'),
     descricao: z.string()
@@ -61,12 +63,12 @@ const vinhoSchema = z.object({
     guarda: z.string()
         .max(100, 'Guarda deve ter no máximo 100 caracteres')
         .optional(),
-    estoque: z.number()
+    estoque: z.coerce.number()
         .int('Estoque deve ser um número inteiro')
         .min(0, 'Estoque não pode ser negativo')
         .optional()
         .nullable(),
-    ativo: z.boolean()
+    ativo: z.coerce.boolean()
         .optional()
         .default(true),
     pais_origem: z.string()
@@ -75,7 +77,13 @@ const vinhoSchema = z.object({
 });
 
 // Schema para vinho parcial (update)
-const vinhoUpdateSchema = vinhoSchema.partial();
+const vinhoUpdateSchema = vinhoSchema.extend({
+    removerImagem: z.coerce.boolean().optional(),
+    ativo: z.coerce.boolean().optional(),
+    ano: z.coerce.number().optional().nullable(),
+    preco: z.coerce.number().optional(),
+    estoque: z.coerce.number().optional().nullable()
+}).partial();
 
 // Schema para ID
 const idSchema = z.object({
@@ -151,10 +159,20 @@ const validate = (schema, source = 'body') => {
             next();
         } catch (error) {
             if (error instanceof z.ZodError) {
-                const errors = error.errors.map(err => ({
-                    field: err.path.join('.'),
-                    message: err.message
-                }));
+                const issues = Array.isArray(error.issues)
+                    ? error.issues
+                    : Array.isArray(error.errors)
+                        ? error.errors
+                        : [];
+
+                let errors = [{ field: '', message: error.message || 'Dados inválidos' }];
+
+                if (Array.isArray(issues) && issues.length > 0) {
+                    errors = issues.map(err => ({
+                        field: Array.isArray(err?.path) ? err.path.join('.') : '',
+                        message: err?.message || 'Dados inválidos'
+                    }));
+                }
                 
                 return res.status(400).json({
                     status: 'error',

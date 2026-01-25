@@ -25,12 +25,14 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com"],
             scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
             scriptSrcAttr: ["'unsafe-inline'"], // Permite onclick, onchange, etc
-            imgSrc: ["'self'", "data:", "https:", "res.cloudinary.com", "via.placeholder.com", "flagcdn.com"],
-            connectSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "https:", "res.cloudinary.com", "flagcdn.com"],
+            connectSrc: ["'self'", "res.cloudinary.com", "cdnjs.cloudflare.com", "flagcdn.com"],
             fontSrc: ["'self'", "cdnjs.cloudflare.com"],
             objectSrc: ["'none'"],
             mediaSrc: ["'self'"],
-            frameSrc: ["'none'"]
+            frameSrc: ["'none'"],
+            workerSrc: ["'self'"],
+            manifestSrc: ["'self'"]
         }
     },
     crossOriginEmbedderPolicy: false
