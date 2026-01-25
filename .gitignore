@@ -10,6 +10,7 @@ uploads/
 # Logs
 *.log
 npm-debug.log*
+logs/
 
 # Arquivos do sistema
 .DS_Store

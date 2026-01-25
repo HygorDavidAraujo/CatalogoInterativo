@@ -194,13 +194,17 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
         
         return `
             <div class="vinho-card" data-id="${vinho.id}">
-                <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-imagem" onerror="this.src='https://via.placeholder.com/300x300?text=Vinho'">
+                <img src="${imagemSrc}" 
+                     alt="${vinho.nome}" 
+                     class="vinho-imagem" 
+                     loading="lazy"
+                     onerror="this.src='https://via.placeholder.com/300x300?text=Vinho'">
                 <div class="vinho-info">
                     <span class="vinho-tipo tipo-${vinho.tipo}">${capitalizar(vinho.tipo)}</span>
                     <h3 class="vinho-nome">${vinho.nome}</h3>
                     <p class="vinho-uva"><i class="fas fa-grape-alt"></i> ${vinho.uva}</p>
                     <p class="vinho-ano"><i class="fas fa-calendar"></i> Safra ${vinho.ano}</p>
-                    ${pais ? `<p class="vinho-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14">` : ''}<span>${pais}</span></p>` : ''}
+                    ${pais ? `<p class="vinho-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14" loading="lazy">` : ''}<span>${pais}</span></p>` : ''}
                     ${precoFinal !== precoOriginal ? `<p class='vinho-preco'><span class='preco-original' style='text-decoration:line-through;color:#888;'>R$ ${formatarPreco(precoOriginal)}</span> ${badge} <span class='preco-final' style='color:#1976d2;font-weight:bold;'>R$ ${formatarPreco(precoFinal)}</span></p>` : `<p class="vinho-preco">R$ ${formatarPreco(precoOriginal)}</p>`}
                     <button class="btn btn-adicionar-carrinho" onclick="event.stopPropagation(); window.carrinhoManager.adicionarItem(${JSON.stringify(vinho).replace(/"/g, '&quot;')})">
                         <i class="fas fa-shopping-cart"></i> Adicionar
