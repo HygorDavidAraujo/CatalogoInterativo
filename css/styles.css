@@ -567,6 +567,159 @@ body {
     margin-top: 1.5rem;
 }
 
+/* ===== MODAL IDADE ===== */
+.modal-idade-content {
+    max-width: 520px;
+    text-align: center;
+    padding: 2.2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.modal-idade-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+}
+
+.modal-idade-icone {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--cor-primaria), var(--cor-secundaria));
+    color: var(--cor-branca);
+    font-size: 1.5rem;
+    box-shadow: var(--sombra);
+}
+
+.modal-idade-header h2 {
+    margin: 0;
+    color: var(--cor-primaria);
+    font-size: 1.4rem;
+}
+
+.modal-idade-subtitulo {
+    color: var(--cor-texto-claro);
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+.modal-idade-pergunta {
+    font-weight: 700;
+    color: var(--cor-primaria);
+    margin: 1rem 0 0.5rem;
+    width: 100%;
+}
+
+.modal-idade-acoes {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 1rem;
+    width: 100%;
+}
+
+.btn-idade-sim,
+.btn-idade-nao {
+    border: none;
+    border-radius: 10px;
+    padding: 0.9rem 1.4rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: var(--sombra);
+    transition: var(--transicao);
+    min-width: 180px;
+    justify-content: center;
+}
+
+.btn-idade-sim {
+    background: linear-gradient(135deg, var(--cor-primaria), var(--cor-secundaria));
+    color: var(--cor-branca);
+}
+
+.btn-idade-sim:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sombra-hover);
+}
+
+.btn-idade-nao {
+    background: var(--cor-branca);
+    color: var(--cor-primaria);
+    border: 2px solid var(--cor-primaria);
+}
+
+.btn-idade-nao:hover {
+    background: var(--cor-clara);
+}
+
+.modal-idade-aviso {
+    margin-top: 0.8rem;
+    color: var(--cor-texto-claro);
+    font-size: 0.95rem;
+}
+
+.modal-idade-toggle {
+    margin-top: 1.2rem;
+    padding: 1rem;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    background: #fafafa;
+    text-align: center;
+    width: 100%;
+}
+
+.idade-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--cor-texto);
+}
+
+.idade-toggle-label input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--cor-primaria);
+}
+
+.tag-mais18 {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #8B1538, #6B1C40);
+    color: var(--cor-branca);
+    font-size: 0.8rem;
+    font-weight: 800;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    letter-spacing: 0.5px;
+}
+
+.idade-toggle-texto {
+    color: var(--cor-primaria);
+}
+
+.idade-toggle-legenda {
+    font-size: 0.85rem;
+    color: var(--cor-texto-claro);
+    margin-top: 0.4rem;
+    text-align: center;
+}
+
 /* ===== MENSAGEM VAZIO ===== */
 .mensagem-vazio {
     text-align: center;

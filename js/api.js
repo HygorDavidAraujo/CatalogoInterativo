@@ -288,6 +288,7 @@ function abrirModal(id) {
     modal.style.display = 'block';
 }
 
+
 function fecharModal() {
     const modal = document.getElementById('modal-vinho');
     if (modal) {

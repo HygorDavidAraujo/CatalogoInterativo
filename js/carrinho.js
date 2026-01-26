@@ -17,6 +17,12 @@ class CarrinhoManager {
         if (carrinhoSalvo) {
             this.itens = JSON.parse(carrinhoSalvo);
         }
+        this.itens = this.itens.map(item => ({
+            ...item,
+            alcoolica: typeof item.alcoolica === 'boolean'
+                ? item.alcoolica
+                : this.determinarFlagAlcoolica(item)
+        }));
         this.atualizarInterface();
     }
 
@@ -26,10 +32,22 @@ class CarrinhoManager {
     }
 
     adicionarItem(vinho) {
+        const idadeManager = window.idadeManager;
+        const alcoolica = this.determinarFlagAlcoolica(vinho);
+
+        if (alcoolica && !(idadeManager?.podeComprarBebidaAlcoolica?.())) {
+            idadeManager?.abrirModal?.();
+            this.mostrarMensagem('Confirme que tem 18 anos ou mais para adicionar bebidas alcoólicas.', 'erro');
+            return;
+        }
+
         const itemExistente = this.itens.find(item => item.id === vinho.id);
         
         if (itemExistente) {
             itemExistente.quantidade++;
+            if (typeof itemExistente.alcoolica !== 'boolean') {
+                itemExistente.alcoolica = alcoolica;
+            }
         } else {
             this.itens.push({
                 id: vinho.id,
@@ -37,7 +55,8 @@ class CarrinhoManager {
                 tipo: vinho.tipo,
                 preco: parseFloat(vinho.preco),
                 imagem: vinho.imagem,
-                quantidade: 1
+                quantidade: 1,
+                alcoolica
             });
         }
         
@@ -94,6 +113,10 @@ class CarrinhoManager {
 
     getTotalItens() {
         return this.itens.reduce((total, item) => total + item.quantidade, 0);
+    }
+
+    determinarFlagAlcoolica(vinho) {
+        return window.idadeManager?.isBebidaAlcoolica?.(vinho) ?? true;
     }
 
     atualizarInterface() {
@@ -181,6 +204,14 @@ class CarrinhoManager {
     async finalizarPedido() {
         if (this.itens.length === 0) {
             alert('Seu carrinho está vazio!');
+            return;
+        }
+
+        const idadeManager = window.idadeManager;
+        const possuiAlcoolica = this.itens.some(item => idadeManager?.isBebidaAlcoolica?.(item));
+        if (possuiAlcoolica && !(idadeManager?.podeComprarBebidaAlcoolica?.())) {
+            idadeManager?.abrirModal?.();
+            this.mostrarMensagem('Pedidos com bebida alcoólica exigem confirmação de maioridade.', 'erro');
             return;
         }
 

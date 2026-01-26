@@ -241,6 +241,26 @@
         </div>
     </div>
 
+    <!-- Modal Verificação de Idade -->
+    <div id="modal-idade" class="modal modal-idade">
+        <div class="modal-content modal-idade-content">
+            <div class="modal-idade-header">
+                <div class="modal-idade-icone">
+                    <i class="fas fa-ban"></i>
+                </div>
+                <div>
+                    <h2>Confirmação de idade</h2>
+                    <p class="modal-idade-subtitulo">Lei nº 13.106/2015: A venda de bebidas alcoólicas para menores de 18 anos é proibida por lei.</p>
+                </div>
+            </div>
+            <div class="modal-idade-pergunta">Você tem 18 anos ou mais?</div>
+            <div class="modal-idade-acoes">
+                <button class="btn btn-idade-sim" id="btn-idade-sim"><i class="fas fa-check"></i> Sim, tenho 18 anos</button>
+                <button class="btn btn-idade-nao" id="btn-idade-nao"><i class="fas fa-times"></i> Não tenho 18</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Botão Carrinho Flutuante -->
     <button class="btn-carrinho" id="btn-abrir-carrinho" title="Ver Carrinho">
         <i class="fas fa-shopping-cart"></i>
@@ -276,6 +296,7 @@
     </div>
 
     <script src="js/config.js"></script>
+    <script src="js/idade.js"></script>
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/carrinho.js"></script>
