@@ -664,7 +664,7 @@ body {
 }
 
 /* Dark Mode */
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
     :root {
         --cor-clara: #1a1a1a;
         --cor-texto: #e0e0e0;
@@ -678,4 +678,4 @@ body {
     .vinho-imagem {
         background: #333;
     }
-}
+} */
