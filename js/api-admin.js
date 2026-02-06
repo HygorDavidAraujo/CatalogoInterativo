@@ -886,11 +886,37 @@ function configurarFiltrosAdmin() {
     }
 }
 
+// ===== TABS DE CONFIGURAÇÃO =====
+function configurarTabs() {
+    const tabs = document.querySelectorAll('.config-tab');
+    const contents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const targetTab = tab.dataset.tab;
+
+            // Remover classe active de todas as tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+
+            // Adicionar classe active na tab clicada
+            tab.classList.add('active');
+            
+            // Mostrar conteúdo correspondente
+            const targetContent = document.getElementById(`tab-${targetTab}`);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+        });
+    });
+}
+
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', async () => {
     await carregarConfiguracoes();
     configurarFormularioConfig();
     configurarUploadLogo();
+    configurarTabs();
     await renderizarListaAdmin();
     configurarFormulario();
     configurarSelecaoPais();

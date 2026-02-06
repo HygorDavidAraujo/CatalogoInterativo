@@ -1089,6 +1089,115 @@
     opacity: 0.3;
 }
 
+/* ===== TABS DE CONFIGURA\u00c7\u00c3O ===== */
+.config-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--cor-primaria);
+    flex-wrap: wrap;
+}
+
+.config-tab {
+    background: transparent;
+    border: none;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--cor-texto-claro);
+    transition: var(--transicao);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.config-tab i {
+    font-size: 1.1rem;
+}
+
+.config-tab:hover {
+    color: var(--cor-primaria);
+    background-color: rgba(107, 28, 64, 0.05);
+}
+
+.config-tab.active {
+    color: var(--cor-primaria);
+    border-bottom-color: var(--cor-primaria);
+    font-weight: 600;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.info-box {
+    background-color: rgba(193, 154, 107, 0.1);
+    border-left: 4px solid var(--cor-destaque);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-top: 1.5rem;
+}
+
+.info-box i {
+    color: var(--cor-destaque);
+    font-size: 1.2rem;
+    margin-right: 0.5rem;
+}
+
+.info-box p {
+    margin-bottom: 0.5rem;
+    color: var(--cor-texto);
+}
+
+.info-box ul {
+    margin: 0.5rem 0 0 1.5rem;
+    color: var(--cor-texto-claro);
+}
+
+.info-box li {
+    margin-bottom: 0.5rem;
+}
+
+/* Responsividade para tabs */
+@media (max-width: 768px) {
+    .config-tabs {
+        flex-direction: column;
+        border-bottom: none;
+    }
+    
+    .config-tab {
+        border-bottom: 2px solid #ddd;
+        border-left: 3px solid transparent;
+        margin-bottom: 0;
+        padding: 0.75rem 1rem;
+    }
+    
+    .config-tab.active {
+        border-bottom-color: #ddd;
+        border-left-color: var(--cor-primaria);
+        background-color: rgba(107, 28, 64, 0.05);
+    }
+}
+
 @media (max-width: 768px) {
     .cliente-info-grid {
         grid-template-columns: 1fr;
