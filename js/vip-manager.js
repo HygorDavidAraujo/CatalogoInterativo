@@ -27,6 +27,16 @@ class VipManager {
             this.carregandoPromise = null;
         }
     }
+
+    async recarregar() {
+        // Invalidar cache e forçar recarregamento
+        this.carregado = false;
+        this.beneficios = [];
+        this.carregandoPromise = null;
+        
+        console.log('🔄 Recarregando benefícios VIP...');
+        return await this.carregar();
+    }
     
     async _carregarDaApi() {
         try {
@@ -40,9 +50,9 @@ class VipManager {
             console.error('Erro ao carregar benefícios:', error);
             // Fallback para benefícios padrão em caso de erro
             this.beneficios = [
-                { slug: 'prata', nome: 'VIP Prata', tipo_desconto: 'percentual', valor_desconto: 3 },
-                { slug: 'ouro', nome: 'VIP Ouro', tipo_desconto: 'percentual', valor_desconto: 7 },
-                { slug: 'diamante', nome: 'VIP Diamante', tipo_desconto: 'percentual', valor_desconto: 11 }
+                { slug: 'prata', nome: 'VIP Prata', tipo_desconto: 'percentual', valor_desconto: 3, cor: '#C0C0C0' },
+                { slug: 'ouro', nome: 'VIP Ouro', tipo_desconto: 'percentual', valor_desconto: 7, cor: '#FFD700' },
+                { slug: 'diamante', nome: 'VIP Diamante', tipo_desconto: 'percentual', valor_desconto: 11, cor: '#B9F2FF' }
             ];
             this.carregado = true;
             console.log('⚠ Usando benefícios padrão (fallback)');
@@ -140,3 +150,23 @@ if (document.readyState === 'loading') {
     // Se o DOM já está pronto, carregar imediatamente
     window.vipManager.carregar().catch(err => console.error('Erro ao carregar VIP Manager:', err));
 }
+
+// Verificar mudanças nos benefícios a cada 30 segundos (detecção automática)
+setInterval(async () => {
+    if (document.hidden) return; // Não verificar se a aba está inativa
+    
+    try {
+        const response = await fetch(`${API_URL}/beneficios`);
+        if (!response.ok) return;
+        
+        const novosBeneficios = await response.json();
+        
+        // Verificar se houve mudanças
+        if (JSON.stringify(novosBeneficios) !== JSON.stringify(window.vipManager.beneficios)) {
+            console.log('🔄 Mudanças detectadas nos benefícios VIP, atualizando...');
+            await window.vipManager.recarregar();
+        }
+    } catch (error) {
+        // Silenciar erros de sincronização automática
+    }
+}, 30000);

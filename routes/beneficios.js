@@ -38,7 +38,7 @@ router.get('/slug/:slug', async (req, res) => {
 // POST - Criar novo benefício (apenas admin)
 router.post('/', verificarAdminAuth, async (req, res) => {
     try {
-        const { nome, slug, tipo_desconto, valor_desconto, ordem } = req.body;
+        const { nome, slug, tipo_desconto, valor_desconto, cor, ordem } = req.body;
         
         // Validações
         if (!nome || !slug || !tipo_desconto || valor_desconto === undefined) {
@@ -49,9 +49,12 @@ router.post('/', verificarAdminAuth, async (req, res) => {
             return res.status(400).json({ error: 'tipo_desconto deve ser "percentual" ou "valor_fixo"' });
         }
 
+        // Cor padrão se não informada
+        const corFinal = cor || '#6B1C40';
+
         const [result] = await pool.query(
-            'INSERT INTO beneficios_vip (nome, slug, tipo_desconto, valor_desconto, ordem) VALUES (?, ?, ?, ?, ?)',
-            [nome, slug, tipo_desconto, parseFloat(valor_desconto), ordem || 0]
+            'INSERT INTO beneficios_vip (nome, slug, tipo_desconto, valor_desconto, cor, ordem) VALUES (?, ?, ?, ?, ?, ?)',
+            [nome, slug, tipo_desconto, parseFloat(valor_desconto), corFinal, ordem || 0]
         );
 
         res.status(201).json({
@@ -71,13 +74,22 @@ router.post('/', verificarAdminAuth, async (req, res) => {
 // PUT - Atualizar benefício (apenas admin)
 router.put('/:id', verificarAdminAuth, async (req, res) => {
     try {
-        const { nome, slug, tipo_desconto, valor_desconto, ordem } = req.body;
+        const { nome, slug, tipo_desconto, valor_desconto, cor, ordem } = req.body;
         const { id } = req.params;
 
-        const [result] = await pool.query(
-            'UPDATE beneficios_vip SET nome = ?, slug = ?, tipo_desconto = ?, valor_desconto = ?, ordem = ? WHERE id = ?',
-            [nome, slug, tipo_desconto, parseFloat(valor_desconto), ordem || 0, id]
-        );
+        // Se cor não informada, manter a cor atual
+        let query = 'UPDATE beneficios_vip SET nome = ?, slug = ?, tipo_desconto = ?, valor_desconto = ?, ordem = ?';
+        let params = [nome, slug, tipo_desconto, parseFloat(valor_desconto), ordem || 0];
+        
+        if (cor) {
+            query += ', cor = ?';
+            params.push(cor);
+        }
+        
+        query += ' WHERE id = ?';
+        params.push(id);
+        
+        const [result] = await pool.query(query, params);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Benefício não encontrado' });

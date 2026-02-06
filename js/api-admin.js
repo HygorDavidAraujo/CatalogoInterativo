@@ -999,7 +999,7 @@ async function adicionarBeneficio() {
             throw new Error(error.error || 'Erro ao adicionar benefício');
         }
 
-        mostrarMensagem('Benefício adicionado com sucesso!', 'sucesso');
+        mostrarMensagem('Ben efício adicionado com sucesso!', 'sucesso');
         
         // Limpar formulário
         document.getElementById('beneficio-nome').value = '';
@@ -1008,7 +1008,14 @@ async function adicionarBeneficio() {
         document.getElementById('beneficio-cor').value = '#6B1C40';
         document.getElementById('beneficio-ordem').value = '0';
         
+        // Recarregar lista de benefícios no admin
         await carregarBeneficios();
+        
+        // Recarregar VipManager no frontend para atualizar badges
+        if (window.vipManager) {
+            await window.vipManager.recarregar();
+            console.log('✓ VipManager recarregado com sucesso');
+        }
     } catch (error) {
         console.error('Erro ao adicionar benefício:', error);
         alert(error.message);
@@ -1085,6 +1092,12 @@ async function atualizarBeneficio(id, dados) {
 
         mostrarMensagem('Benefício atualizado com sucesso!', 'sucesso');
         await carregarBeneficios();
+        
+        // Recarregar VipManager no frontend para atualizar badges e descontos
+        if (window.vipManager) {
+            await window.vipManager.recarregar();
+            console.log('✓ VipManager recarregado com sucesso');
+        }
     } catch (error) {
         console.error('Erro ao atualizar benefício:', error);
         alert(error.message);
