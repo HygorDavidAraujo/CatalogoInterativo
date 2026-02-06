@@ -273,6 +273,144 @@ body {
     color: var(--cor-branca);
 }
 
+.filtros-ordenacao {
+    margin-top: calc(var(--space-xs) * -1);
+    margin-bottom: var(--space-lg);
+}
+
+/* ===== DESTAQUE DA SEMANA (Mobile) ===== */
+.destaque-semana {
+    margin: var(--space-lg) 0 var(--space-xl);
+}
+
+.destaque-card {
+    position: relative;
+    display: grid;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: 20px;
+    background: linear-gradient(160deg, #2C1810, #6B1C40 55%, #8B2E5A);
+    color: var(--cor-branca);
+    box-shadow: 0 16px 30px rgba(44, 24, 16, 0.35);
+    animation: destaqueReveal 0.6s ease both;
+}
+
+.destaque-selo {
+    position: absolute;
+    top: var(--space-sm);
+    left: var(--space-sm);
+    background: linear-gradient(135deg, #F1C27D, #C19A6B);
+    color: #2C1810;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.65rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+}
+
+.destaque-media {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: var(--space-sm);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.destaque-media img {
+    max-width: 100%;
+    max-height: 240px;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
+}
+
+.destaque-conteudo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.destaque-topo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.destaque-tipo,
+.destaque-vip {
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.destaque-vip {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.destaque-titulo {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 1.5rem;
+    line-height: 1.2;
+}
+
+.destaque-descricao {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.destaque-preco {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+}
+
+.destaque-preco .preco-original {
+    text-decoration: line-through;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.destaque-preco .preco-final {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #F1C27D;
+}
+
+.destaque-acoes {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    color: var(--cor-branca);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transicao);
+}
+
+.btn-outline:active {
+    transform: scale(0.98);
+}
+
+@keyframes destaqueReveal {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Grid de Vinhos Mobile (2 colunas) */
 .vinhos-grid {
     display: grid;

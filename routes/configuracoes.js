@@ -18,7 +18,9 @@ router.get('/', async (req, res) => {
                 endereco: '',
                 whatsapp: '',
                 instagram: '',
-                facebook: ''
+                facebook: '',
+                destaque_vinho_id: null,
+                destaque_fixado_em: null
             });
         }
         
@@ -54,9 +56,19 @@ router.post('/', verificarAdminAuth, async (req, res) => {
         console.log('===== RECEBENDO CONFIGURAÇÕES =====');
         console.log('Body recebido:', req.body);
         const config = req.body;
+        const destaqueVinhoId = config.destaque_vinho_id ? parseInt(config.destaque_vinho_id, 10) : null;
 
         // Verificar se já existe configuração
-        const [existing] = await pool.query('SELECT id FROM configuracoes LIMIT 1');
+        const [existing] = await pool.query('SELECT id, destaque_vinho_id, destaque_fixado_em FROM configuracoes LIMIT 1');
+
+        let destaqueFixadoEm = null;
+        if (destaqueVinhoId) {
+            if (!existing.length || Number(existing[0].destaque_vinho_id) !== destaqueVinhoId) {
+                destaqueFixadoEm = new Date();
+            } else {
+                destaqueFixadoEm = existing[0].destaque_fixado_em;
+            }
+        }
         
         if (existing.length > 0) {
             // Atualizar configuração existente
@@ -70,7 +82,9 @@ router.post('/', verificarAdminAuth, async (req, res) => {
                     endereco = ?,
                     whatsapp = ?,
                     instagram = ?,
-                    facebook = ?
+                    facebook = ?,
+                    destaque_vinho_id = ?,
+                    destaque_fixado_em = ?
                 WHERE id = ?`,
                 [
                     config.nome_site || '',
@@ -82,6 +96,8 @@ router.post('/', verificarAdminAuth, async (req, res) => {
                     config.whatsapp || '',
                     config.instagram || '',
                     config.facebook || '',
+                    destaqueVinhoId,
+                    destaqueFixadoEm,
                     existing[0].id
                 ]
             );
@@ -89,8 +105,8 @@ router.post('/', verificarAdminAuth, async (req, res) => {
             // Inserir nova configuração
             await pool.query(
                 `INSERT INTO configuracoes 
-                (nome_site, titulo, descricao, telefone, email, endereco, whatsapp, instagram, facebook)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                (nome_site, titulo, descricao, telefone, email, endereco, whatsapp, instagram, facebook, destaque_vinho_id, destaque_fixado_em)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     config.nome_site || '',
                     config.titulo || '',
@@ -100,7 +116,9 @@ router.post('/', verificarAdminAuth, async (req, res) => {
                     config.endereco || '',
                     config.whatsapp || '',
                     config.instagram || '',
-                    config.facebook || ''
+                    config.facebook || '',
+                    destaqueVinhoId,
+                    destaqueFixadoEm
                 ]
             );
         }

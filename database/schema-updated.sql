@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS configuracoes (
     whatsapp VARCHAR(20),
     instagram VARCHAR(500),
     facebook VARCHAR(500),
+    destaque_vinho_id INT NULL,
+    destaque_fixado_em DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -111,8 +113,8 @@ CREATE TABLE IF NOT EXISTS pedidos_itens (
 -- DELETE FROM pedidos;
 
 -- Inserir configurações padrão (ATUALIZADA: Usar nova estrutura de colunas)
-INSERT INTO configuracoes (nome_site, titulo, descricao, telefone, email, endereco, whatsapp, instagram, facebook) VALUES
-('Davini Vinhos Finos', 'Catálogo Interativo de Vinhos', 'Explore nossa seleção premium de vinhos', '(62) 98183-1483', 'hygordavidaraujo@gmail.com', 'Goiânia, GO', '5562981831483', 'https://instagram.com/davinivinhos', 'https://facebook.com/davinivinhos')
+INSERT INTO configuracoes (nome_site, titulo, descricao, telefone, email, endereco, whatsapp, instagram, facebook, destaque_vinho_id, destaque_fixado_em) VALUES
+('Davini Vinhos Finos', 'Catálogo Interativo de Vinhos', 'Explore nossa seleção premium de vinhos', '(62) 98183-1483', 'hygordavidaraujo@gmail.com', 'Goiânia, GO', '5562981831483', 'https://instagram.com/davinivinhos', 'https://facebook.com/davinivinhos', NULL, NULL)
 ON DUPLICATE KEY UPDATE
     titulo = VALUES(titulo),
     descricao = VALUES(descricao),
@@ -121,7 +123,9 @@ ON DUPLICATE KEY UPDATE
     endereco = VALUES(endereco),
     whatsapp = VALUES(whatsapp),
     instagram = VALUES(instagram),
-    facebook = VALUES(facebook);
+    facebook = VALUES(facebook),
+    destaque_vinho_id = VALUES(destaque_vinho_id),
+    destaque_fixado_em = VALUES(destaque_fixado_em);
 
 -- Inserir vinhos iniciais
 INSERT INTO vinhos (nome, tipo, uva, ano, guarda, harmonizacao, descricao, preco, imagem, ativo) VALUES

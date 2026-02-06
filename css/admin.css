@@ -148,6 +148,12 @@
     resize: vertical;
 }
 
+.destaque-status {
+    margin-top: 0.4rem;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
 .form-actions {
     display: flex;
     gap: 1rem;

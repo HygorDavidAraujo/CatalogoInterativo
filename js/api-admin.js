@@ -90,6 +90,7 @@ async function carregarConfiguracoes() {
         document.getElementById('config-instagram').value = config.instagram || '';
         document.getElementById('config-facebook').value = config.facebook || '';
         document.getElementById('config-whatsapp').value = config.whatsapp || '';
+        await preencherDestaqueSemana(config);
     } catch (error) {
         console.error('Erro ao carregar configurações:', error);
     }
@@ -108,6 +109,9 @@ async function configurarFormularioConfig() {
         e.preventDefault();
         console.log('Formulário de configurações submetido');
 
+        const destaqueSelect = document.getElementById('config-destaque-vinho');
+        const destaqueId = destaqueSelect ? destaqueSelect.value : '';
+
         const configuracoes = {
             nome_site: document.getElementById('config-nome-site').value.trim(),
             titulo: document.getElementById('config-titulo').value.trim(),
@@ -117,7 +121,8 @@ async function configurarFormularioConfig() {
             endereco: document.getElementById('config-endereco').value.trim(),
             instagram: document.getElementById('config-instagram').value.trim(),
             facebook: document.getElementById('config-facebook').value.trim(),
-            whatsapp: document.getElementById('config-whatsapp').value.trim()
+            whatsapp: document.getElementById('config-whatsapp').value.trim(),
+            destaque_vinho_id: destaqueId ? parseInt(destaqueId, 10) : null
         };
 
         console.log('Dados a serem salvos:', configuracoes);
@@ -125,12 +130,48 @@ async function configurarFormularioConfig() {
         try {
             const resultado = await vinhoManager.salvarConfiguracoes(configuracoes);
             console.log('Configurações salvas:', resultado);
+            atualizarStatusDestaque(resultado);
             mostrarMensagem('Configurações salvas com sucesso! As alterações já estão visíveis no site.', 'sucesso');
         } catch (error) {
             console.error('Erro ao salvar configurações:', error);
             mostrarMensagem('Erro ao salvar configurações. Tente novamente.', 'erro');
         }
     });
+}
+
+async function preencherDestaqueSemana(config) {
+    const select = document.getElementById('config-destaque-vinho');
+    if (!select) return;
+
+    if (!vinhoManager.vinhos.length) {
+        await vinhoManager.carregarVinhos(true);
+    }
+
+    const vinhosAtivos = vinhoManager.vinhos.filter(vinho => vinho.ativo === 1 || vinho.ativo === true);
+    const opcoes = ['<option value="">Aleatorio (sem fixar)</option>'];
+
+    vinhosAtivos.forEach(vinho => {
+        opcoes.push(`<option value="${vinho.id}">${vinho.nome}</option>`);
+    });
+
+    select.innerHTML = opcoes.join('');
+    select.value = config?.destaque_vinho_id ? String(config.destaque_vinho_id) : '';
+    atualizarStatusDestaque(config);
+}
+
+function atualizarStatusDestaque(config) {
+    const status = document.getElementById('destaque-status');
+    if (!status) return;
+
+    if (config?.destaque_vinho_id && config?.destaque_fixado_em) {
+        const fixadoEm = new Date(config.destaque_fixado_em);
+        const expiraEm = new Date(fixadoEm.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const dataFixada = fixadoEm.toLocaleDateString('pt-BR');
+        const dataExpira = expiraEm.toLocaleDateString('pt-BR');
+        status.textContent = `Fixado em ${dataFixada}. Valido ate ${dataExpira} ou ate substituicao.`;
+    } else {
+        status.textContent = 'Sem destaque fixado. O sistema escolhe automaticamente.';
+    }
 }
 
 // ===== RENDERIZAÇÃO DA LISTA ADMIN =====

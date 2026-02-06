@@ -232,6 +232,89 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
     });
 }
 
+async function renderizarDestaqueSemana() {
+    const container = document.getElementById('destaque-semana');
+    if (!container) return;
+
+    try {
+        if (!vinhoManager.vinhos.length) {
+            await vinhoManager.carregarVinhos();
+        }
+
+        await vinhoManager.carregarConfiguracoes();
+
+        const vinhosAtivos = vinhoManager.vinhos.filter(vinho => vinho.ativo !== 0 && vinho.ativo !== false);
+        if (!vinhosAtivos.length) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const config = vinhoManager.configuracoes || {};
+        const destaqueId = config.destaque_vinho_id ? Number(config.destaque_vinho_id) : null;
+        const destaqueFixadoEm = config.destaque_fixado_em ? new Date(config.destaque_fixado_em) : null;
+        const limiteFixacao = 7 * 24 * 60 * 60 * 1000;
+        const fixacaoValida = destaqueId && destaqueFixadoEm && (Date.now() - destaqueFixadoEm.getTime() <= limiteFixacao);
+
+        let vinho = null;
+        if (fixacaoValida) {
+            vinho = vinhosAtivos.find(item => item.id === destaqueId) || null;
+        }
+
+        if (!vinho) {
+            const index = calcularIndiceAleatorioDoDia(vinhosAtivos.length);
+            vinho = vinhosAtivos[index];
+        }
+
+        const imagemSrc = vinho.imagem ?
+            (vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`) :
+            'https://via.placeholder.com/480x480?text=Vinho';
+
+        const usuario = window.authManager?.usuarioLogado;
+        const vipTipo = usuario?.is_vip ? usuario?.vip_tipo : null;
+        const precoOriginal = parseFloat(vinho.preco);
+        const precoFinal = calcularPrecoComDesconto(precoOriginal, vipTipo);
+        const badgeVip = vipTipo ? `VIP ${vipTipo.charAt(0).toUpperCase()}${vipTipo.slice(1)}` : '';
+
+        container.innerHTML = `
+            <div class="destaque-card" data-id="${vinho.id}">
+                <div class="destaque-selo">
+                    <span>Destaque da Semana</span>
+                </div>
+                <div class="destaque-media">
+                    <img src="${imagemSrc}" alt="${vinho.nome}" loading="lazy" onerror="this.src='https://via.placeholder.com/480x480?text=Vinho'">
+                </div>
+                <div class="destaque-conteudo">
+                    <div class="destaque-topo">
+                        <span class="destaque-tipo tipo-${vinho.tipo}">${capitalizar(vinho.tipo)}</span>
+                        ${badgeVip ? `<span class="destaque-vip">${badgeVip}</span>` : ''}
+                    </div>
+                    <h3 class="destaque-titulo">${vinho.nome}</h3>
+                    <p class="destaque-descricao">Selecao premium da casa, escolhida para quem aprecia luxo e deseja surpreender no brinde. Garanta este exemplar enquanto esta em evidencia.</p>
+                    <div class="destaque-preco">
+                        ${precoFinal !== precoOriginal ? `<span class="preco-original">R$ ${formatarPreco(precoOriginal)}</span>` : ''}
+                        <span class="preco-final">R$ ${formatarPreco(precoFinal)}</span>
+                    </div>
+                    <div class="destaque-acoes">
+                        <button class="btn btn-adicionar-carrinho" onclick="event.stopPropagation(); window.carrinhoManager.adicionarItem(${JSON.stringify(vinho).replace(/"/g, '&quot;')})">
+                            <i class="fas fa-shopping-cart"></i> Adicionar
+                        </button>
+                        <button class="btn btn-outline" onclick="event.stopPropagation(); abrirModal(${vinho.id})">
+                            Ver detalhes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.querySelector('.destaque-card')?.addEventListener('click', () => {
+            abrirModal(vinho.id);
+        });
+    } catch (error) {
+        console.error('Erro ao renderizar destaque da semana:', error);
+        container.innerHTML = '';
+    }
+}
+
 // ===== MODAL DE DETALHES =====
 function abrirModal(id) {
     const vinho = vinhoManager.getVinhoPorId(id);
@@ -476,10 +559,27 @@ function calcularPrecoComDesconto(precoOriginal, vipTipo) {
     return precoFinal;
 }
 
+function calcularIndiceAleatorioDoDia(total) {
+    if (!total) return 0;
+    const agora = new Date();
+    const inicioAno = new Date(agora.getFullYear(), 0, 1);
+    const diasPassados = Math.floor((agora - inicioAno) / 86400000);
+    const semana = Math.floor((diasPassados + inicioAno.getDay()) / 7);
+    const seed = `${agora.getFullYear()}-S${semana}`;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+        hash = (hash * 31 + seed.charCodeAt(i)) % 2147483647;
+    }
+    return hash % total;
+}
+
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', async () => {
     // Renderizar vinhos iniciais
     await renderizarVinhos();
+
+    // Renderizar destaque da semana
+    await renderizarDestaqueSemana();
 
     // Atualizar informações de contato
     await atualizarInformacoesContato();
