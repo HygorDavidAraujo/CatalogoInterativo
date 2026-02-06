@@ -94,7 +94,26 @@ class CarrinhoManager {
         if (!isVip || !vipTipo) return preco;
         
         // Usar VipManager para calcular desconto dinâmico
-        return window.vipManager.calcularDesconto(preco, vipTipo);
+        if (window.vipManager && window.vipManager.calcularDesconto) {
+            return window.vipManager.calcularDesconto(preco, vipTipo);
+        }
+        
+        // Fallback se VipManager não estiver pronto
+        console.warn('VipManager não disponível, usando cálculo manual');
+        const beneficios = {
+            'prata': 0.03,
+            'ouro': 0.07,
+            'diamante': 0.11,
+            'atacado': 0.15
+        };
+        const desconto = beneficios[vipTipo] || 0;
+        if (desconto > 0) {
+            let precoFinal = preco * (1 - desconto);
+            precoFinal = Math.ceil(precoFinal * 100) / 100;
+            precoFinal = Math.floor(precoFinal) + 0.90;
+            return precoFinal;
+        }
+        return preco;
     }
 
     getTotal() {
