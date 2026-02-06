@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { verificarAdminAuth } = require('../middleware/auth');
+const { cloudinary, upload } = require('../config/cloudinary');
 
 // GET - Buscar todas as configurações
 router.get('/', async (req, res) => {
@@ -155,6 +156,24 @@ router.put('/:chave', verificarAdminAuth, async (req, res) => {
     } catch (error) {
         console.error('Erro ao atualizar configuração:', error);
         res.status(500).json({ error: 'Erro ao atualizar configuração' });
+    }
+});
+
+// POST - Upload de logo (apenas admin)
+router.post('/upload-logo', verificarAdminAuth, upload.single('logo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Nenhuma imagem foi enviada' });
+        }
+
+        // URL da imagem no Cloudinary
+        const logoUrl = req.file.path;
+        
+        console.log('Logo enviada com sucesso:', logoUrl);
+        res.json({ logo_url: logoUrl });
+    } catch (error) {
+        console.error('Erro ao fazer upload da logo:', error);
+        res.status(500).json({ error: 'Erro ao fazer upload da logo', details: error.message });
     }
 });
 

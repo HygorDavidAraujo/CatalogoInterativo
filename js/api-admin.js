@@ -146,21 +146,23 @@ async function configurarFormularioConfig() {
         // Verificar se tem logo
         try {
             if (logoUpload) {
-                // Fazer upload da logo e obter URL
+                // Fazer upload da logo via backend
                 const formData = new FormData();
-                formData.append('file', logoUpload);
-                formData.append('upload_preset', 'catlogo_interativo');
+                formData.append('logo', logoUpload);
 
-                const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/dcfxxfqsi/image/upload', {
+                const uploadResponse = await fetch(`${API_URL}/configuracoes/upload-logo`, {
                     method: 'POST',
+                    headers: getAuthHeaders(),
                     body: formData
                 });
 
-                if (cloudinaryResponse.ok) {
-                    const cloudinaryData = await cloudinaryResponse.json();
-                    configuracoes.logo_url = cloudinaryData.secure_url;
-                    console.log('Logo enviada para Cloudinary:', configuracoes.logo_url);
+                if (uploadResponse.ok) {
+                    const uploadData = await uploadResponse.json();
+                    configuracoes.logo_url = uploadData.logo_url;
+                    console.log('Logo enviada com sucesso:', configuracoes.logo_url);
                 } else {
+                    const errorText = await uploadResponse.text();
+                    console.error('Erro no upload:', errorText);
                     mostrarMensagem('Erro ao fazer upload da logo. Tente novamente.', 'erro');
                     return;
                 }

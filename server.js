@@ -16,6 +16,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
+// ===== TRUST PROXY =====
+// Necessário quando atrás de um proxy reverso (Railway, Heroku, etc)
+app.set('trust proxy', 1);
+
 // ===== SEGURANÇA =====
 // Helmet para headers de segurança
 app.use(helmet({
