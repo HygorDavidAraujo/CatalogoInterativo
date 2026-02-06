@@ -218,8 +218,7 @@ body {
 
 /* ===== HERO MOBILE ===== */
 .hero {
-    background: linear-gradient(135deg, rgba(107, 28, 64, 0.9), rgba(139, 46, 90, 0.9)),
-                url('../images/hero-bg.jpg') center/cover no-repeat;
+    background: linear-gradient(135deg, rgba(107, 28, 64, 0.9), rgba(139, 46, 90, 0.9));
     color: var(--cor-branca);
     padding: var(--space-xl) 0;
     text-align: center;
