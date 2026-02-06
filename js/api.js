@@ -184,22 +184,26 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
         const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
         const pais = vinho.pais_origem || '';
         
-        // VIP desconto logic
+        // VIP desconto logic - dinâmico via VipManager
         let usuario = window.authManager?.usuarioLogado;
         let isVip = usuario?.is_vip;
         let vipTipo = usuario?.vip_tipo;
-        let desconto = 0;
         let badge = '';
+        
         if (isVip && vipTipo) {
-            if (vipTipo === 'prata') { desconto = 0.03; badge = '<span class="badge-vip badge-prata"><i class="fas fa-star"></i> VIP Prata</span>'; }
-            else if (vipTipo === 'ouro') { desconto = 0.07; badge = '<span class="badge-vip badge-ouro"><i class="fas fa-star"></i> VIP Ouro</span>'; }
-            else if (vipTipo === 'diamante') { desconto = 0.11; badge = '<span class="badge-vip badge-diamante"><i class="fas fa-gem"></i> VIP Diamante</span>'; }
+            // Usar VipManager para buscar badge dinâmico
+            if (window.vipManager && window.vipManager.beneficios.length > 0) {
+                badge = window.vipManager.getBadgeHtml(vipTipo);
+            } else {
+                // Fallback básico se VipManager não carregou
+                const labels = {prata: 'Prata', ouro: 'Ouro', diamante: 'Diamante', atacado: 'Atacado'};
+                const label = labels[vipTipo] || vipTipo.charAt(0).toUpperCase() + vipTipo.slice(1);
+                badge = `<span class="badge-vip" style="background:#6B1C40;color:white;padding:4px 8px;border-radius:4px;font-size:0.8rem;">🎁 ${label}</span>`;
+            }
         }
+        
         let precoOriginal = parseFloat(vinho.preco);
-        let precoFinal = precoOriginal;
-        if (desconto > 0) {
-            precoFinal = calcularPrecoComDesconto(precoOriginal, vipTipo);
-        }
+        let precoFinal = isVip && vipTipo ? calcularPrecoComDesconto(precoOriginal, vipTipo) : precoOriginal;
         
         return `
             <div class="vinho-card" data-id="${vinho.id}">
@@ -562,11 +566,22 @@ function formatarPreco(preco) {
 }
 
 function calcularPrecoComDesconto(precoOriginal, vipTipo) {
-    let desconto = 0;
-    if (vipTipo === 'prata') desconto = 0.03;
-    else if (vipTipo === 'ouro') desconto = 0.07;
-    else if (vipTipo === 'diamante') desconto = 0.11;
-
+    if (!vipTipo) return precoOriginal;
+    
+    // Tentar usar VipManager primeiro
+    if (window.vipManager && window.vipManager.beneficios.length > 0) {
+        return window.vipManager.calcularDesconto(precoOriginal, vipTipo);
+    }
+    
+    // Fallback com todos os tipos conhecidos
+    const descontos = {
+        'prata': 0.03,
+        'ouro': 0.07,
+        'diamante': 0.11,
+        'atacado': 0.15
+    };
+    
+    const desconto = descontos[vipTipo] || 0;
     if (desconto === 0) return precoOriginal;
 
     let precoFinal = precoOriginal * (1 - desconto);

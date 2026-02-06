@@ -391,8 +391,6 @@ function configurarEventosCarrinho() {
     }
 }
 
-// Adicionar CSS para animações
-const style = document.createElement('style');
 // Quando VipManager carregar, atualizar interface para exibir badges dinâmicas
 if (window.vipManager) {
     window.vipManager.onReady(() => {
