@@ -255,18 +255,25 @@ class CarrinhoManager {
             // Montar mensagem para WhatsApp
             let mensagem = `🍷 *PEDIDO DE VINHOS*\n\n`;
             mensagem += `*Pedido #${resultado.pedidoId}*\n\n`;
-            mensagem += `*Cliente:* ${usuario.nome}\n`;
+            
+            let nomeClienteComVip = usuario.nome;
+            if (usuario?.is_vip && usuario?.vip_tipo) {
+                nomeClienteComVip += ` (VIP ${usuario.vip_tipo.toUpperCase()})`;
+            }
+            
+            mensagem += `*Cliente:* ${nomeClienteComVip}\n`;
             mensagem += `*Email:* ${usuario.email}\n`;
             mensagem += `*Telefone:* ${usuario.telefone || 'Não informado'}\n\n`;
             mensagem += `*ITENS DO PEDIDO:*\n`;
             mensagem += `━━━━━━━━━━━━━━━━\n`;
 
             this.itens.forEach((item, index) => {
-                const subtotal = item.preco * item.quantidade;
+                const precoComDesconto = this.getDescontoVip(item.preco);
+                const subtotal = precoComDesconto * item.quantidade;
                 mensagem += `\n${index + 1}. *${item.nome}*\n`;
                 mensagem += `   • Tipo: ${item.tipo}\n`;
                 mensagem += `   • Quantidade: ${item.quantidade}x\n`;
-                mensagem += `   • Preço Unit: R$ ${item.preco.toFixed(2).replace('.', ',')}\n`;
+                mensagem += `   • Preço Unit: R$ ${precoComDesconto.toFixed(2).replace('.', ',')}\n`;
                 mensagem += `   • Subtotal: R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
             });
 

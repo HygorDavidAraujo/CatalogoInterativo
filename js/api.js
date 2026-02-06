@@ -117,7 +117,7 @@ class VinhoManager {
 const vinhoManager = new VinhoManager();
 
 // ===== RENDERIZAÇÃO DOS VINHOS =====
-async function renderizarVinhos(filtro = 'todos', busca = '') {
+async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padrao') {
     const container = document.getElementById('vinhos-container');
     if (!container) return;
 
@@ -144,6 +144,17 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
             );
         }
 
+        const usuario = window.authManager?.usuarioLogado;
+        const vipTipo = usuario?.is_vip ? usuario?.vip_tipo : null;
+
+        if (ordenacao === 'preco_asc' || ordenacao === 'preco_desc') {
+            vinhos = vinhos.slice().sort((a, b) => {
+                const precoA = calcularPrecoComDesconto(parseFloat(a.preco), vipTipo);
+                const precoB = calcularPrecoComDesconto(parseFloat(b.preco), vipTipo);
+                return ordenacao === 'preco_asc' ? precoA - precoB : precoB - precoA;
+            });
+        }
+
         if (vinhos.length === 0) {
             container.innerHTML = `
                 <div class="mensagem-vazio" role="status">
@@ -158,7 +169,7 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
             <div class="mensagem-erro" role="alert">
                 <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
                 <p>Erro ao carregar vinhos. Tente novamente.</p>
-                <button class="btn btn-primary" onclick="renderizarVinhos('${filtro}', '${busca}')">
+                <button class="btn btn-primary" onclick="renderizarVinhos('${filtro}', '${busca}', '${ordenacao}')">
                     <i class="fas fa-redo"></i> Tentar Novamente
                 </button>
             </div>
@@ -187,9 +198,7 @@ async function renderizarVinhos(filtro = 'todos', busca = '') {
         let precoOriginal = parseFloat(vinho.preco);
         let precoFinal = precoOriginal;
         if (desconto > 0) {
-            precoFinal = precoOriginal * (1 - desconto);
-            precoFinal = Math.ceil(precoFinal * 100) / 100;
-            precoFinal = Math.floor(precoFinal) + 0.90;
+            precoFinal = calcularPrecoComDesconto(precoOriginal, vipTipo);
         }
         
         return `
@@ -298,25 +307,36 @@ function fecharModal() {
 
 // ===== FILTROS =====
 function configurarFiltros() {
-    const filtros = document.querySelectorAll('.filtro-btn');
+    const filtros = document.querySelectorAll('[data-filtro]');
+    const ordenacoes = document.querySelectorAll('[data-ordenacao]');
     const buscaInput = document.getElementById('busca-catalogo');
     
     let filtroAtual = 'todos';
     let buscaAtual = '';
+    let ordenacaoAtual = 'padrao';
 
     filtros.forEach(btn => {
         btn.addEventListener('click', () => {
             filtros.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             filtroAtual = btn.dataset.filtro;
-            renderizarVinhos(filtroAtual, buscaAtual);
+            renderizarVinhos(filtroAtual, buscaAtual, ordenacaoAtual);
+        });
+    });
+
+    ordenacoes.forEach(btn => {
+        btn.addEventListener('click', () => {
+            ordenacoes.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            ordenacaoAtual = btn.dataset.ordenacao || 'padrao';
+            renderizarVinhos(filtroAtual, buscaAtual, ordenacaoAtual);
         });
     });
 
     if (buscaInput) {
         buscaInput.addEventListener('input', () => {
             buscaAtual = buscaInput.value;
-            renderizarVinhos(filtroAtual, buscaAtual);
+            renderizarVinhos(filtroAtual, buscaAtual, ordenacaoAtual);
         });
     }
 }
@@ -440,6 +460,20 @@ function capitalizar(str) {
 
 function formatarPreco(preco) {
     return parseFloat(preco).toFixed(2).replace('.', ',');
+}
+
+function calcularPrecoComDesconto(precoOriginal, vipTipo) {
+    let desconto = 0;
+    if (vipTipo === 'prata') desconto = 0.03;
+    else if (vipTipo === 'ouro') desconto = 0.07;
+    else if (vipTipo === 'diamante') desconto = 0.11;
+
+    if (desconto === 0) return precoOriginal;
+
+    let precoFinal = precoOriginal * (1 - desconto);
+    precoFinal = Math.ceil(precoFinal * 100) / 100;
+    precoFinal = Math.floor(precoFinal) + 0.90;
+    return precoFinal;
 }
 
 // ===== INICIALIZAÇÃO =====
