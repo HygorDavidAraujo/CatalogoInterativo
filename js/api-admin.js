@@ -2,6 +2,8 @@
 let vinhoEmEdicao = null;
 let imagemUpload = null;
 let removerImagem = false;
+let logoUpload = null;
+let removerLogo = false;
 
 // Recupera cabeçalhos com JWT do authManager
 function getAuthHeaders() {
@@ -90,6 +92,20 @@ async function carregarConfiguracoes() {
         document.getElementById('config-instagram').value = config.instagram || '';
         document.getElementById('config-facebook').value = config.facebook || '';
         document.getElementById('config-whatsapp').value = config.whatsapp || '';
+        
+        // Carregar logo se houver
+        if (config.logo_url) {
+            const previewImg = document.getElementById('logo-preview-img');
+            const uploadPreview = document.getElementById('logo-upload-preview');
+            const uploadActions = document.getElementById('logo-upload-actions');
+            previewImg.src = config.logo_url;
+            previewImg.style.display = 'block';
+            uploadPreview.style.display = 'none';
+            if (uploadActions) uploadActions.style.display = 'flex';
+            removerLogo = false;
+            logoUpload = null;
+        }
+        
         await preencherDestaqueSemana(config);
     } catch (error) {
         console.error('Erro ao carregar configurações:', error);
@@ -127,10 +143,44 @@ async function configurarFormularioConfig() {
 
         console.log('Dados a serem salvos:', configuracoes);
 
+        // Verificar se tem logo
         try {
+            if (logoUpload) {
+                // Fazer upload da logo e obter URL
+                const formData = new FormData();
+                formData.append('file', logoUpload);
+                formData.append('upload_preset', 'catlogo_interativo');
+
+                const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/dcfxxfqsi/image/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (cloudinaryResponse.ok) {
+                    const cloudinaryData = await cloudinaryResponse.json();
+                    configuracoes.logo_url = cloudinaryData.secure_url;
+                    console.log('Logo enviada para Cloudinary:', configuracoes.logo_url);
+                } else {
+                    mostrarMensagem('Erro ao fazer upload da logo. Tente novamente.', 'erro');
+                    return;
+                }
+            } else if (removerLogo) {
+                configuracoes.logo_url = null;
+            } else if (document.getElementById('logo-preview-img').style.display !== 'none') {
+                const currentLogoUrl = document.getElementById('logo-preview-img').src;
+                if (currentLogoUrl && !currentLogoUrl.includes('blob:')) {
+                    configuracoes.logo_url = currentLogoUrl;
+                }
+            }
+
             const resultado = await vinhoManager.salvarConfiguracoes(configuracoes);
             console.log('Configurações salvas:', resultado);
             atualizarStatusDestaque(resultado);
+            
+            // Resetar estados de upload
+            logoUpload = null;
+            removerLogo = false;
+            
             mostrarMensagem('Configurações salvas com sucesso! As alterações já estão visíveis no site.', 'sucesso');
         } catch (error) {
             console.error('Erro ao salvar configurações:', error);
@@ -346,6 +396,89 @@ function configurarUploadImagem() {
             if (vinhoEmEdicao) {
                 removerImagem = true;
             }
+            fileInput.files = e.dataTransfer.files;
+            fileInput.dispatchEvent(new Event('change'));
+            if (uploadActions) uploadActions.style.display = 'flex';
+        }
+    });
+}
+
+// ===== UPLOAD DE LOGO =====
+function configurarUploadLogo() {
+    const fileInput = document.getElementById('config-logo');
+    const uploadPreview = document.getElementById('logo-upload-preview');
+    const previewImg = document.getElementById('logo-preview-img');
+    const uploadActions = document.getElementById('logo-upload-actions');
+    const btnRemoverLogo = document.getElementById('btn-remover-logo');
+
+    if (!fileInput) return;
+
+    if (btnRemoverLogo) {
+        btnRemoverLogo.addEventListener('click', () => {
+            removerLogo = true;
+            logoUpload = null;
+            fileInput.value = '';
+            previewImg.src = '';
+            previewImg.style.display = 'none';
+            uploadPreview.style.display = 'block';
+            if (uploadActions) uploadActions.style.display = 'none';
+        });
+    }
+
+    // Click no preview abre o seletor
+    uploadPreview.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Quando seleciona arquivo
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            logoUpload = file;
+            removerLogo = false;
+            
+            // Validar tamanho (2MB para logo)
+            if (file.size > 2 * 1024 * 1024) {
+                mostrarMensagem('Arquivo muito grande! Máximo 2MB.', 'erro');
+                fileInput.value = '';
+                return;
+            }
+
+            // Validar tipo
+            if (!file.type.startsWith('image/')) {
+                mostrarMensagem('Apenas arquivos de imagem são permitidos!', 'erro');
+                fileInput.value = '';
+                return;
+            }
+
+            // Mostrar preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                previewImg.style.display = 'block';
+                uploadPreview.style.display = 'none';
+                if (uploadActions) uploadActions.style.display = 'flex';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Drag and drop
+    uploadPreview.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadPreview.style.borderColor = 'var(--cor-secundaria)';
+    });
+
+    uploadPreview.addEventListener('dragleave', () => {
+        uploadPreview.style.borderColor = 'var(--cor-primaria)';
+    });
+
+    uploadPreview.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadPreview.style.borderColor = 'var(--cor-primaria)';
+        
+        const file = e.dataTransfer.files[0];
+        if (file) {
             fileInput.files = e.dataTransfer.files;
             fileInput.dispatchEvent(new Event('change'));
             if (uploadActions) uploadActions.style.display = 'flex';
@@ -755,6 +888,7 @@ function configurarFiltrosAdmin() {
 document.addEventListener('DOMContentLoaded', async () => {
     await carregarConfiguracoes();
     configurarFormularioConfig();
+    configurarUploadLogo();
     await renderizarListaAdmin();
     configurarFormulario();
     configurarSelecaoPais();

@@ -38,6 +38,12 @@
     font-size: 1.8rem;
 }
 
+#logo-img-admin {
+    max-height: 50px;
+    width: auto;
+    object-fit: contain;
+}
+
 .admin-nav {
     display: flex;
     gap: 1rem;
@@ -343,6 +349,16 @@
 /* ===== UPLOAD DE IMAGEM ===== */
 .upload-container {
     margin-bottom: 1rem;
+}
+
+.file-input {
+    display: none;
+}
+
+.upload-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 .file-input {

@@ -56,6 +56,18 @@ body {
     letter-spacing: 1px;
 }
 
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.logo img {
+    max-height: 50px;
+    width: auto;
+    object-fit: contain;
+}
+
 .nav ul {
     list-style: none;
     display: flex;

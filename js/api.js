@@ -459,6 +459,22 @@ async function atualizarInformacoesContato() {
     const config = vinhoManager.configuracoes;
     console.log('Configurações carregadas:', config);
 
+    // Atualizar logo se existir
+    const logoImg = document.getElementById('logo-img');
+    const logoAdminImg = document.getElementById('logo-img-admin');
+    
+    if (config.logo_url) {
+        if (logoImg) {
+            logoImg.src = config.logo_url;
+            logoImg.style.display = 'block';
+            console.log('Logo renderizada no site:', config.logo_url);
+        }
+        if (logoAdminImg) {
+            logoAdminImg.src = config.logo_url;
+            logoAdminImg.style.display = 'block';
+        }
+    }
+
     // Atualizar informações de contato usando IDs específicos
     const telefoneElement = document.getElementById('contato-telefone');
     const emailElement = document.getElementById('contato-email');

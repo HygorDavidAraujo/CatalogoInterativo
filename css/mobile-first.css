@@ -83,6 +83,18 @@ body {
     letter-spacing: 0.5px;
 }
 
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.logo img {
+    max-height: 40px;
+    width: auto;
+    object-fit: contain;
+}
+
 /* ===== MENU HAMBURGUER (Mobile) ===== */
 .menu-toggle {
     display: flex;

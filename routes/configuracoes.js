@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
                 whatsapp: '',
                 instagram: '',
                 facebook: '',
+                logo_url: null,
                 destaque_vinho_id: null,
                 destaque_fixado_em: null
             });
@@ -83,6 +84,7 @@ router.post('/', verificarAdminAuth, async (req, res) => {
                     whatsapp = ?,
                     instagram = ?,
                     facebook = ?,
+                    logo_url = ?,
                     destaque_vinho_id = ?,
                     destaque_fixado_em = ?
                 WHERE id = ?`,
@@ -96,6 +98,7 @@ router.post('/', verificarAdminAuth, async (req, res) => {
                     config.whatsapp || '',
                     config.instagram || '',
                     config.facebook || '',
+                    config.logo_url || null,
                     destaqueVinhoId,
                     destaqueFixadoEm,
                     existing[0].id
@@ -105,8 +108,8 @@ router.post('/', verificarAdminAuth, async (req, res) => {
             // Inserir nova configuração
             await pool.query(
                 `INSERT INTO configuracoes 
-                (nome_site, titulo, descricao, telefone, email, endereco, whatsapp, instagram, facebook, destaque_vinho_id, destaque_fixado_em)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                (nome_site, titulo, descricao, telefone, email, endereco, whatsapp, instagram, facebook, logo_url, destaque_vinho_id, destaque_fixado_em)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     config.nome_site || '',
                     config.titulo || '',
@@ -117,6 +120,7 @@ router.post('/', verificarAdminAuth, async (req, res) => {
                     config.whatsapp || '',
                     config.instagram || '',
                     config.facebook || '',
+                    config.logo_url || null,
                     destaqueVinhoId,
                     destaqueFixadoEm
                 ]

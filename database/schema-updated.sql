@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS configuracoes (
     whatsapp VARCHAR(20),
     instagram VARCHAR(500),
     facebook VARCHAR(500),
+    logo_url VARCHAR(500),
     destaque_vinho_id INT NULL,
     destaque_fixado_em DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
