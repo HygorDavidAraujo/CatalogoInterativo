@@ -557,10 +557,9 @@ class PerfilManager {
                 let vipTipo = usuario?.vip_tipo;
                 let badge = '';
                 
-                // Usar VipManager para gerar badge dinâmico
+                // Usar VipManager para gerar badge dinâmico com cor
                 if (isVip && vipTipo) {
-                    const nomeBeneficio = window.vipManager.getNomeBeneficio(vipTipo);
-                    badge = `<span class="badge-vip badge-${vipTipo}">${nomeBeneficio}</span>`;
+                    badge = window.vipManager.getBadgeHtml(vipTipo);
                 }
                 
                 return `

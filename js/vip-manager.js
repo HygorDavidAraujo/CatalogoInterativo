@@ -85,6 +85,29 @@ class VipManager {
         return beneficio ? beneficio.nome : 'VIP';
     }
 
+    getCorBeneficio(slug) {
+        const beneficio = this.getBeneficioPorSlug(slug);
+        return beneficio?.cor || '#6B1C40';
+    }
+
+    getBadgeHtml(slug) {
+        const beneficio = this.getBeneficioPorSlug(slug);
+        if (!beneficio) return '';
+        
+        const cor = beneficio.cor || '#6B1C40';
+        const nome = beneficio.nome;
+        
+        // Calcular luminosidade da cor para decidir se usa texto preto ou branco
+        const hex = cor.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        const luminosidade = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        const corTexto = luminosidade > 0.5 ? '#000' : '#fff';
+        
+        return `<span class="badge-vip badge-${slug}" style="background-color: ${cor}; color: ${corTexto};">${nome}</span>`;
+    }
+
     getDescricaoDesconto(slug) {
         const beneficio = this.getBeneficioPorSlug(slug);
         if (!beneficio) return '';

@@ -948,10 +948,13 @@ function renderizarBeneficios() {
     container.innerHTML = beneficiosVip.map(beneficio => `
         <div class="beneficio-item" data-id="${beneficio.id}">
             <div class="beneficio-info">
-                <div class="beneficio-nome">${beneficio.nome}</div>
+                <div class="beneficio-nome">
+                    <span class="badge-vip" style="background-color: ${beneficio.cor || '#6B1C40'}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.9em; margin-right: 8px;">${beneficio.nome}</span>
+                </div>
                 <div class="beneficio-detalhes">
                     <span><i class="fas fa-tag"></i> ${beneficio.slug}</span>
                     <span><i class="fas fa-percent"></i> ${beneficio.tipo_desconto === 'percentual' ? beneficio.valor_desconto + '%' : 'R$ ' + beneficio.valor_desconto.toFixed(2).replace('.', ',')}</span>
+                    <span><i class="fas fa-palette"></i> ${beneficio.cor || '#6B1C40'}</span>
                     <span><i class="fas fa-sort"></i> Ordem: ${beneficio.ordem}</span>
                 </div>
             </div>
@@ -972,6 +975,7 @@ async function adicionarBeneficio() {
     const slug = document.getElementById('beneficio-slug').value.trim().toLowerCase();
     const tipoDesconto = document.getElementById('beneficio-tipo-desconto').value;
     const valorDesconto = parseFloat(document.getElementById('beneficio-valor-desconto').value);
+    const cor = document.getElementById('beneficio-cor').value;
     const ordem = parseInt(document.getElementById('beneficio-ordem').value) || 0;
 
     if (!nome || !slug || isNaN(valorDesconto)) {
@@ -987,7 +991,7 @@ async function adicionarBeneficio() {
                 ...getAuthHeaders(),
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ nome, slug, tipo_desconto: tipoDesconto, valor_desconto: valorDesconto, ordem })
+            body: JSON.stringify({ nome, slug, tipo_desconto: tipoDesconto, valor_desconto: valorDesconto, cor, ordem })
         });
 
         if (!response.ok) {
@@ -1001,6 +1005,7 @@ async function adicionarBeneficio() {
         document.getElementById('beneficio-nome').value = '';
         document.getElementById('beneficio-slug').value = '';
         document.getElementById('beneficio-valor-desconto').value = '';
+        document.getElementById('beneficio-cor').value = '#6B1C40';
         document.getElementById('beneficio-ordem').value = '0';
         
         await carregarBeneficios();
@@ -1045,6 +1050,9 @@ function editarBeneficio(id) {
     const novoValor = prompt(`Valor do desconto ${beneficio.tipo_desconto === 'percentual' ? '(%)' : '(R$)'}:`, beneficio.valor_desconto);
     if (!novoValor) return;
 
+    const novaCor = prompt('Cor do Badge (hex):', beneficio.cor || '#6B1C40');
+    if (!novaCor) return;
+
     const novaOrdem = prompt('Ordem de exibição:', beneficio.ordem);
     if (!novaOrdem) return;
 
@@ -1053,6 +1061,7 @@ function editarBeneficio(id) {
         slug: novoSlug.trim().toLowerCase(),
         tipo_desconto: beneficio.tipo_desconto,
         valor_desconto: parseFloat(novoValor),
+        cor: novaCor.trim(),
         ordem: parseInt(novaOrdem)
     });
 }
