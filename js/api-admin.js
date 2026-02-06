@@ -911,12 +911,192 @@ function configurarTabs() {
     });
 }
 
+// ===== BENEFÍCIOS VIP =====
+let beneficiosVip = [];
+
+async function carregarBeneficios() {
+    try {
+        const response = await fetch(`${API_URL}/beneficios`);
+        if (!response.ok) throw new Error('Erro ao carregar benefícios');
+        
+        beneficiosVip = await response.json();
+        renderizarBeneficios();
+        return beneficiosVip;
+    } catch (error) {
+        console.error('Erro ao carregar benefícios:', error);
+        document.getElementById('lista-beneficios').innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #f44336;">
+                <i class="fas fa-exclamation-triangle"></i> Erro ao carregar benefícios
+            </div>
+        `;
+    }
+}
+
+function renderizarBeneficios() {
+    const container = document.getElementById('lista-beneficios');
+    if (!container) return;
+
+    if (beneficiosVip.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #666;">
+                <i class="fas fa-info-circle"></i> Nenhum benefício cadastrado
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = beneficiosVip.map(beneficio => `
+        <div class="beneficio-item" data-id="${beneficio.id}">
+            <div class="beneficio-info">
+                <div class="beneficio-nome">${beneficio.nome}</div>
+                <div class="beneficio-detalhes">
+                    <span><i class="fas fa-tag"></i> ${beneficio.slug}</span>
+                    <span><i class="fas fa-percent"></i> ${beneficio.tipo_desconto === 'percentual' ? beneficio.valor_desconto + '%' : 'R$ ' + beneficio.valor_desconto.toFixed(2).replace('.', ',')}</span>
+                    <span><i class="fas fa-sort"></i> Ordem: ${beneficio.ordem}</span>
+                </div>
+            </div>
+            <div class="beneficio-acoes">
+                <button class="btn-icon-small btn-editar-beneficio" onclick="editarBeneficio(${beneficio.id})" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon-small btn-excluir-beneficio" onclick="excluirBeneficio(${beneficio.id})" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function adicionarBeneficio() {
+    const nome = document.getElementById('beneficio-nome').value.trim();
+    const slug = document.getElementById('beneficio-slug').value.trim().toLowerCase();
+    const tipoDesconto = document.getElementById('beneficio-tipo-desconto').value;
+    const valorDesconto = parseFloat(document.getElementById('beneficio-valor-desconto').value);
+    const ordem = parseInt(document.getElementById('beneficio-ordem').value) || 0;
+
+    if (!nome || !slug || isNaN(valorDesconto)) {
+        alert('Por favor, preencha todos os campos obrigatórios');
+        return;
+    }
+
+    try {
+        exigirTokenOuAvisar();
+        const response = await fetch(`${API_URL}/beneficios`, {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ nome, slug, tipo_desconto: tipoDesconto, valor_desconto: valorDesconto, ordem })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao adicionar benefício');
+        }
+
+        mostrarMensagem('Benefício adicionado com sucesso!', 'sucesso');
+        
+        // Limpar formulário
+        document.getElementById('beneficio-nome').value = '';
+        document.getElementById('beneficio-slug').value = '';
+        document.getElementById('beneficio-valor-desconto').value = '';
+        document.getElementById('beneficio-ordem').value = '0';
+        
+        await carregarBeneficios();
+    } catch (error) {
+        console.error('Erro ao adicionar benefício:', error);
+        alert(error.message);
+    }
+}
+
+async function excluirBeneficio(id) {
+    if (!confirm('Tem certeza que deseja excluir este benefício? Esta ação não pode ser desfeita.')) {
+        return;
+    }
+
+    try {
+        exigirTokenOuAvisar();
+        const response = await fetch(`${API_URL}/beneficios/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) throw new Error('Erro ao excluir benefício');
+
+        mostrarMensagem('Benefício excluído com sucesso!', 'sucesso');
+        await carregarBeneficios();
+    } catch (error) {
+        console.error('Erro ao excluir benefício:', error);
+        alert('Erro ao excluir benefício. Tente novamente.');
+    }
+}
+
+function editarBeneficio(id) {
+    const beneficio = beneficiosVip.find(b => b.id === id);
+    if (!beneficio) return;
+
+    const novoNome = prompt('Nome do Benefício:', beneficio.nome);
+    if (!novoNome) return;
+
+    const novoSlug = prompt('Identificador (slug):', beneficio.slug);
+    if (!novoSlug) return;
+
+    const novoValor = prompt(`Valor do desconto ${beneficio.tipo_desconto === 'percentual' ? '(%)' : '(R$)'}:`, beneficio.valor_desconto);
+    if (!novoValor) return;
+
+    const novaOrdem = prompt('Ordem de exibição:', beneficio.ordem);
+    if (!novaOrdem) return;
+
+    atualizarBeneficio(id, {
+        nome: novoNome.trim(),
+        slug: novoSlug.trim().toLowerCase(),
+        tipo_desconto: beneficio.tipo_desconto,
+        valor_desconto: parseFloat(novoValor),
+        ordem: parseInt(novaOrdem)
+    });
+}
+
+async function atualizarBeneficio(id, dados) {
+    try {
+        exigirTokenOuAvisar();
+        const response = await fetch(`${API_URL}/beneficios/${id}`, {
+            method: 'PUT',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dados)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao atualizar benefício');
+        }
+
+        mostrarMensagem('Benefício atualizado com sucesso!', 'sucesso');
+        await carregarBeneficios();
+    } catch (error) {
+        console.error('Erro ao atualizar benefício:', error);
+        alert(error.message);
+    }
+}
+
+function configurarBeneficios() {
+    const btnAdicionar = document.getElementById('btn-adicionar-beneficio');
+    if (btnAdicionar) {
+        btnAdicionar.addEventListener('click', adicionarBeneficio);
+    }
+}
+
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', async () => {
     await carregarConfiguracoes();
     configurarFormularioConfig();
     configurarUploadLogo();
     configurarTabs();
+    configurarBeneficios();
+    await carregarBeneficios();
     await renderizarListaAdmin();
     configurarFormulario();
     configurarSelecaoPais();

@@ -69,6 +69,9 @@
                     <button class="config-tab" data-tab="destaque">
                         <i class="fa-solid fa-star"></i> Destaque da Semana
                     </button>
+                    <button class="config-tab" data-tab="beneficios">
+                        <i class="fa-solid fa-gift"></i> Benefícios VIP
+                    </button>
                 </div>
                 
                 <form id="form-configuracoes" class="form-config">
@@ -160,6 +163,56 @@
                                 <li>Após 7 dias ou ao escolher outro vinho, o destaque será substituído</li>
                                 <li>Se nenhum vinho for selecionado, o sistema escolhe automaticamente um vinho diferente a cada semana</li>
                             </ul>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Benefícios VIP -->
+                    <div class="tab-content" id="tab-beneficios">
+                        <h3>Benefícios VIP</h3>
+                        <p style="color: #666; margin-bottom: 1.5rem;">Gerencie os tipos de benefícios VIP disponíveis no sistema. Cada benefício pode ter desconto percentual ou valor fixo em R$.</p>
+                        
+                        <!-- Formulário de Novo Benefício -->
+                        <div class="beneficio-form-container" style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                            <h4><i class="fa-solid fa-plus-circle"></i> Adicionar Novo Benefício</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="beneficio-nome">Nome do Benefício</label>
+                                    <input type="text" id="beneficio-nome" placeholder="Ex: VIP Platina">
+                                </div>
+                                <div class="form-group">
+                                    <label for="beneficio-slug">Identificador (slug)</label>
+                                    <input type="text" id="beneficio-slug" placeholder="Ex: platina">
+                                    <small>Usado internamente, apenas letras minúsculas e underscore</small>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="beneficio-tipo-desconto">Tipo de Desconto</label>
+                                    <select id="beneficio-tipo-desconto">
+                                        <option value="percentual">Percentual (%)</option>
+                                        <option value="valor_fixo">Valor Fixo (R$)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="beneficio-valor-desconto">Valor do Desconto</label>
+                                    <input type="number" id="beneficio-valor-desconto" step="0.01" min="0" placeholder="Ex: 5.00">
+                                </div>
+                                <div class="form-group">
+                                    <label for="beneficio-ordem">Ordem de Exibição</label>
+                                    <input type="number" id="beneficio-ordem" min="0" value="0" placeholder="0">
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-success" id="btn-adicionar-beneficio">
+                                <i class="fa-solid fa-plus"></i> Adicionar Benefício
+                            </button>
+                        </div>
+
+                        <!-- Lista de Benefícios Existentes -->
+                        <h4><i class="fa-solid fa-list"></i> Benefícios Cadastrados</h4>
+                        <div id="lista-beneficios" class="beneficios-lista">
+                            <div style="text-align: center; padding: 2rem; color: #666;">
+                                <i class="fas fa-spinner fa-spin"></i> Carregando benefícios...
+                            </div>
                         </div>
                     </div>
 
@@ -351,6 +404,7 @@
     <!-- Scripts Mobile (menu hamburguer, lazyload, web vitals) -->
     <script src="js/mobile.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/vip-manager.js"></script>
     <script src="js/api-admin.js"></script>
     <script>
         // Proteger página admin - executar imediatamente

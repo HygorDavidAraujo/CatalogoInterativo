@@ -1039,6 +1039,34 @@
     border-bottom: none;
 }
 
+/* Estilo para itens renderizados como divs */
+.pedido-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px dashed #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.pedido-item:last-child {
+    border-bottom: none;
+}
+
+.pedido-item span:first-child {
+    color: var(--cor-escura);
+    font-weight: 500;
+    flex: 1;
+}
+
+.pedido-item span:last-child {
+    color: var(--cor-primaria);
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+    font-size: 0.95rem;
+}
+
 .item-nome {
     color: var(--cor-escura);
     font-weight: 500;
@@ -1177,6 +1205,85 @@
     margin-bottom: 0.5rem;
 }
 
+/* ===== BEN EFÍCIOS VIP ===== */
+.beneficios-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.beneficio-item {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transicao);
+}
+
+.beneficio-item:hover {
+    border-color: var(--cor-primaria);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.beneficio-info {
+    flex: 1;
+}
+
+.beneficio-nome {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--cor-primaria);
+    margin-bottom: 0.5rem;
+}
+
+.beneficio-detalhes {
+    display: flex;
+    gap: 1.5rem;
+    color: var(--cor-texto-claro);
+    font-size: 0.9rem;
+}
+
+.beneficio-detalhes span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.beneficio-acoes {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-icon-small {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transicao);
+    font-size: 1rem;
+}
+
+.btn-editar-beneficio {
+    background-color: #2196F3;
+    color: white;
+}
+
+.btn-editar-beneficio:hover {
+    background-color: #1976D2;
+}
+
+.btn-excluir-beneficio {
+    background-color: #f44336;
+    color: white;
+}
+
+.btn-excluir-beneficio:hover {
+    background-color: #d32f2f;
+}
+
 /* Responsividade para tabs */
 @media (max-width: 768px) {
     .config-tabs {
@@ -1207,5 +1314,16 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
+    }
+    
+    .pedido-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .pedido-item span:last-child {
+        text-align: left;
+        font-size: 0.9rem;
     }
 }

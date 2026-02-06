@@ -3,19 +3,11 @@ class PerfilManager {
             let usuario = window.authManager?.usuarioLogado;
             let isVip = usuario?.is_vip;
             let vipTipo = usuario?.vip_tipo;
-            let desconto = 0;
-            if (isVip && vipTipo) {
-                if (vipTipo === 'prata') desconto = 0.03;
-                else if (vipTipo === 'ouro') desconto = 0.07;
-                else if (vipTipo === 'diamante') desconto = 0.11;
-            }
-            let precoFinal = preco;
-            if (desconto > 0) {
-                precoFinal = preco * (1 - desconto);
-                precoFinal = Math.ceil(precoFinal * 100) / 100;
-                precoFinal = Math.floor(precoFinal) + 0.90;
-            }
-            return precoFinal;
+            
+            if (!isVip || !vipTipo) return preco;
+            
+            // Usar VipManager para calcular desconto dinâmico
+            return window.vipManager.calcularDesconto(preco, vipTipo);
         }
     constructor() {
         this.pedidoParaRefazer = null;
@@ -564,11 +556,13 @@ class PerfilManager {
                 let isVip = usuario?.is_vip;
                 let vipTipo = usuario?.vip_tipo;
                 let badge = '';
+                
+                // Usar VipManager para gerar badge dinâmico
                 if (isVip && vipTipo) {
-                    if (vipTipo === 'prata') badge = '<span class="badge-vip badge-prata">-4% Prata</span>';
-                    else if (vipTipo === 'ouro') badge = '<span class="badge-vip badge-ouro">-8% Ouro</span>';
-                    else if (vipTipo === 'diamante') badge = '<span class="badge-vip badge-diamante">-12% Diamante</span>';
+                    const nomeBeneficio = window.vipManager.getNomeBeneficio(vipTipo);
+                    badge = `<span class="badge-vip badge-${vipTipo}">${nomeBeneficio}</span>`;
                 }
+                
                 return `
                     <div class="produto-item">
                         <div>

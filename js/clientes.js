@@ -305,12 +305,18 @@ function renderizarPedido(pedido) {
                 </div>
             </div>
             <div class="pedido-itens">
-                ${pedido.itens.map(item => `
-                    <div class="pedido-item">
-                        <span>${item.quantidade}x ${item.vinho_nome}</span>
-                        <span>R$ ${parseFloat(item.subtotal).toFixed(2).replace('.', ',')}</span>
-                    </div>
-                `).join('')}
+                ${pedido.itens.map(item => {
+                    const precoUnitario = parseFloat(item.preco_unitario || 0);
+                    const subtotal = parseFloat(item.subtotal || 0);
+                    const quantidade = parseInt(item.quantidade || 0);
+                    
+                    return `
+                        <div class="pedido-item">
+                            <span>${quantidade}x ${item.vinho_nome}</span>
+                            <span>R$ ${precoUnitario.toFixed(2).replace('.', ',')} cada = R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+                        </div>
+                    `;
+                }).join('')}
             </div>
             <div class="pedido-total">
                 <strong>Total:</strong>
@@ -326,11 +332,14 @@ function renderizarPedido(pedido) {
 }
 
 // ===== MODAL DE EDIÇÃO =====
-function abrirModalEditar(clienteId) {
+async function abrirModalEditar(clienteId) {
     const cliente = todosClientes.find(c => c.id === clienteId);
     if (!cliente) return;
 
     const modal = document.getElementById('modal-editar-cliente');
+    
+    // Carregar benefícios VIP e atualizar select dinamicamente
+    await carregarBeneficiosVipSelect();
     
     // Preencher formulário
     document.getElementById('edit-usuario-id').value = cliente.id;
@@ -350,6 +359,40 @@ function abrirModalEditar(clienteId) {
     document.getElementById('edit-vip-tipo').value = cliente.vip_tipo || '';
 
     modal.style.display = 'block';
+}
+
+async function carregarBeneficiosVipSelect() {
+    try {
+        // Carregar benefícios via VipManager
+        await window.vipManager.carregar();
+        const beneficios = window.vipManager.beneficios;
+        
+        // Atualizar select
+        const select = document.getElementById('edit-vip-tipo');
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">Selecione...</option>';
+        
+        beneficios.forEach(beneficio => {
+            const option = document.createElement('option');
+            option.value = beneficio.slug;
+            
+            // Formatar descrição do benefício
+            let descricao = beneficio.nome;
+            if (beneficio.tipo_desconto === 'percentual') {
+                descricao += ` - ${beneficio.valor_desconto}% desconto`;
+            } else if (beneficio.tipo_desconto === 'valor_fixo') {
+                descricao += ` - R$ ${beneficio.valor_desconto.toFixed(2).replace('.', ',')} desconto`;
+            }
+            
+            option.textContent = descricao;
+            select.appendChild(option);
+        });
+        
+        console.log('✓ Select VIP atualizado com benefícios dinâmicos');
+    } catch (error) {
+        console.error('Erro ao carregar benefícios VIP para select:', error);
+    }
 }
 
 function fecharModalEditar() {

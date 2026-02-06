@@ -90,19 +90,11 @@ class CarrinhoManager {
         let usuario = window.authManager?.usuarioLogado;
         let isVip = usuario?.is_vip;
         let vipTipo = usuario?.vip_tipo;
-        let desconto = 0;
-        if (isVip && vipTipo) {
-            if (vipTipo === 'prata') desconto = 0.03;
-            else if (vipTipo === 'ouro') desconto = 0.07;
-            else if (vipTipo === 'diamante') desconto = 0.11;
-        }
-        let precoFinal = preco;
-        if (desconto > 0) {
-            precoFinal = preco * (1 - desconto);
-            precoFinal = Math.ceil(precoFinal * 100) / 100;
-            precoFinal = Math.floor(precoFinal) + 0.90;
-        }
-        return precoFinal;
+        
+        if (!isVip || !vipTipo) return preco;
+        
+        // Usar VipManager para calcular desconto dinâmico
+        return window.vipManager.calcularDesconto(preco, vipTipo);
     }
 
     getTotal() {
@@ -233,6 +225,16 @@ class CarrinhoManager {
         }
         
         try {
+            // Preparar itens com preço com desconto VIP aplicado
+            const itensComDesconto = this.itens.map(item => ({
+                id: item.id,
+                nome: item.nome,
+                tipo: item.tipo,
+                quantidade: item.quantidade,
+                preco: this.getDescontoVip(item.preco), // Preço unitário com desconto VIP
+                preco_original: item.preco // Manter preço original apenas para referência
+            }));
+
             // Salvar pedido no banco de dados
             const response = await fetch(`${API_URL}/pedidos`, {
                 method: 'POST',
@@ -240,7 +242,7 @@ class CarrinhoManager {
                 body: JSON.stringify({
                     usuario_id: usuario.id,
                     total: this.getTotal(),
-                    itens: this.itens,
+                    itens: itensComDesconto,
                     observacoes: 'Pedido via WhatsApp'
                 })
             });

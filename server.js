@@ -76,12 +76,14 @@ const configuracoesRoutes = require('./routes/configuracoes');
 const authRoutes = require('./routes/auth');
 const pedidosRoutes = require('./routes/pedidos');
 const setupRoutes = require('./routes/setup');
+const beneficiosRoutes = require('./routes/beneficios');
 
 // Usar rotas
 app.use('/api/vinhos', vinhosRoutes);
 app.use('/api/configuracoes', configuracoesRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/beneficios', beneficiosRoutes);
 
 // Setup route apenas em desenvolvimento
 if (isDevelopment) {
