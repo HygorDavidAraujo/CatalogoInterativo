@@ -64,7 +64,9 @@ body {
 
 .logo img {
     max-height: 50px;
+    max-width: 200px;
     width: auto;
+    height: auto;
     object-fit: contain;
 }
 
