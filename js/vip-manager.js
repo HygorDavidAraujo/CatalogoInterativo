@@ -4,6 +4,26 @@ class VipManager {
         this.beneficios = [];
         this.carregado = false;
         this.carregandoPromise = null;
+        this.callbacks = []; // Para notificar quando carrega
+    }
+
+    onReady(callback) {
+        if (this.carregado) {
+            callback();
+        } else {
+            this.callbacks.push(callback);
+        }
+    }
+
+    executarCallbacks() {
+        this.callbacks.forEach(cb => {
+            try {
+                cb();
+            } catch (error) {
+                console.error('Erro ao executar callback:', error);
+            }
+        });
+        this.callbacks = [];
     }
 
     async carregar() {
@@ -46,6 +66,9 @@ class VipManager {
             this.beneficios = await response.json();
             this.carregado = true;
             console.log('✓ Benefícios VIP carregados:', this.beneficios);
+            
+            // Notificar callbacks
+            this.executarCallbacks();
         } catch (error) {
             console.error('Erro ao carregar benefícios:', error);
             // Fallback para benefícios padrão em caso de erro
@@ -56,6 +79,9 @@ class VipManager {
             ];
             this.carregado = true;
             console.log('⚠ Usando benefícios padrão (fallback)');
+            
+            // Notificar callbacks mesmo em caso de fallback
+            this.executarCallbacks();
         }
     }
 
@@ -135,6 +161,16 @@ class VipManager {
             value: b.slug,
             label: b.nome
         }));
+    }
+
+    async aguardarPronto() {
+        // Aguarda até o VipManager estar carregado
+        let tentativas = 0;
+        while (!this.carregado && tentativas < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            tentativas++;
+        }
+        return this.carregado;
     }
 }
 

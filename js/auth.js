@@ -86,20 +86,22 @@ class AuthManager {
             // Mostrar badge VIP se aplicável
             if (badgeVipHeader && this.usuarioLogado.is_vip && this.usuarioLogado.vip_tipo) {
                 const vipTipo = this.usuarioLogado.vip_tipo;
-                let badgeHTML = '';
-                if (vipTipo === 'prata') {
-                    badgeHTML = '<i class="fas fa-star"></i> VIP Prata';
-                    badgeVipHeader.className = 'badge-vip-header badge-vip-prata';
-                } else if (vipTipo === 'ouro') {
-                    badgeHTML = '<i class="fas fa-star"></i> VIP Ouro';
-                    badgeVipHeader.className = 'badge-vip-header badge-vip-ouro';
-                } else if (vipTipo === 'diamante') {
-                    badgeHTML = '<i class="fas fa-gem"></i> VIP Diamante';
-                    badgeVipHeader.className = 'badge-vip-header badge-vip-diamante';
+                
+                // Aguardar VipManager estar pronto
+                if (window.vipManager && window.vipManager.beneficios.length > 0) {
+                    const badgeHTML = window.vipManager.getBadgeHtml(vipTipo);
+                    badgeVipHeader.innerHTML = badgeHTML;
+                    badgeVipHeader.style.display = 'inline-block';
+                    console.log('✓ Badge VIP exibido:', vipTipo);
+                } else {
+                    // Fallback enquanto VipManager carrega
+                    console.log('⏳ VipManager ainda carregando, usando fallback...');
+                    const iconMap = { 'diamante': '💎', 'ouro': '✨', 'prata': '⭐', 'default': '⭐' };
+                    const icon = iconMap[vipTipo] || iconMap['default'];
+                    const nomeBeneficio = window.vipManager?.getNomeBeneficio(vipTipo) || `VIP ${vipTipo}`;
+                    badgeVipHeader.innerHTML = `${icon} ${nomeBeneficio}`;
+                    badgeVipHeader.style.display = 'inline-block';
                 }
-                badgeVipHeader.innerHTML = badgeHTML;
-                badgeVipHeader.style.display = 'inline-block';
-                console.log('Badge VIP exibido:', vipTipo);
             } else if (badgeVipHeader) {
                 badgeVipHeader.style.display = 'none';
             }
@@ -448,4 +450,12 @@ function inicializarAuth() {
     console.log('Inicializando sistema de autenticação...');
     configurarAuth();
     window.authManager.atualizarInterface();
+    
+    // Quando VipManager carregar, atualizar interface novamente para badges dinâmicas
+    if (window.vipManager) {
+        window.vipManager.onReady(() => {
+            console.log('✓ VipManager pronto, atualizando interface...');
+            window.authManager.atualizarInterface();
+        });
+    }
 }

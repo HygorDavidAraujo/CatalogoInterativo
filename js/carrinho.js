@@ -141,11 +141,19 @@ class CarrinhoManager {
                 let vipTipo = usuario?.vip_tipo;
                 let badge = '';
                 if (isVip && vipTipo) {
-                    const labels = {prata: 'Prata', ouro: 'Ouro', diamante: 'Diamante'};
-                    const icons = {prata: '<i class="fas fa-star"></i>', ouro: '<i class="fas fa-star"></i>', diamante: '<i class="fas fa-gem"></i>'};
-                    const label = labels[vipTipo] || '';
-                    const icon = icons[vipTipo] || '';
-                    badge = `<span class="badge-vip badge-${vipTipo}">${icon} VIP ${label}</span>`;
+                const labels = {prata: 'Prata', ouro: 'Ouro', diamante: 'Diamante', atacado: 'Atacado'};
+                    const icons = {prata: '<i class="fas fa-star"></i>', ouro: '<i class="fas fa-star"></i>', diamante: '<i class="fas fa-gem"></i>', atacado: '<i class="fas fa-dolly"></i>'};
+                    
+                    // Tentar usar VipManager se disponível
+                    let badge = '';
+                    if (window.vipManager && window.vipManager.beneficios.length > 0) {
+                        badge = window.vipManager.getBadgeHtml(vipTipo);
+                    } else {
+                        // Fallback com labels hardcoded
+                        const label = labels[vipTipo] || vipTipo;
+                        const icon = icons[vipTipo] || '<i class="fas fa-star"></i>';
+                        badge = `<span class="badge-vip badge-${vipTipo}">${icon} VIP ${label}</span>`;
+                    }
                 }
                 return `
                 <div class="carrinho-item" data-id="${item.id}">
@@ -362,6 +370,18 @@ function configurarEventosCarrinho() {
     if (btnFinalizar) {
         btnFinalizar.addEventListener('click', () => window.carrinhoManager.finalizarPedido());
     }
+}
+
+// Adicionar CSS para animações
+const style = document.createElement('style');
+// Quando VipManager carregar, atualizar interface para exibir badges dinâmicas
+if (window.vipManager) {
+    window.vipManager.onReady(() => {
+        console.log('✓ VipManager pronto no carrinho, atualizando badges...');
+        if (window.carrinhoManager) {
+            window.carrinhoManager.atualizarInterface();
+        }
+    });
 }
 
 // Adicionar CSS para animações
