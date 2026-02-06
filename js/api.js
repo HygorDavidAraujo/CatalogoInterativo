@@ -289,7 +289,7 @@ async function renderizarDestaqueSemana() {
                         ${badgeVip ? `<span class="destaque-vip">${badgeVip}</span>` : ''}
                     </div>
                     <h3 class="destaque-titulo">${vinho.nome}</h3>
-                    <p class="destaque-descricao">Selecao premium da casa, escolhida para quem aprecia luxo e deseja surpreender no brinde. Garanta este exemplar enquanto esta em evidencia.</p>
+                    <p class="destaque-descricao">Escolhido especialmente para esta semana. Descubra suas caracteristicas unicas e aproveite este destaque.</p>
                     <div class="destaque-preco">
                         ${precoFinal !== precoOriginal ? `<span class="preco-original">R$ ${formatarPreco(precoOriginal)}</span>` : ''}
                         <span class="preco-final">R$ ${formatarPreco(precoFinal)}</span>
