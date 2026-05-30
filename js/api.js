@@ -152,7 +152,7 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
     let vinhos = [];
     try {
         await vinhoManager.carregarVinhos();
-        vinhos = vinhoManager.getVinhos(filtro);
+        vinhos = vinhoManager.getVinhos(filtro).filter(v => isVinhoAtivo(v.ativo));
 
         // Aplicar busca se fornecida
         if (busca) {

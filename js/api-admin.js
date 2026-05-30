@@ -779,6 +779,10 @@ async function toggleVisibilidade(id, ativo) {
         const result = await response.json();
         console.log('Resposta sucesso:', result);
 
+        // Atualizar o estado local imediatamente e recarregar a lista
+        vinho.ativo = isVinhoAtivo(ativo);
+        await vinhoManager.carregarVinhos(true);
+
         mostrarMensagem(ativo ? 'Vinho agora está visível no site!' : 'Vinho ocultado do site!', 'sucesso');
         await renderizarListaAdmin();
     } catch (error) {
