@@ -298,7 +298,7 @@ async function renderizarListaAdmin(filtros = {}) {
                         <i class="fa-solid fa-trash"></i>
                     </button>
                     <label class="toggle-switch" title="${isVinhoAtivo(vinho.ativo) ? 'Clique para ocultar do site' : 'Clique para mostrar no site'}">
-                        <input type="checkbox" ${isVinhoAtivo(vinho.ativo) ? 'checked' : ''} onchange="toggleVisibilidade(${vinho.id}, this.checked)">
+                        <input type="checkbox" ${isVinhoAtivo(vinho.ativo) ? 'checked' : ''} onchange="toggleVisibilidade(this, ${vinho.id})">
                         <span class="toggle-slider"></span>
                         <span class="toggle-label">${isVinhoAtivo(vinho.ativo) ? 'Visível' : 'Oculto'}</span>
                     </label>
@@ -731,13 +731,18 @@ function confirmarExclusao(id) {
 }
 
 // ===== TOGGLE VISIBILIDADE =====
-async function toggleVisibilidade(id, ativo) {
+async function toggleVisibilidade(checkbox, id) {
+    if (!checkbox || checkbox.disabled) return;
+
+    const ativo = checkbox.checked;
+    checkbox.disabled = true;
+    console.log('Toggle visibilidade:', { id, ativo });
+    
     try {
-        console.log('Toggle visibilidade:', { id, ativo });
-        
         const vinho = vinhoManager.vinhos.find(v => v.id == id);
         if (!vinho) {
             console.error('Vinho não encontrado:', id);
+            checkbox.disabled = false;
             return;
         }
 
@@ -788,7 +793,14 @@ async function toggleVisibilidade(id, ativo) {
     } catch (error) {
         console.error('Erro ao alterar visibilidade:', error);
         mostrarMensagem('Erro ao alterar visibilidade. Tente novamente.', 'erro');
+        if (checkbox) {
+            checkbox.checked = !ativo;
+        }
         await renderizarListaAdmin(); // Recarregar para reverter o estado visual
+    } finally {
+        if (checkbox) {
+            checkbox.disabled = false;
+        }
     }
 }
 
