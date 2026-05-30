@@ -13,6 +13,15 @@ const loginSchema = z.object({
 });
 
 // Schema para cadastro de usuário
+const booleanFromString = z.preprocess((value) => {
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (['true', '1'].includes(normalized)) return true;
+        if (['false', '0'].includes(normalized)) return false;
+    }
+    return value;
+}, z.boolean());
+
 const cadastroSchema = z.object({
     nome_completo: z.string()
         .min(3, 'Nome deve ter no mínimo 3 caracteres')
@@ -68,7 +77,7 @@ const vinhoSchema = z.object({
         .min(0, 'Estoque não pode ser negativo')
         .optional()
         .nullable(),
-    ativo: z.coerce.boolean()
+    ativo: booleanFromString
         .optional()
         .default(true),
     pais_origem: z.string()
@@ -78,8 +87,8 @@ const vinhoSchema = z.object({
 
 // Schema para vinho parcial (update)
 const vinhoUpdateSchema = vinhoSchema.extend({
-    removerImagem: z.coerce.boolean().optional(),
-    ativo: z.coerce.boolean().optional(),
+    removerImagem: booleanFromString.optional(),
+    ativo: booleanFromString.optional(),
     ano: z.coerce.number().optional().nullable(),
     preco: z.coerce.number().optional(),
     estoque: z.coerce.number().optional().nullable()
