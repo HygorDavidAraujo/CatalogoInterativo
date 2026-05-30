@@ -23,6 +23,22 @@ function obterHeadersComAutenticacao(headers = {}) {
     return headersCompletos;
 }
 
+function isVinhoAtivo(value) {
+    return value === null ||
+           value === undefined ||
+           value === 1 ||
+           value === '1' ||
+           value === true ||
+           value === 'true';
+}
+
+function normalizarVinho(vinho) {
+    return {
+        ...vinho,
+        ativo: isVinhoAtivo(vinho.ativo)
+    };
+}
+
 // ===== GERENCIAMENTO DE DADOS COM API =====
 class VinhoManager {
     constructor() {
@@ -33,9 +49,10 @@ class VinhoManager {
     async carregarVinhos(admin = false) {
         try {
             const url = admin ? `${API_URL}/vinhos?admin=true` : `${API_URL}/vinhos`;
+            const fetchOptions = { cache: 'no-store' };
             const response = await (window.fetchWithTimeout 
-                ? window.fetchWithTimeout(url) 
-                : fetch(url));
+                ? window.fetchWithTimeout(url, fetchOptions) 
+                : fetch(url, fetchOptions));
             
             if (!response.ok) throw new Error(`Erro ao carregar vinhos: ${response.status}`);
             
@@ -46,14 +63,17 @@ class VinhoManager {
                 ? responseData 
                 : (responseData.data || responseData);
             
-            // Otimizar URLs do Cloudinary
-            if (window.optimizeCloudinaryUrl) {
-                vinhos = vinhos.map(vinho => ({
-                    ...vinho,
-                    imagem: window.optimizeCloudinaryUrl(vinho.imagem, 'card'),
-                    imagemOriginal: vinho.imagem
-                }));
-            }
+            vinhos = vinhos.map(vinho => {
+                const normalized = normalizarVinho(vinho);
+                if (window.optimizeCloudinaryUrl) {
+                    return {
+                        ...normalized,
+                        imagem: window.optimizeCloudinaryUrl(vinho.imagem, 'card'),
+                        imagemOriginal: vinho.imagem
+                    };
+                }
+                return normalized;
+            });
             
             this.vinhos = vinhos;
             return this.vinhos;
@@ -247,7 +267,7 @@ async function renderizarDestaqueSemana() {
 
         await vinhoManager.carregarConfiguracoes();
 
-        const vinhosAtivos = vinhoManager.vinhos.filter(vinho => vinho.ativo !== 0 && vinho.ativo !== false);
+        const vinhosAtivos = vinhoManager.vinhos.filter(vinho => isVinhoAtivo(vinho.ativo));
         if (!vinhosAtivos.length) {
             container.innerHTML = '';
             return;

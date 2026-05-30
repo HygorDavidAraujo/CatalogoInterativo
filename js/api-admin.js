@@ -15,6 +15,15 @@ function getAuthHeaders() {
     return headers;
 }
 
+function isVinhoAtivo(value) {
+    return value === null ||
+           value === undefined ||
+           value === 1 ||
+           value === '1' ||
+           value === true ||
+           value === 'true';
+}
+
 function exigirTokenOuAvisar() {
     const token = window.authManager?.obterToken?.() || localStorage.getItem('jwt_token');
     if (!token) {
@@ -199,7 +208,7 @@ async function preencherDestaqueSemana(config) {
         await vinhoManager.carregarVinhos(true);
     }
 
-    const vinhosAtivos = vinhoManager.vinhos.filter(vinho => vinho.ativo === 1 || vinho.ativo === true);
+    const vinhosAtivos = vinhoManager.vinhos.filter(vinho => isVinhoAtivo(vinho.ativo));
     const opcoes = ['<option value="">Aleatorio (sem fixar)</option>'];
 
     vinhosAtivos.forEach(vinho => {
@@ -272,7 +281,7 @@ async function renderizarListaAdmin(filtros = {}) {
         const paisHtml = vinho.pais_origem ? ` | <span class="vinho-item-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14">` : ''}${vinho.pais_origem}</span>` : '';
         
         return `
-            <div class="vinho-item-admin ${vinho.ativo === 0 || vinho.ativo === false ? 'vinho-inativo' : ''}" data-id="${vinho.id}">
+            <div class="vinho-item-admin ${isVinhoAtivo(vinho.ativo) ? '' : 'vinho-inativo'}" data-id="${vinho.id}">
                 <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-item-imagem" onerror="this.src='/images/placeholder-80x80.svg'">
                 <div class="vinho-item-info">
                     <div class="vinho-item-nome">${vinho.nome}</div>
@@ -288,10 +297,10 @@ async function renderizarListaAdmin(filtros = {}) {
                     <button class="btn-icon-small btn-excluir" onclick="confirmarExclusao(${vinho.id})" title="Excluir">
                         <i class="fa-solid fa-trash"></i>
                     </button>
-                    <label class="toggle-switch" title="${vinho.ativo === 0 || vinho.ativo === false ? 'Clique para mostrar no site' : 'Clique para ocultar do site'}">
-                        <input type="checkbox" ${vinho.ativo === 1 || vinho.ativo === true ? 'checked' : ''} onchange="toggleVisibilidade(${vinho.id}, this.checked)">
+                    <label class="toggle-switch" title="${isVinhoAtivo(vinho.ativo) ? 'Clique para ocultar do site' : 'Clique para mostrar no site'}">
+                        <input type="checkbox" ${isVinhoAtivo(vinho.ativo) ? 'checked' : ''} onchange="toggleVisibilidade(${vinho.id}, this.checked)">
                         <span class="toggle-slider"></span>
-                        <span class="toggle-label">${vinho.ativo === 0 || vinho.ativo === false ? 'Oculto' : 'Visível'}</span>
+                        <span class="toggle-label">${isVinhoAtivo(vinho.ativo) ? 'Visível' : 'Oculto'}</span>
                     </label>
                 </div>
             </div>
@@ -679,7 +688,7 @@ async function editarVinho(id) {
     document.getElementById('harmonizacao').value = vinho.harmonizacao || '';
     document.getElementById('descricao').value = vinho.descricao || '';
     document.getElementById('preco').value = vinho.preco;
-    document.getElementById('ativo').checked = (vinho.ativo === 1 || vinho.ativo === true); // Trata valores do MySQL (0/1)
+    document.getElementById('ativo').checked = isVinhoAtivo(vinho.ativo); // Trata valores do MySQL (0/1)
 
     // Mostrar imagem atual
     if (vinho.imagem) {
@@ -757,7 +766,8 @@ async function toggleVisibilidade(id, ativo) {
         const response = await fetch(`${API_URL}/vinhos/${id}`, {
             method: 'PUT',
             headers: getAuthHeaders(),
-            body: formData
+            body: formData,
+            cache: 'no-store'
         });
 
         if (!response.ok) {
