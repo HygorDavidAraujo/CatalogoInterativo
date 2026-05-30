@@ -211,6 +211,9 @@
                 <p class="auth-switch">
                     Não tem uma conta? <a href="#" id="mostrar-cadastro">Cadastre-se</a>
                 </p>
+                <p style="text-align:center; margin-top:0.5rem;">
+                    <a href="#" id="esqueci-senha-link" class="auth-forgot">Esqueci minha senha</a>
+                </p>
             </div>
 
             <!-- Formulário de Cadastro -->
@@ -277,6 +280,28 @@
 
     <!-- Overlay -->
     <div class="carrinho-overlay" id="carrinho-overlay"></div>
+
+    <!-- Modal Recuperar Senha -->
+    <div id="modal-recuperar-senha" class="modal" style="display:none;">
+        <div class="modal-content modal-auth">
+            <span class="close close-recuperar-senha">&times;</span>
+            <h2><i class="fas fa-envelope-open-text"></i> Recuperar Senha</h2>
+            <form id="form-recuperar-senha" class="auth-form">
+                <div class="form-group">
+                    <label for="recuperar-email">Informe seu e-mail</label>
+                    <input type="email" id="recuperar-email" name="email" required placeholder="seu@email.com">
+                </div>
+                <div id="recuperar-senha-erro" class="mensagem-erro-auth" style="display:none;"></div>
+                <div id="recuperar-senha-sucesso" class="mensagem-sucesso-auth" style="display:none; margin-bottom:0.5rem;"></div>
+                <button type="submit" class="btn btn-primary btn-auth">
+                    <i class="fas fa-paper-plane"></i> Enviar instruções
+                </button>
+            </form>
+            <p style="text-align:center; margin-top:0.5rem;">
+                <a href="#" id="voltar-login-from-recuperar">Voltar ao login</a>
+            </p>
+        </div>
+    </div>
 
     <!-- Sidebar Carrinho -->
     <div class="carrinho-sidebar" id="carrinho-sidebar">

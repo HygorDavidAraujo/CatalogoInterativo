@@ -35,6 +35,9 @@
     "winston": "^3.19.0",
     "zod": "^4.3.6"
   },
+  "optionalDependencies": {
+    "nodemailer": "^6.10.1"
+  },
   "devDependencies": {
     "nodemon": "^3.0.2"
   }

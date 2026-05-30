@@ -4,6 +4,13 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+let nodemailer;
+try {
+    nodemailer = require('nodemailer');
+} catch (e) {
+    nodemailer = null;
+}
 const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
 const { loginLimiter, cadastroLimiter } = require('../middleware/rateLimiter');
 const { validateLogin, validateCadastro, validatePerfil, validateId } = require('../middleware/validators');
@@ -430,3 +437,122 @@ router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
 });
 
 module.exports = router;
+
+// ===== Rotas de recuperação de senha =====
+// POST /auth/recuperar - solicita reset de senha (gera token, grava em password_resets e envia e-mail/console)
+router.post('/recuperar', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'E-mail é obrigatório' });
+
+        // Buscar usuário
+        const [usuarios] = await pool.query('SELECT id, email, nome_completo FROM usuarios WHERE email = ?', [email]);
+        if (usuarios.length === 0) {
+            // Responder sempre OK para evitar enumeração
+            return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
+        }
+
+        const usuario = usuarios[0];
+
+        // Garantir tabela password_resets existe
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                usuario_id INT NOT NULL,
+                token VARCHAR(128) NOT NULL,
+                expires_at DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (usuario_id),
+                INDEX (token)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `);
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + (60 * 60 * 1000)); // 1 hora
+
+        await pool.query('INSERT INTO password_resets (usuario_id, token, expires_at) VALUES (?, ?, ?)', [usuario.id, token, expiresAt]);
+
+        const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+        const resetLink = `${appUrl}/reset-senha.html?token=${token}`;
+
+        // Tentar enviar por e-mail se nodemailer disponível
+        if (nodemailer) {
+            // Prefer explicit SMTP_HOST/PORT if configurado
+            let transporter;
+            try {
+                if (process.env.SMTP_HOST) {
+                    transporter = nodemailer.createTransport({
+                        host: process.env.SMTP_HOST,
+                        port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
+                        secure: process.env.SMTP_SECURE === 'true',
+                        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+                    });
+                } else if (process.env.SMTP_USER && process.env.SMTP_USER.endsWith('@gmail.com') && process.env.SMTP_PASS) {
+                    // Convenience: support Gmail using App Password (recommended)
+                    transporter = nodemailer.createTransport({
+                        service: 'gmail',
+                        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+                    });
+                }
+
+                if (transporter) {
+                    const mailOptions = {
+                        from: process.env.SMTP_FROM || `Davini Vinhos <${process.env.SMTP_USER || ('noreply@' + (process.env.APP_HOST || 'localhost'))}>`,
+                        to: usuario.email,
+                        subject: 'Recuperação de senha - Davini Vinhos',
+                        text: `Olá ${usuario.nome_completo || ''},\n\nRecebemos uma solicitação para redefinir sua senha. Acesse o link abaixo para criar uma nova senha (válido por 1 hora):\n\n${resetLink}\n\nSe você não solicitou, ignore esta mensagem.`,
+                        html: `<p>Olá ${usuario.nome_completo || ''},</p><p>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para criar uma nova senha (válido por 1 hora):</p><p><a href="${resetLink}">${resetLink}</a></p><p>Se você não solicitou, ignore esta mensagem.</p>`
+                    };
+
+                    transporter.sendMail(mailOptions, (err, info) => {
+                        if (err) console.error('Erro ao enviar e-mail de recuperação:', err);
+                        else console.log('E-mail de recuperação enviado:', info.response || info);
+                    });
+
+                    return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
+                }
+            } catch (mailErr) {
+                console.error('Erro ao tentar enviar e-mail via nodemailer:', mailErr);
+            }
+        }
+
+        // Fallback: logar o link no console (útil em desenvolvimento sem SMTP)
+        console.log(`Password reset link for ${usuario.email}: ${resetLink}`);
+
+        return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
+    } catch (error) {
+        console.error('Erro em /auth/recuperar:', error);
+        return res.status(500).json({ error: 'Erro ao processar recuperação de senha' });
+    }
+});
+
+// POST /auth/recuperar/confirmar - confirma token e troca senha
+router.post('/recuperar/confirmar', async (req, res) => {
+    try {
+        const { token, novaSenha } = req.body;
+        if (!token || !novaSenha) return res.status(400).json({ error: 'Token e novaSenha são obrigatórios' });
+        if (typeof novaSenha !== 'string' || novaSenha.length < 6) return res.status(400).json({ error: 'Senha deve ter no mínimo 6 caracteres' });
+
+        const [rows] = await pool.query('SELECT pr.id AS pr_id, pr.usuario_id, pr.expires_at, u.email FROM password_resets pr JOIN usuarios u ON pr.usuario_id = u.id WHERE pr.token = ?', [token]);
+        if (rows.length === 0) return res.status(400).json({ error: 'Token inválido ou expirado' });
+
+        const pr = rows[0];
+        const now = new Date();
+        if (new Date(pr.expires_at) < now) {
+            // remover token expirado
+            await pool.query('DELETE FROM password_resets WHERE id = ?', [pr.pr_id]);
+            return res.status(400).json({ error: 'Token expirado' });
+        }
+
+        const hash = await bcrypt.hash(novaSenha, 10);
+        await pool.query('UPDATE usuarios SET senha = ? WHERE id = ?', [hash, pr.usuario_id]);
+
+        // remover todos tokens desse usuário
+        await pool.query('DELETE FROM password_resets WHERE usuario_id = ?', [pr.usuario_id]);
+
+        return res.json({ success: true, message: 'Senha atualizada com sucesso. Faça login com a nova senha.' });
+    } catch (error) {
+        console.error('Erro em /auth/recuperar/confirmar:', error);
+        return res.status(500).json({ error: 'Erro ao confirmar recuperação de senha' });
+    }
+});

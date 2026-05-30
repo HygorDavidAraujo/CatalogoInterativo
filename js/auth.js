@@ -410,6 +410,35 @@ function configurarAuth() {
         closeAuth.addEventListener('click', fecharModalAuth);
     }
 
+    // Esqueci a senha - abrir modal
+    const esqueciSenhaLink = document.getElementById('esqueci-senha-link');
+    const modalRecuperar = document.getElementById('modal-recuperar-senha');
+    const closeRecuperar = document.querySelector('.close-recuperar-senha');
+    const voltarLoginFromRecuperar = document.getElementById('voltar-login-from-recuperar');
+
+    if (esqueciSenhaLink) {
+        esqueciSenhaLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('modal-auth').style.display = 'none';
+            if (modalRecuperar) modalRecuperar.style.display = 'block';
+        });
+    }
+
+    if (closeRecuperar) {
+        closeRecuperar.addEventListener('click', () => {
+            if (modalRecuperar) modalRecuperar.style.display = 'none';
+            document.getElementById('modal-auth').style.display = 'block';
+        });
+    }
+
+    if (voltarLoginFromRecuperar) {
+        voltarLoginFromRecuperar.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (modalRecuperar) modalRecuperar.style.display = 'none';
+            document.getElementById('modal-auth').style.display = 'block';
+        });
+    }
+
     // Alternar entre login e cadastro
     if (mostrarCadastro) {
         mostrarCadastro.addEventListener('click', (e) => {
@@ -437,6 +466,57 @@ function configurarAuth() {
     // Configurar formulários quando existirem na página
     configurarFormLogin();
     configurarFormCadastro();
+    configurarFormRecuperarSenha();
+}
+
+// ===== FORMULÁRIO DE RECUPERAÇÃO DE SENHA =====
+function configurarFormRecuperarSenha() {
+    const form = document.getElementById('form-recuperar-senha');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('recuperar-email').value.trim();
+        const erroDiv = document.getElementById('recuperar-senha-erro');
+        const sucessoDiv = document.getElementById('recuperar-senha-sucesso');
+        erroDiv.style.display = 'none';
+        sucessoDiv.style.display = 'none';
+
+        if (!email) {
+            erroDiv.textContent = 'Informe um e-mail válido.';
+            erroDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/auth/recuperar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                // Mensagem amigável: se backend não implementado, orientar contato com admin
+                const msg = data.error || 'Não foi possível enviar instruções. Contate o suporte.';
+                erroDiv.textContent = msg;
+                erroDiv.style.display = 'block';
+                return;
+            }
+
+            // Se backend retornar senha temporária (fallback), exibir ao usuário
+            if (data.tempSenha) {
+                sucessoDiv.innerHTML = `Senha temporária: <strong>${data.tempSenha}</strong> — altere após o login.`;
+            } else {
+                sucessoDiv.textContent = data.message || 'Verifique seu e-mail para instruções de recuperação.';
+            }
+            sucessoDiv.style.display = 'block';
+        } catch (err) {
+            erroDiv.textContent = 'Erro ao enviar solicitação. Tente novamente mais tarde.';
+            erroDiv.style.display = 'block';
+        }
+    });
 }
 
 // ===== INICIALIZAÇÃO =====
