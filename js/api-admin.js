@@ -730,12 +730,17 @@ function confirmarExclusao(id) {
     }
 }
 
+const toggleVisibilidadeInProgress = new Set();
+
 // ===== TOGGLE VISIBILIDADE =====
 async function toggleVisibilidade(checkbox, id) {
     if (!checkbox || checkbox.disabled) return;
+    if (toggleVisibilidadeInProgress.has(id)) return;
 
     const ativo = checkbox.checked;
     checkbox.disabled = true;
+    checkbox.checked = ativo;
+    toggleVisibilidadeInProgress.add(id);
     console.log('Toggle visibilidade:', { id, ativo });
     
     try {
@@ -743,6 +748,7 @@ async function toggleVisibilidade(checkbox, id) {
         if (!vinho) {
             console.error('Vinho não encontrado:', id);
             checkbox.disabled = false;
+            toggleVisibilidadeInProgress.delete(id);
             return;
         }
 
@@ -801,6 +807,7 @@ async function toggleVisibilidade(checkbox, id) {
         if (checkbox) {
             checkbox.disabled = false;
         }
+        toggleVisibilidadeInProgress.delete(id);
     }
 }
 
