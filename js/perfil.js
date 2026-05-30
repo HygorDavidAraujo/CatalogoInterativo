@@ -549,40 +549,31 @@ class PerfilManager {
 
         const itensHtml = (pedido.itens && pedido.itens.length > 0) 
             ? pedido.itens.map(item => {
-                const precoOriginal = parseFloat(item.preco_unitario) || 0;
+                const precoUnitario = parseFloat(item.preco_unitario) || 0;
                 const quantidade = parseInt(item.quantidade) || 0;
-                const precoFinal = this.getDescontoVip(precoOriginal);
-                let usuario = window.authManager?.usuarioLogado;
-                let isVip = usuario?.is_vip;
-                let vipTipo = usuario?.vip_tipo;
-                let badge = '';
-                
-                // Usar VipManager para gerar badge dinâmico com cor
-                if (isVip && vipTipo) {
-                    badge = window.vipManager.getBadgeHtml(vipTipo);
-                }
-                
+                const subtotal = parseFloat(item.subtotal) || (precoUnitario * quantidade);
+
                 return `
                     <div class="produto-item">
                         <div>
                             <div class="produto-nome">${item.vinho_nome}</div>
                             <div class="produto-quantidade">${quantidade}x</div>
                         </div>
-                        ${precoFinal !== precoOriginal ? `<div class='produto-preco'><span class='preco-original' style='text-decoration:line-through;color:#888;'>R$ ${precoOriginal.toFixed(2).replace('.', ',')}</span> ${badge} <span class='preco-final' style='color:#1976d2;font-weight:bold;'>R$ ${(precoFinal * quantidade).toFixed(2).replace('.', ',')}</span></div>` : `<div class="produto-preco">R$ ${(precoFinal * quantidade).toFixed(2).replace('.', ',')}</div>`}
+                        <div class="produto-preco">R$ ${precoUnitario.toFixed(2).replace('.', ',')} cada = R$ ${subtotal.toFixed(2).replace('.', ',')}</div>
                     </div>
                 `;
             }).join('')
             : '<p>Nenhum item encontrado</p>';
 
         // Calcular total com desconto VIP
-        const total = (pedido.itens && pedido.itens.length > 0)
-            ? pedido.itens.reduce((sum, item) => {
-                const precoOriginal = parseFloat(item.preco_unitario) || 0;
-                const quantidade = parseInt(item.quantidade) || 0;
-                const precoFinal = this.getDescontoVip(precoOriginal);
-                return sum + (precoFinal * quantidade);
-            }, 0)
-            : 0;
+        const total = (pedido.total !== undefined && pedido.total !== null)
+            ? parseFloat(pedido.total)
+            : (pedido.itens && pedido.itens.length > 0)
+                ? pedido.itens.reduce((sum, item) => {
+                    const subtotal = parseFloat(item.subtotal) || 0;
+                    return sum + subtotal;
+                }, 0)
+                : 0;
 
         return `
             <div class="pedido-item">
