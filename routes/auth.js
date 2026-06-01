@@ -17,6 +17,26 @@ const { validateLogin, validateCadastro, validatePerfil, validateId } = require(
 
 const JWT_SECRET = process.env.JWT_SECRET || 'davini-vinhos-secret-key-2024';
 
+function createGmailSmtpTransporter(port) {
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const secure = port === 465;
+
+    return {
+        transporter: nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port,
+            secure,
+            auth: { user: smtpUser, pass: smtpPass },
+            requireTLS: true,
+            tls: { rejectUnauthorized: false },
+            logger: true,
+            debug: process.env.NODE_ENV !== 'production'
+        }),
+        transporterType: `gmail-smtp:${port}`
+    };
+}
+
 function createSmtpTransporter() {
     if (!nodemailer) return { transporter: null, transporterType: 'nodemailer-missing' };
 
@@ -27,21 +47,7 @@ function createSmtpTransporter() {
     const smtpSecure = process.env.SMTP_SECURE === 'true';
 
     if (smtpUser && smtpPass && smtpUser.endsWith('@gmail.com')) {
-        const port = smtpPort || 587;
-        const secure = port === 465;
-        return {
-            transporter: nodemailer.createTransport({
-                host: 'smtp.gmail.com',
-                port,
-                secure,
-                auth: { user: smtpUser, pass: smtpPass },
-                requireTLS: true,
-                tls: { rejectUnauthorized: false },
-                logger: true,
-                debug: process.env.NODE_ENV !== 'production'
-            }),
-            transporterType: `gmail-smtp:${port}`
-        };
+        return createGmailSmtpTransporter(smtpPort || 587);
     }
 
     if (smtpHost && smtpUser && smtpPass) {
@@ -61,6 +67,30 @@ function createSmtpTransporter() {
     }
 
     return { transporter: null, transporterType: 'none' };
+}
+
+async function sendMailWithFallback(mailOptions) {
+    let { transporter, transporterType } = createSmtpTransporter();
+    if (!transporter) return { success: false, transporterType, error: 'SMTP não configurado' };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        return { success: true, transporterType, info };
+    } catch (error) {
+        if (transporterType === 'gmail-smtp:587' && error && error.message && error.message.includes('Connection timeout')) {
+            console.warn('Connection timeout em 587, tentando fallback para 465');
+            const fallback = createGmailSmtpTransporter(465);
+            transporter = fallback.transporter;
+            transporterType = fallback.transporterType;
+            try {
+                const info = await transporter.sendMail(mailOptions);
+                return { success: true, transporterType, info };
+            } catch (fallbackError) {
+                return { success: false, transporterType, error: fallbackError };
+            }
+        }
+        return { success: false, transporterType, error };
+    }
 }
 
 // POST - Atualizar senha antiga para bcrypt
@@ -522,28 +552,22 @@ router.post('/recuperar', async (req, res) => {
         const resetLink = `${appUrl}/reset-senha.html?token=${token}`;
 
         // Tentar enviar por e-mail se nodemailer disponível
-        const { transporter, transporterType } = createSmtpTransporter();
-        if (transporter) {
-            const mailOptions = {
-                from: process.env.SMTP_FROM || `Davini Vinhos <${process.env.SMTP_USER || ('noreply@' + (process.env.APP_URL ? new URL(process.env.APP_URL).hostname : 'localhost'))}>`,
-                to: usuario.email,
-                subject: 'Recuperação de senha - Davini Vinhos',
-                text: `Olá ${usuario.nome_completo || ''},\n\nRecebemos uma solicitação para redefinir sua senha. Acesse o link abaixo para criar uma nova senha (válido por 1 hora):\n\n${resetLink}\n\nSe você não solicitou, ignore esta mensagem.`,
-                html: `<p>Olá ${usuario.nome_completo || ''},</p><p>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para criar uma nova senha (válido por 1 hora):</p><p><a href="${resetLink}">${resetLink}</a></p><p>Se você não solicitou, ignore esta mensagem.</p>`
-            };
+        const mailOptions = {
+            from: process.env.SMTP_FROM || `Davini Vinhos <${process.env.SMTP_USER || ('noreply@' + (process.env.APP_URL ? new URL(process.env.APP_URL).hostname : 'localhost'))}>`,
+            to: usuario.email,
+            subject: 'Recuperação de senha - Davini Vinhos',
+            text: `Olá ${usuario.nome_completo || ''},\n\nRecebemos uma solicitação para redefinir sua senha. Acesse o link abaixo para criar uma nova senha (válido por 1 hora):\n\n${resetLink}\n\nSe você não solicitou, ignore esta mensagem.`,
+            html: `<p>Olá ${usuario.nome_completo || ''},</p><p>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para criar uma nova senha (válido por 1 hora):</p><p><a href="${resetLink}">${resetLink}</a></p><p>Se você não solicitou, ignore esta mensagem.</p>`
+        };
 
-            try {
-                const info = await transporter.sendMail(mailOptions);
-                console.log(`✓ [${transporterType}] E-mail de recuperação enviado para ${usuario.email}:`, info.response || info);
-            } catch (err) {
-                console.error(`✗ [${transporterType}] Erro ao enviar e-mail de recuperação para ${usuario.email}:`, err.message || err);
-                // Continua mesmo se falhar (token já foi criado)
-            }
-
-            return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
+        const { success, transporterType, info, error } = await sendMailWithFallback(mailOptions);
+        if (success) {
+            console.log(`✓ [${transporterType}] E-mail de recuperação enviado para ${usuario.email}:`, info.response || info);
         } else {
-            console.error('✗ Nenhum transporter SMTP configurado. Defina SMTP_USER/SMTP_PASS e SMTP_FROM.');
+            console.error(`✗ [${transporterType}] Erro ao enviar e-mail de recuperação para ${usuario.email}:`, error.message || error);
         }
+
+        return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
 
         // Fallback: logar o link no console (útil em desenvolvimento sem SMTP)
         console.log(`Password reset link for ${usuario.email}: ${resetLink}`);
