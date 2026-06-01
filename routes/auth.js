@@ -477,21 +477,28 @@ router.post('/recuperar', async (req, res) => {
 
         // Tentar enviar por e-mail se nodemailer disponível
         if (nodemailer) {
-            // Prefer explicit SMTP_HOST/PORT if configurado
             let transporter;
+            let transporterType = 'none';
             try {
-                if (process.env.SMTP_HOST) {
+                if (process.env.SMTP_USER && process.env.SMTP_USER.endsWith('@gmail.com') && process.env.SMTP_PASS) {
+                    // Gmail: prefer service config (mais confiável em Railway)
+                    transporterType = 'gmail-service';
+                    transporter = nodemailer.createTransport({
+                        service: 'gmail',
+                        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+                        logger: true,
+                        debug: process.env.NODE_ENV !== 'production'
+                    });
+                } else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+                    // Custom SMTP server
+                    transporterType = 'custom-smtp';
                     transporter = nodemailer.createTransport({
                         host: process.env.SMTP_HOST,
                         port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
                         secure: process.env.SMTP_SECURE === 'true',
-                        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
-                    });
-                } else if (process.env.SMTP_USER && process.env.SMTP_USER.endsWith('@gmail.com') && process.env.SMTP_PASS) {
-                    // Convenience: support Gmail using App Password (recommended)
-                    transporter = nodemailer.createTransport({
-                        service: 'gmail',
-                        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+                        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+                        logger: true,
+                        debug: process.env.NODE_ENV !== 'production'
                     });
                 }
 
@@ -506,16 +513,18 @@ router.post('/recuperar', async (req, res) => {
 
                     try {
                         const info = await transporter.sendMail(mailOptions);
-                        console.log(`✓ E-mail de recuperação enviado para ${usuario.email}:`, info.response || info);
+                        console.log(`✓ [${transporterType}] E-mail de recuperação enviado para ${usuario.email}:`, info.response || info);
                     } catch (err) {
-                        console.error(`✗ Erro ao enviar e-mail de recuperação para ${usuario.email}:`, err.message || err);
+                        console.error(`✗ [${transporterType}] Erro ao enviar e-mail de recuperação para ${usuario.email}:`, err.message || err);
                         // Continua mesmo se falhar (token já foi criado)
                     }
 
                     return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
+                } else {
+                    console.error('✗ Nenhum transporter SMTP configurado. Defina SMTP_USER/SMTP_PASS e SMTP_FROM.');
                 }
             } catch (mailErr) {
-                console.error('Erro ao tentar enviar e-mail via nodemailer:', mailErr);
+                console.error('✗ Erro ao tentar configurar nodemailer:', mailErr.message || mailErr);
             }
         }
 
