@@ -17,6 +17,52 @@ const { validateLogin, validateCadastro, validatePerfil, validateId } = require(
 
 const JWT_SECRET = process.env.JWT_SECRET || 'davini-vinhos-secret-key-2024';
 
+function createSmtpTransporter() {
+    if (!nodemailer) return { transporter: null, transporterType: 'nodemailer-missing' };
+
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : undefined;
+    const smtpSecure = process.env.SMTP_SECURE === 'true';
+
+    if (smtpUser && smtpPass && smtpUser.endsWith('@gmail.com')) {
+        const port = smtpPort || 587;
+        const secure = port === 465;
+        return {
+            transporter: nodemailer.createTransport({
+                host: 'smtp.gmail.com',
+                port,
+                secure,
+                auth: { user: smtpUser, pass: smtpPass },
+                requireTLS: true,
+                tls: { rejectUnauthorized: false },
+                logger: true,
+                debug: process.env.NODE_ENV !== 'production'
+            }),
+            transporterType: `gmail-smtp:${port}`
+        };
+    }
+
+    if (smtpHost && smtpUser && smtpPass) {
+        return {
+            transporter: nodemailer.createTransport({
+                host: smtpHost,
+                port: smtpPort || 587,
+                secure: smtpSecure,
+                auth: { user: smtpUser, pass: smtpPass },
+                requireTLS: true,
+                tls: { rejectUnauthorized: false },
+                logger: true,
+                debug: process.env.NODE_ENV !== 'production'
+            }),
+            transporterType: 'custom-smtp'
+        };
+    }
+
+    return { transporter: null, transporterType: 'none' };
+}
+
 // POST - Atualizar senha antiga para bcrypt
 router.post('/atualizar-senha', async (req, res) => {
     try {
@@ -476,56 +522,27 @@ router.post('/recuperar', async (req, res) => {
         const resetLink = `${appUrl}/reset-senha.html?token=${token}`;
 
         // Tentar enviar por e-mail se nodemailer disponível
-        if (nodemailer) {
-            let transporter;
-            let transporterType = 'none';
+        const { transporter, transporterType } = createSmtpTransporter();
+        if (transporter) {
+            const mailOptions = {
+                from: process.env.SMTP_FROM || `Davini Vinhos <${process.env.SMTP_USER || ('noreply@' + (process.env.APP_URL ? new URL(process.env.APP_URL).hostname : 'localhost'))}>`,
+                to: usuario.email,
+                subject: 'Recuperação de senha - Davini Vinhos',
+                text: `Olá ${usuario.nome_completo || ''},\n\nRecebemos uma solicitação para redefinir sua senha. Acesse o link abaixo para criar uma nova senha (válido por 1 hora):\n\n${resetLink}\n\nSe você não solicitou, ignore esta mensagem.`,
+                html: `<p>Olá ${usuario.nome_completo || ''},</p><p>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para criar uma nova senha (válido por 1 hora):</p><p><a href="${resetLink}">${resetLink}</a></p><p>Se você não solicitou, ignore esta mensagem.</p>`
+            };
+
             try {
-                if (process.env.SMTP_USER && process.env.SMTP_USER.endsWith('@gmail.com') && process.env.SMTP_PASS) {
-                    // Gmail: prefer service config (mais confiável em Railway)
-                    transporterType = 'gmail-service';
-                    transporter = nodemailer.createTransport({
-                        service: 'gmail',
-                        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-                        logger: true,
-                        debug: process.env.NODE_ENV !== 'production'
-                    });
-                } else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-                    // Custom SMTP server
-                    transporterType = 'custom-smtp';
-                    transporter = nodemailer.createTransport({
-                        host: process.env.SMTP_HOST,
-                        port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
-                        secure: process.env.SMTP_SECURE === 'true',
-                        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-                        logger: true,
-                        debug: process.env.NODE_ENV !== 'production'
-                    });
-                }
-
-                if (transporter) {
-                    const mailOptions = {
-                        from: process.env.SMTP_FROM || `Davini Vinhos <${process.env.SMTP_USER || ('noreply@' + (process.env.APP_HOST || 'localhost'))}>`,
-                        to: usuario.email,
-                        subject: 'Recuperação de senha - Davini Vinhos',
-                        text: `Olá ${usuario.nome_completo || ''},\n\nRecebemos uma solicitação para redefinir sua senha. Acesse o link abaixo para criar uma nova senha (válido por 1 hora):\n\n${resetLink}\n\nSe você não solicitou, ignore esta mensagem.`,
-                        html: `<p>Olá ${usuario.nome_completo || ''},</p><p>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para criar uma nova senha (válido por 1 hora):</p><p><a href="${resetLink}">${resetLink}</a></p><p>Se você não solicitou, ignore esta mensagem.</p>`
-                    };
-
-                    try {
-                        const info = await transporter.sendMail(mailOptions);
-                        console.log(`✓ [${transporterType}] E-mail de recuperação enviado para ${usuario.email}:`, info.response || info);
-                    } catch (err) {
-                        console.error(`✗ [${transporterType}] Erro ao enviar e-mail de recuperação para ${usuario.email}:`, err.message || err);
-                        // Continua mesmo se falhar (token já foi criado)
-                    }
-
-                    return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
-                } else {
-                    console.error('✗ Nenhum transporter SMTP configurado. Defina SMTP_USER/SMTP_PASS e SMTP_FROM.');
-                }
-            } catch (mailErr) {
-                console.error('✗ Erro ao tentar configurar nodemailer:', mailErr.message || mailErr);
+                const info = await transporter.sendMail(mailOptions);
+                console.log(`✓ [${transporterType}] E-mail de recuperação enviado para ${usuario.email}:`, info.response || info);
+            } catch (err) {
+                console.error(`✗ [${transporterType}] Erro ao enviar e-mail de recuperação para ${usuario.email}:`, err.message || err);
+                // Continua mesmo se falhar (token já foi criado)
             }
+
+            return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
+        } else {
+            console.error('✗ Nenhum transporter SMTP configurado. Defina SMTP_USER/SMTP_PASS e SMTP_FROM.');
         }
 
         // Fallback: logar o link no console (útil em desenvolvimento sem SMTP)
@@ -598,23 +615,12 @@ router.get('/test-email', async (req, res) => {
         }
 
         // Criar transporter
-        let transporter;
-        if (process.env.SMTP_USER && process.env.SMTP_USER.endsWith('@gmail.com') && process.env.SMTP_PASS) {
-            transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-            });
-        } else if (process.env.SMTP_HOST) {
-            transporter = nodemailer.createTransport({
-                host: process.env.SMTP_HOST,
-                port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
-                secure: process.env.SMTP_SECURE === 'true',
-                auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
-            });
-        } else {
+        const { transporter, transporterType } = createSmtpTransporter();
+        if (!transporter) {
             results.test.error = 'SMTP não configurado (faltam SMTP_USER/SMTP_PASS ou SMTP_HOST)';
             return res.json(results);
         }
+        results.test.transporterType = transporterType;
 
         // Testar verificação
         try {
