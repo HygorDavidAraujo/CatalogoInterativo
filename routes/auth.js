@@ -504,10 +504,13 @@ router.post('/recuperar', async (req, res) => {
                         html: `<p>Olá ${usuario.nome_completo || ''},</p><p>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para criar uma nova senha (válido por 1 hora):</p><p><a href="${resetLink}">${resetLink}</a></p><p>Se você não solicitou, ignore esta mensagem.</p>`
                     };
 
-                    transporter.sendMail(mailOptions, (err, info) => {
-                        if (err) console.error('Erro ao enviar e-mail de recuperação:', err);
-                        else console.log('E-mail de recuperação enviado:', info.response || info);
-                    });
+                    try {
+                        const info = await transporter.sendMail(mailOptions);
+                        console.log(`✓ E-mail de recuperação enviado para ${usuario.email}:`, info.response || info);
+                    } catch (err) {
+                        console.error(`✗ Erro ao enviar e-mail de recuperação para ${usuario.email}:`, err.message || err);
+                        // Continua mesmo se falhar (token já foi criado)
+                    }
 
                     return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
                 }
@@ -556,3 +559,83 @@ router.post('/recuperar/confirmar', async (req, res) => {
         return res.status(500).json({ error: 'Erro ao confirmar recuperação de senha' });
     }
 });
+
+// GET /auth/test-email - Endpoint de diagnóstico SMTP (apenas em desenvolvimento)
+router.get('/test-email', async (req, res) => {
+    try {
+        // Apenas em desenvolvimento
+        if (process.env.NODE_ENV === 'production') {
+            return res.status(403).json({ error: 'Endpoint não disponível em produção' });
+        }
+
+        const results = {
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || 'development',
+            smtp: {
+                user: process.env.SMTP_USER || 'NÃO DEFINIDO',
+                pass: process.env.SMTP_PASS ? '***DEFINIDO***' : 'NÃO DEFINIDO',
+                port: process.env.SMTP_PORT || 'NÃO DEFINIDO',
+                secure: process.env.SMTP_SECURE || 'NÃO DEFINIDO',
+                from: process.env.SMTP_FROM || 'NÃO DEFINIDO',
+                appUrl: process.env.APP_URL || 'NÃO DEFINIDO'
+            },
+            test: {}
+        };
+
+        // Verificar se nodemailer está disponível
+        if (!nodemailer) {
+            results.test.error = 'Nodemailer não instalado';
+            return res.json(results);
+        }
+
+        // Criar transporter
+        let transporter;
+        if (process.env.SMTP_USER && process.env.SMTP_USER.endsWith('@gmail.com') && process.env.SMTP_PASS) {
+            transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+            });
+        } else if (process.env.SMTP_HOST) {
+            transporter = nodemailer.createTransport({
+                host: process.env.SMTP_HOST,
+                port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
+                secure: process.env.SMTP_SECURE === 'true',
+                auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+            });
+        } else {
+            results.test.error = 'SMTP não configurado (faltam SMTP_USER/SMTP_PASS ou SMTP_HOST)';
+            return res.json(results);
+        }
+
+        // Testar verificação
+        try {
+            await transporter.verify();
+            results.test.verify = '✓ Conexão SMTP verificada com sucesso';
+        } catch (err) {
+            results.test.verify_error = err.message || String(err);
+            return res.json(results);
+        }
+
+        // Enviar e-mail de teste
+        try {
+            const testEmail = process.env.SMTP_USER;
+            const info = await transporter.sendMail({
+                from: process.env.SMTP_FROM || `Teste <${testEmail}>`,
+                to: testEmail,
+                subject: 'Teste SMTP - Catálogo Interativo',
+                text: `Teste de e-mail enviado em ${new Date().toISOString()}`
+            });
+            results.test.sendMail = '✓ E-mail de teste enviado com sucesso';
+            results.test.sendMail_response = info.response || String(info);
+        } catch (err) {
+            results.test.sendMail_error = err.message || String(err);
+        }
+
+        res.json(results);
+    } catch (error) {
+        console.error('Erro em /auth/test-email:', error);
+        res.status(500).json({ error: 'Erro ao testar e-mail', details: error.message });
+    }
+});
+
+module.exports = router;
