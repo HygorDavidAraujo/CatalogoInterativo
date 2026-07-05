@@ -22,6 +22,7 @@ const { loginLimiter, cadastroLimiter } = require('../middleware/rateLimiter');
 const { validateLogin, validateCadastro, validatePerfil, validateId } = require('../middleware/validators');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'davini-vinhos-secret-key-2024';
+const RESEND_FROM_ADDRESS = process.env.RESEND_FROM || process.env.SMTP_FROM || 'onboarding@resend.dev';
 let resendClient = null;
 
 function getResendClient() {
@@ -40,7 +41,7 @@ async function sendWithResend(mailOptions) {
 
     try {
         const response = await client.emails.send({
-            from: mailOptions.from || process.env.RESEND_FROM || process.env.SMTP_FROM || 'onboarding@resend.dev',
+            from: mailOptions.from || RESEND_FROM_ADDRESS,
             to: Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to],
             subject: mailOptions.subject,
             text: mailOptions.text || '',
@@ -597,7 +598,7 @@ router.post('/recuperar', async (req, res) => {
 
         // Tentar enviar por e-mail se nodemailer disponível
         const mailOptions = {
-            from: process.env.SMTP_FROM || `Davini Vinhos <${process.env.SMTP_USER || ('noreply@' + (process.env.APP_URL ? new URL(process.env.APP_URL).hostname : 'localhost'))}>`,
+            from: RESEND_FROM_ADDRESS,
             to: usuario.email,
             subject: 'Recuperação de senha - Davini Vinhos',
             text: `Olá ${usuario.nome_completo || ''},\n\nRecebemos uma solicitação para redefinir sua senha. Acesse o link abaixo para criar uma nova senha (válido por 1 hora):\n\n${resetLink}\n\nSe você não solicitou, ignore esta mensagem.`,
@@ -682,7 +683,7 @@ router.get('/test-email', async (req, res) => {
 
         if (process.env.RESEND_API_KEY) {
             const resendResult = await sendWithResend({
-                from: process.env.RESEND_FROM || process.env.SMTP_FROM || 'onboarding@resend.dev',
+                from: RESEND_FROM_ADDRESS,
                 to: process.env.SMTP_USER || 'teste@exemplo.com',
                 subject: 'Teste Resend - Catálogo Interativo',
                 text: `Teste de e-mail enviado em ${new Date().toISOString()}`
