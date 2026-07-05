@@ -11,11 +11,47 @@ try {
 } catch (e) {
     nodemailer = null;
 }
+let Resend;
+try {
+    ({ Resend } = require('resend'));
+} catch (e) {
+    Resend = null;
+}
 const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
 const { loginLimiter, cadastroLimiter } = require('../middleware/rateLimiter');
 const { validateLogin, validateCadastro, validatePerfil, validateId } = require('../middleware/validators');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'davini-vinhos-secret-key-2024';
+let resendClient = null;
+
+function getResendClient() {
+    if (!Resend || !process.env.RESEND_API_KEY) return null;
+    if (!resendClient) {
+        resendClient = new Resend(process.env.RESEND_API_KEY);
+    }
+    return resendClient;
+}
+
+async function sendWithResend(mailOptions) {
+    const client = getResendClient();
+    if (!client) {
+        return { success: false, transporterType: 'resend-disabled', error: 'RESEND_API_KEY não configurado' };
+    }
+
+    try {
+        const response = await client.emails.send({
+            from: mailOptions.from || process.env.RESEND_FROM || process.env.SMTP_FROM || 'onboarding@resend.dev',
+            to: Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to],
+            subject: mailOptions.subject,
+            text: mailOptions.text || '',
+            html: mailOptions.html || ''
+        });
+
+        return { success: true, transporterType: 'resend', info: response };
+    } catch (error) {
+        return { success: false, transporterType: 'resend', error };
+    }
+}
 
 function createGmailSmtpTransporter(port) {
     const smtpUser = process.env.SMTP_USER;
@@ -70,6 +106,14 @@ function createSmtpTransporter() {
 }
 
 async function sendMailWithFallback(mailOptions) {
+    if (process.env.RESEND_API_KEY) {
+        const resendResult = await sendWithResend(mailOptions);
+        if (resendResult.success) {
+            return resendResult;
+        }
+        console.warn('Resend falhou, tentando SMTP como fallback:', resendResult.error?.message || resendResult.error);
+    }
+
     let { transporter, transporterType } = createSmtpTransporter();
     if (!transporter) return { success: false, transporterType, error: 'SMTP não configurado' };
 
@@ -629,45 +673,65 @@ router.get('/test-email', async (req, res) => {
                 from: process.env.SMTP_FROM || 'NÃO DEFINIDO',
                 appUrl: process.env.APP_URL || 'NÃO DEFINIDO'
             },
+            resend: {
+                apiKey: process.env.RESEND_API_KEY ? '***DEFINIDO***' : 'NÃO DEFINIDO',
+                from: process.env.RESEND_FROM || 'NÃO DEFINIDO'
+            },
             test: {}
         };
 
-        // Verificar se nodemailer está disponível
-        if (!nodemailer) {
-            results.test.error = 'Nodemailer não instalado';
-            return res.json(results);
-        }
-
-        // Criar transporter
-        const { transporter, transporterType } = createSmtpTransporter();
-        if (!transporter) {
-            results.test.error = 'SMTP não configurado (faltam SMTP_USER/SMTP_PASS ou SMTP_HOST)';
-            return res.json(results);
-        }
-        results.test.transporterType = transporterType;
-
-        // Testar verificação
-        try {
-            await transporter.verify();
-            results.test.verify = '✓ Conexão SMTP verificada com sucesso';
-        } catch (err) {
-            results.test.verify_error = err.message || String(err);
-            return res.json(results);
-        }
-
-        // Enviar e-mail de teste
-        try {
-            const testEmail = process.env.SMTP_USER;
-            const info = await transporter.sendMail({
-                from: process.env.SMTP_FROM || `Teste <${testEmail}>`,
-                to: testEmail,
-                subject: 'Teste SMTP - Catálogo Interativo',
+        if (process.env.RESEND_API_KEY) {
+            const resendResult = await sendWithResend({
+                from: process.env.RESEND_FROM || process.env.SMTP_FROM || 'onboarding@resend.dev',
+                to: process.env.SMTP_USER || 'teste@exemplo.com',
+                subject: 'Teste Resend - Catálogo Interativo',
                 text: `Teste de e-mail enviado em ${new Date().toISOString()}`
             });
-            results.test.sendMail = '✓ E-mail de teste enviado com sucesso';
-            results.test.sendMail_response = info.response || String(info);
-        } catch (err) {
-            results.test.sendMail_error = err.message || String(err);
+
+            if (resendResult.success) {
+                results.test.provider = 'resend';
+                results.test.sendMail = '✓ E-mail de teste enviado com sucesso via Resend';
+                results.test.sendMail_response = resendResult.info?.id || JSON.stringify(resendResult.info);
+            } else {
+                results.test.provider = 'resend';
+                results.test.sendMail_error = resendResult.error?.message || String(resendResult.error);
+            }
+        }
+
+        if (!process.env.RESEND_API_KEY || results.test.sendMail_error) {
+            if (!nodemailer) {
+                results.test.error = 'Nodemailer não instalado';
+                return res.json(results);
+            }
+
+            const { transporter, transporterType } = createSmtpTransporter();
+            if (!transporter) {
+                results.test.error = 'SMTP não configurado (faltam SMTP_USER/SMTP_PASS ou SMTP_HOST)';
+                return res.json(results);
+            }
+            results.test.transporterType = transporterType;
+
+            try {
+                await transporter.verify();
+                results.test.verify = '✓ Conexão SMTP verificada com sucesso';
+            } catch (err) {
+                results.test.verify_error = err.message || String(err);
+                return res.json(results);
+            }
+
+            try {
+                const testEmail = process.env.SMTP_USER || process.env.RESEND_FROM || 'teste@exemplo.com';
+                const info = await transporter.sendMail({
+                    from: process.env.SMTP_FROM || `Teste <${testEmail}>`,
+                    to: testEmail,
+                    subject: 'Teste SMTP - Catálogo Interativo',
+                    text: `Teste de e-mail enviado em ${new Date().toISOString()}`
+                });
+                results.test.sendMail = '✓ E-mail de teste enviado com sucesso';
+                results.test.sendMail_response = info.response || String(info);
+            } catch (err) {
+                results.test.sendMail_error = err.message || String(err);
+            }
         }
 
         res.json(results);
