@@ -2,6 +2,11 @@
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token') || '';
   const tokenInput = document.getElementById('reset-token');
+  const API_BASE = window.APP_CONFIG
+    ? `${window.APP_CONFIG.API_URL}/api`
+    : (window.location.hostname === 'localhost'
+        ? 'http://localhost:3000/api'
+        : window.location.origin + '/api');
   const form = document.getElementById('form-reset-senha');
   const erroDiv = document.getElementById('reset-erro');
   const sucessoDiv = document.getElementById('reset-sucesso');
@@ -34,7 +39,7 @@
     }
 
     try {
-      const resp = await fetch(`${API_URL}/auth/recuperar/confirmar`, {
+      const resp = await fetch(`${API_BASE}/auth/recuperar/confirmar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: t, novaSenha: nova })
