@@ -71,13 +71,13 @@ app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/js', express.static(path.join(__dirname, 'js')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.get(
-    ['/index.html', '/admin.html', '/clientes.html', '/meu-perfil.html', '/reset-senha.html'],
-    (req, res) => res.sendFile(path.join(__dirname, req.path.slice(1)))
-);
-app.get(['/manifest.json', '/sw.js'], (req, res) => {
-    res.sendFile(path.join(__dirname, req.path.slice(1)));
-});
+app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+app.get('/clientes.html', (req, res) => res.sendFile(path.join(__dirname, 'clientes.html')));
+app.get('/meu-perfil.html', (req, res) => res.sendFile(path.join(__dirname, 'meu-perfil.html')));
+app.get('/reset-senha.html', (req, res) => res.sendFile(path.join(__dirname, 'reset-senha.html')));
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
+app.get('/sw.js', (req, res) => res.sendFile(path.join(__dirname, 'sw.js')));
 
 // Importar rotas
 const vinhosRoutes = require('./routes/vinhos');
