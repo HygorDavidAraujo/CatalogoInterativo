@@ -46,41 +46,42 @@ const consoleFormat = winston.format.combine(
     )
 );
 
-// Criar diretório de logs se não existir
-const logsDir = path.join(__dirname, '..', 'logs');
-const fs = require('fs');
-if (!fs.existsSync(logsDir)) {
-    fs.mkdirSync(logsDir, { recursive: true });
-}
-
-// Configurar transports (destinos dos logs)
+// Vercel functions have an ephemeral, read-only filesystem; use platform logs there.
 const transports = [
-    // Console - sempre ativo
     new winston.transports.Console({
         format: consoleFormat,
         level: level()
-    }),
-    
-    // Arquivo de erro - apenas erros
-    new winston.transports.File({
-        filename: path.join(logsDir, 'error.log'),
-        level: 'error',
-        maxsize: 5242880, // 5MB
-        maxFiles: 5,
-        format: format
-    }),
-    
-    // Arquivo combinado - todos os níveis
-    new winston.transports.File({
-        filename: path.join(logsDir, 'combined.log'),
-        maxsize: 5242880, // 5MB
-        maxFiles: 5,
-        format: format
     })
 ];
 
-// Adicionar transport separado para HTTP em produção
-if (process.env.NODE_ENV === 'production') {
+const logsDir = !process.env.VERCEL
+    ? path.join(__dirname, '..', 'logs')
+    : null;
+
+if (logsDir) {
+    const fs = require('fs');
+    if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir, { recursive: true });
+    }
+
+    transports.push(
+        new winston.transports.File({
+            filename: path.join(logsDir, 'error.log'),
+            level: 'error',
+            maxsize: 5242880,
+            maxFiles: 5,
+            format
+        }),
+        new winston.transports.File({
+            filename: path.join(logsDir, 'combined.log'),
+            maxsize: 5242880,
+            maxFiles: 5,
+            format
+        })
+    );
+}
+
+if (process.env.NODE_ENV === 'production' && logsDir) {
     transports.push(
         new winston.transports.File({
             filename: path.join(logsDir, 'http.log'),

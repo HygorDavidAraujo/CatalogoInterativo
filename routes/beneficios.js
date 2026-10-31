@@ -6,7 +6,7 @@ const { verificarAdminAuth } = require('../middleware/auth');
 // GET - Listar todos os benefícios VIP
 router.get('/', async (req, res) => {
     try {
-        const [beneficios] = await pool.query(
+        const { rows: beneficios } = await pool.query(
             'SELECT * FROM beneficios_vip WHERE ativo = TRUE ORDER BY ordem ASC'
         );
         res.json(beneficios);
@@ -19,8 +19,8 @@ router.get('/', async (req, res) => {
 // GET - Buscar benefício por slug
 router.get('/slug/:slug', async (req, res) => {
     try {
-        const [beneficios] = await pool.query(
-            'SELECT * FROM beneficios_vip WHERE slug = ? AND ativo = TRUE',
+        const { rows: beneficios } = await pool.query(
+            'SELECT * FROM beneficios_vip WHERE slug = $1 AND ativo = TRUE',
             [req.params.slug]
         );
         
@@ -52,19 +52,19 @@ router.post('/', verificarAdminAuth, async (req, res) => {
         // Cor padrão se não informada
         const corFinal = cor || '#6B1C40';
 
-        const [result] = await pool.query(
-            'INSERT INTO beneficios_vip (nome, slug, tipo_desconto, valor_desconto, cor, ordem) VALUES (?, ?, ?, ?, ?, ?)',
+        const result = await pool.query(
+            'INSERT INTO beneficios_vip (nome, slug, tipo_desconto, valor_desconto, cor, ordem) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
             [nome, slug, tipo_desconto, parseFloat(valor_desconto), corFinal, ordem || 0]
         );
 
         res.status(201).json({
             success: true,
-            id: result.insertId,
+            id: result.rows[0].id,
             message: 'Benefício criado com sucesso'
         });
     } catch (error) {
         console.error('Erro ao criar benefício:', error);
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === '23505') {
             return res.status(409).json({ error: 'Nome ou slug já existe' });
         }
         res.status(500).json({ error: 'Erro ao criar benefício' });
@@ -78,27 +78,27 @@ router.put('/:id', verificarAdminAuth, async (req, res) => {
         const { id } = req.params;
 
         // Se cor não informada, manter a cor atual
-        let query = 'UPDATE beneficios_vip SET nome = ?, slug = ?, tipo_desconto = ?, valor_desconto = ?, ordem = ?';
+        let query = 'UPDATE beneficios_vip SET nome = $1, slug = $2, tipo_desconto = $3, valor_desconto = $4, ordem = $5';
         let params = [nome, slug, tipo_desconto, parseFloat(valor_desconto), ordem || 0];
         
         if (cor) {
-            query += ', cor = ?';
+            query += ', cor = $6';
             params.push(cor);
         }
         
-        query += ' WHERE id = ?';
+        query += ` WHERE id = $${params.length + 1}`;
         params.push(id);
         
-        const [result] = await pool.query(query, params);
+        const result = await pool.query(query, params);
 
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Benefício não encontrado' });
         }
 
         res.json({ success: true, message: 'Benefício atualizado com sucesso' });
     } catch (error) {
         console.error('Erro ao atualizar benefício:', error);
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === '23505') {
             return res.status(409).json({ error: 'Nome ou slug já existe' });
         }
         res.status(500).json({ error: 'Erro ao atualizar benefício' });
@@ -108,12 +108,12 @@ router.put('/:id', verificarAdminAuth, async (req, res) => {
 // DELETE - Desativar benefício (soft delete)
 router.delete('/:id', verificarAdminAuth, async (req, res) => {
     try {
-        const [result] = await pool.query(
-            'UPDATE beneficios_vip SET ativo = FALSE WHERE id = ?',
+        const result = await pool.query(
+            'UPDATE beneficios_vip SET ativo = FALSE WHERE id = $1',
             [req.params.id]
         );
 
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Benefício não encontrado' });
         }
 

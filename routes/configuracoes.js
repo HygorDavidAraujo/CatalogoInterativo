@@ -7,7 +7,7 @@ const { cloudinary, upload } = require('../config/cloudinary');
 // GET - Buscar todas as configurações
 router.get('/', async (req, res) => {
     try {
-        const [configuracoes] = await pool.query('SELECT * FROM configuracoes LIMIT 1');
+        const { rows: configuracoes } = await pool.query('SELECT * FROM configuracoes LIMIT 1');
         
         if (configuracoes.length === 0) {
             return res.json({
@@ -36,8 +36,8 @@ router.get('/', async (req, res) => {
 // GET - Buscar configuração específica
 router.get('/:chave', async (req, res) => {
     try {
-        const [config] = await pool.query(
-            'SELECT * FROM configuracoes WHERE chave = ?',
+        const { rows: config } = await pool.query(
+            'SELECT * FROM configuracoes WHERE chave = $1',
             [req.params.chave]
         );
         
@@ -61,7 +61,7 @@ router.post('/', verificarAdminAuth, async (req, res) => {
         const destaqueVinhoId = config.destaque_vinho_id ? parseInt(config.destaque_vinho_id, 10) : null;
 
         // Verificar se já existe configuração
-        const [existing] = await pool.query('SELECT id, destaque_vinho_id, destaque_fixado_em FROM configuracoes LIMIT 1');
+        const { rows: existing } = await pool.query('SELECT id, destaque_vinho_id, destaque_fixado_em FROM configuracoes LIMIT 1');
 
         let destaqueFixadoEm = null;
         if (destaqueVinhoId) {
@@ -76,19 +76,19 @@ router.post('/', verificarAdminAuth, async (req, res) => {
             // Atualizar configuração existente
             await pool.query(
                 `UPDATE configuracoes SET 
-                    nome_site = ?,
-                    titulo = ?,
-                    descricao = ?,
-                    telefone = ?,
-                    email = ?,
-                    endereco = ?,
-                    whatsapp = ?,
-                    instagram = ?,
-                    facebook = ?,
-                    logo_url = ?,
-                    destaque_vinho_id = ?,
-                    destaque_fixado_em = ?
-                WHERE id = ?`,
+                nome_site = $1,
+                titulo = $2,
+                descricao = $3,
+                telefone = $4,
+                email = $5,
+                endereco = $6,
+                whatsapp = $7,
+                instagram = $8,
+                facebook = $9,
+                logo_url = $10,
+                destaque_vinho_id = $11,
+                destaque_fixado_em = $12
+            WHERE id = $13`,
                 [
                     config.nome_site || '',
                     config.titulo || '',
@@ -110,7 +110,7 @@ router.post('/', verificarAdminAuth, async (req, res) => {
             await pool.query(
                 `INSERT INTO configuracoes 
                 (nome_site, titulo, descricao, telefone, email, endereco, whatsapp, instagram, facebook, logo_url, destaque_vinho_id, destaque_fixado_em)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
                 [
                     config.nome_site || '',
                     config.titulo || '',
@@ -131,7 +131,7 @@ router.post('/', verificarAdminAuth, async (req, res) => {
         console.log('Configurações salvas com sucesso');
 
         // Buscar configurações atualizadas
-        const [configsAtualizadas] = await pool.query('SELECT * FROM configuracoes LIMIT 1');
+        const { rows: configsAtualizadas } = await pool.query('SELECT * FROM configuracoes LIMIT 1');
         
         console.log('Retornando configurações atualizadas:', configsAtualizadas[0]);
         res.json(configsAtualizadas[0]);
@@ -148,8 +148,8 @@ router.put('/:chave', verificarAdminAuth, async (req, res) => {
         const { chave } = req.params;
 
         await pool.query(
-            'INSERT INTO configuracoes (chave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?',
-            [chave, valor, valor]
+            'INSERT INTO configuracoes (chave, valor) VALUES ($1, $2) ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor',
+            [chave, valor]
         );
 
         res.json({ chave, valor });

@@ -1,26 +1,28 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-// Configuração do pool de conexões
-// Prioriza variáveis Railway nativas (MYSQLHOST, etc), depois as personalizadas (DB_HOST, etc)
-const pool = mysql.createPool({
-    host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
-    user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
-    password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
-    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'catalogo_vinhos',
-    port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT || '3306'),
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    charset: 'utf8mb4'
+if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL não definido. Configure a connection string do PostgreSQL.');
+}
+
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production'
+        ? { rejectUnauthorized: true }
+        : undefined,
+    max: process.env.VERCEL ? 5 : 10,
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 10000
 });
 
-// Testar conexão
+pool.on('error', (error) => {
+    console.error('Erro inesperado no pool PostgreSQL:', error);
+});
+
 async function testConnection() {
     try {
-        const connection = await pool.getConnection();
+        await pool.query('SELECT 1');
         console.log('✓ Conexão com o banco de dados estabelecida com sucesso!');
-        connection.release();
         return true;
     } catch (error) {
         console.error('✗ Erro ao conectar com o banco de dados:', error.message);

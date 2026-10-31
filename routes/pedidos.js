@@ -17,8 +17,8 @@ router.get('/cliente/:clienteId', verificarAutenticacao, validateClienteId, asyn
         console.log('🔍 Buscando pedidos do cliente:', clienteId);
         
         // Buscar pedidos
-        const [pedidos] = await pool.query(
-            'SELECT * FROM pedidos WHERE usuario_id = ? ORDER BY created_at DESC',
+        const { rows: pedidos } = await pool.query(
+            'SELECT * FROM pedidos WHERE usuario_id = $1 ORDER BY created_at DESC',
             [clienteId]
         );
 
@@ -26,8 +26,8 @@ router.get('/cliente/:clienteId', verificarAutenticacao, validateClienteId, asyn
 
         // Para cada pedido, buscar os itens
         for (let pedido of pedidos) {
-            const [itens] = await pool.query(
-                'SELECT * FROM pedidos_itens WHERE pedido_id = ?',
+            const { rows: itens } = await pool.query(
+                'SELECT * FROM pedidos_itens WHERE pedido_id = $1',
                 [pedido.id]
             );
             pedido.itens = itens;
@@ -52,20 +52,28 @@ router.post('/', verificarAutenticacao, validatePedido, async (req, res) => {
             return res.status(403).json({ error: 'Acesso negado: você só pode criar pedidos para sua conta' });
         }
 
-        // Inserir pedido
-        const [result] = await pool.query(
-            'INSERT INTO pedidos (usuario_id, total, observacoes) VALUES (?, ?, ?)',
-            [usuario_id, total, observacoes || null]
-        );
-
-        const pedidoId = result.insertId;
-
-        // Inserir itens do pedido
-        for (const item of itens) {
-            await pool.query(
-                'INSERT INTO pedidos_itens (pedido_id, vinho_id, vinho_nome, quantidade, preco_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)',
-                [pedidoId, item.id, item.nome, item.quantidade, item.preco, item.preco * item.quantidade]
+        const client = await pool.connect();
+        let pedidoId;
+        try {
+            await client.query('BEGIN');
+            const result = await client.query(
+                'INSERT INTO pedidos (usuario_id, total, observacoes) VALUES ($1, $2, $3) RETURNING id',
+                [usuario_id, total, observacoes || null]
             );
+            pedidoId = result.rows[0].id;
+
+            for (const item of itens) {
+                await client.query(
+                    'INSERT INTO pedidos_itens (pedido_id, vinho_id, vinho_nome, quantidade, preco_unitario, subtotal) VALUES ($1, $2, $3, $4, $5, $6)',
+                    [pedidoId, item.id, item.nome, item.quantidade, item.preco, item.preco * item.quantidade]
+                );
+            }
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
         }
 
         res.status(201).json({ 
@@ -82,7 +90,7 @@ router.post('/', verificarAutenticacao, validatePedido, async (req, res) => {
 // GET - Listar todos os pedidos (admin)
 router.get('/', verificarAdminAuth, async (req, res) => {
     try {
-        const [pedidos] = await pool.query(`
+        const { rows: pedidos } = await pool.query(`
             SELECT p.*, u.nome_completo, u.email, u.telefone 
             FROM pedidos p 
             JOIN usuarios u ON p.usuario_id = u.id 
@@ -90,8 +98,8 @@ router.get('/', verificarAdminAuth, async (req, res) => {
         `);
 
         for (let pedido of pedidos) {
-            const [itens] = await pool.query(
-                'SELECT * FROM pedidos_itens WHERE pedido_id = ?',
+            const { rows: itens } = await pool.query(
+                'SELECT * FROM pedidos_itens WHERE pedido_id = $1',
                 [pedido.id]
             );
             pedido.itens = itens;
@@ -111,7 +119,7 @@ router.put('/:id/status', verificarAdminAuth, validateId, validatePedidoStatus, 
         const { status } = req.body;
 
         await pool.query(
-            'UPDATE pedidos SET status = ? WHERE id = ?',
+            'UPDATE pedidos SET status = $1 WHERE id = $2',
             [status, id]
         );
 

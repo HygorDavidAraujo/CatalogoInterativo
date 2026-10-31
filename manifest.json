@@ -15,34 +15,20 @@
     }
   ],
   "categories": ["shopping", "lifestyle", "food"],
-  "screenshots": [
-    {
-      "src": "/images/screenshot-mobile.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/images/screenshot-desktop.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
-    }
-  ],
   "shortcuts": [
     {
       "name": "Ver Catálogo",
       "short_name": "Catálogo",
       "description": "Ver catálogo completo de vinhos",
       "url": "/#catalogo",
-      "icons": [{ "src": "/images/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/images/favicon.svg", "type": "image/svg+xml" }]
     },
     {
       "name": "Meu Perfil",
       "short_name": "Perfil",
       "description": "Acessar meu perfil e pedidos",
       "url": "/meu-perfil.html",
-      "icons": [{ "src": "/images/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/images/favicon.svg", "type": "image/svg+xml" }]
     }
   ]
 }

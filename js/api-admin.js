@@ -274,8 +274,8 @@ async function renderizarListaAdmin(filtros = {}) {
     }
 
     container.innerHTML = vinhos.map(vinho => {
-        const imagemSrc = vinho.imagem ? 
-            (vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`) :
+        const imagemSrc = vinho.imagem ?
+            window.resolverUrlImagem(vinho.imagem) :
             '/images/placeholder-80x80.svg';
         const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
         const paisHtml = vinho.pais_origem ? ` | <span class="vinho-item-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14">` : ''}${vinho.pais_origem}</span>` : '';
@@ -692,7 +692,7 @@ async function editarVinho(id) {
 
     // Mostrar imagem atual
     if (vinho.imagem) {
-        const imagemSrc = vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`;
+        const imagemSrc = window.resolverUrlImagem(vinho.imagem);
         previewImg.src = imagemSrc;
         previewImg.style.display = 'block';
         uploadPreview.style.display = 'none';

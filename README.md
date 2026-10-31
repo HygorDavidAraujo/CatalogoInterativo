@@ -1,6 +1,6 @@
 # Catálogo Interativo - Davini Vinhos Finos
 
-Sistema web completo de catálogo interativo para exibição de vinhos da vinícola com backend Node.js, banco de dados MySQL e upload de imagens.
+Sistema web completo de catálogo interativo para exibição de vinhos da vinícola com backend Node.js, banco de dados PostgreSQL (Neon) e upload de imagens.
 
 ## 📋 Sobre o Projeto
 
@@ -40,8 +40,8 @@ Este é um catálogo interativo moderno desenvolvido para a Davini Vinhos Finos,
 ## 🚀 Como Instalar e Executar
 
 ### Pré-requisitos
-- **Node.js** (versão 14 ou superior)
-- **MySQL** (versão 5.7 ou superior)
+- **Node.js** (versão 20 ou superior)
+- **PostgreSQL** (ou um projeto Neon)
 - **npm** (gerenciador de pacotes do Node.js)
 
 ### Passo 1: Clonar o Repositório
@@ -56,15 +56,13 @@ npm install
 ```
 
 ### Passo 3: Configurar Banco de Dados
-1. Certifique-se de que o MySQL está rodando
-2. Crie o banco de dados executando o script:
-```bash
-mysql -u root -p < database/schema.sql
-```
+1. Crie um banco PostgreSQL no Neon.
+2. Execute `database/schema.postgresql.sql` no SQL Editor do Neon.
+3. Copie a connection string pooled do Neon para `DATABASE_URL`.
 
-Ou execute manualmente no MySQL:
-```sql
-source database/schema.sql
+Para executar localmente, use `.env` com:
+```bash
+DATABASE_URL=postgresql://usuario:senha@host-neon/nome_do_banco?sslmode=require
 ```
 
 ### Passo 4: Configurar Variáveis de Ambiente
@@ -75,11 +73,8 @@ cp .env.example .env
 
 2. Edite o arquivo `.env` com suas configurações:
 ```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=sua_senha
-DB_NAME=catalogo_vinhos
-DB_PORT=3306
+DATABASE_URL=postgresql://usuario:senha@host-neon/nome_do_banco?sslmode=require
+JWT_SECRET=gere-uma-chave-aleatoria-forte
 PORT=3000
 ```
 
@@ -116,33 +111,28 @@ npm run dev
 
 ## 📁 Estrutura de Arquivos
 
+Para migrar os dados da instância MySQL antiga para o Neon e publicar na Vercel, siga [DEPLOY-VERCEL-NEON.md](./DEPLOY-VERCEL-NEON.md).
+
 ```
 CatalogoInterativo/
-├── index.html          # Página principal do catálogo
-├── admin.html          # Painel administrativo
-├── css/
-│   ├── styles.css      # Estilos da página principal
-│   └── admin.css       # Estilos do painel admin
-├── js/
-│   ├── app.js          # JavaScript da página principal
-│   └── admin.js        # JavaScript do painel admin
-└── images/             # Pasta para imagens locais
+├── api/index.js                    # Entrada da função Vercel
+├── config/                         # PostgreSQL, logs e serviços
+├── database/schema.postgresql.sql  # Schema do Neon
+├── middleware/                     # Autenticação, erros e validação
+├── routes/                         # Endpoints Express
+├── scripts/                        # Migração MySQL → Neon e testes de e-mail
+├── services/                       # Cache e serviços compartilhados
+├── css/                            # Estilos do catálogo e do painel
+├── images/                         # Ícones e imagens estáticas
+├── js/                             # Código do frontend
+├── server.js                       # Aplicação Express
+└── vercel.json                     # Rotas da implantação Vercel
 ```
 
 ## 💾 Banco de Dados
 
 ### Estrutura
-O sistema utiliza **MySQL** com duas tabelas principais:
-
-#### Tabela `vinhos`
-- id, nome, tipo, uva, ano
-- guarda, harmonizacao, descricao
-- preco, imagem
-- timestamps (created_at, updated_at)
-
-#### Tabela `configuracoes`
-- id, chave, valor
-- timestamps (created_at, updated_at)
+O sistema utiliza **PostgreSQL no Neon**. O schema completo das tabelas de catálogo, usuários, pedidos, configurações, benefícios VIP e recuperação de senha está em `database/schema.postgresql.sql`.
 
 ### API Endpoints
 
@@ -171,7 +161,8 @@ O sistema utiliza **MySQL** com duas tabelas principais:
 ### Backend
 - **Node.js**: Servidor backend
 - **Express**: Framework web
-- **MySQL**: Banco de dados relacional
+- **PostgreSQL (Neon)**: Banco de dados relacional
+- **Vercel**: Hospedagem do site e das rotas Express
 - **Multer**: Upload de arquivos
 - **CORS**: Comunicação entre frontend e backend
 
@@ -188,26 +179,22 @@ O site inclui links para:
 
 O sistema suporta duas formas de adicionar imagens:
 
-1. **Upload Local**: Faça upload de imagens do seu computador (JPG, PNG, GIF - máx 5MB)
-   - As imagens são salvas em `/uploads/vinhos/`
-   - Nomenclatura automática: `vinho-timestamp-random.ext`
+1. **Upload via Cloudinary**: Configure as variáveis Cloudinary no ambiente para armazenar as imagens de forma persistente. O disco local de funções Vercel não deve ser usado como armazenamento permanente.
 
 2. **URL Externa**: Cole uma URL de imagem hospedada externamente
 
 ## 🔒 Segurança
 
-**Importante**: Este projeto é uma versão básica. Para produção, recomenda-se:
-- Adicionar autenticação JWT no painel admin
-- Implementar validação e sanitização de dados
-- Configurar HTTPS
-- Usar variáveis de ambiente seguras
-- Implementar rate limiting
-- Adicionar backup automático do banco
+**Importante**:
+- Defina um `JWT_SECRET` forte e exclusivo na Vercel.
+- Armazene URLs e credenciais somente em variáveis de ambiente; não as versione.
+- Faça backups protegidos e teste a restauração.
+- Depois de remover segredos do diretório de trabalho, avalie também a limpeza coordenada do histórico Git.
 
 ## 🎯 Melhorias Futuras
 
 - ✅ Sistema completo de backend com Node.js
-- ✅ Banco de dados MySQL
+- ✅ Banco de dados PostgreSQL (Neon)
 - ✅ Upload de imagens
 - ✅ API RESTful
 - 🔲 Autenticação de administrador

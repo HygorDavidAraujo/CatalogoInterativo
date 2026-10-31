@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // ===== TRUST PROXY =====
-// Necessário quando atrás de um proxy reverso (Railway, Heroku, etc)
+// Necessário quando atrás do proxy reverso da hospedagem.
 app.set('trust proxy', 1);
 
 // ===== SEGURANÇA =====
@@ -66,9 +66,18 @@ app.use((req, res, next) => {
 // Rate limiter global para todas as rotas da API
 app.use('/api/', apiLimiter);
 
-// Servir arquivos estáticos
-app.use(express.static(path.join(__dirname)));
+// Servir somente assets públicos; não expor arquivos internos do backend.
+app.use('/css', express.static(path.join(__dirname, 'css')));
+app.use('/js', express.static(path.join(__dirname, 'js')));
+app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.get(
+    ['/index.html', '/admin.html', '/clientes.html', '/meu-perfil.html', '/reset-senha.html'],
+    (req, res) => res.sendFile(path.join(__dirname, req.path.slice(1)))
+);
+app.get(['/manifest.json', '/sw.js'], (req, res) => {
+    res.sendFile(path.join(__dirname, req.path.slice(1)));
+});
 
 // Importar rotas
 const vinhosRoutes = require('./routes/vinhos');
@@ -137,11 +146,7 @@ if (isDevelopment) {
     // Rota de diagnóstico de variáveis
     app.get('/api/check-env', (req, res) => {
         res.json({
-            MYSQLHOST: process.env.MYSQLHOST || 'NÃO DEFINIDO',
-            MYSQLUSER: process.env.MYSQLUSER || 'NÃO DEFINIDO',
-            MYSQLPASSWORD: process.env.MYSQLPASSWORD ? '***DEFINIDO***' : 'NÃO DEFINIDO',
-            MYSQLDATABASE: process.env.MYSQLDATABASE || 'NÃO DEFINIDO',
-            MYSQLPORT: process.env.MYSQLPORT || 'NÃO DEFINIDO',
+            DATABASE_URL: process.env.DATABASE_URL ? '***DEFINIDO***' : 'NÃO DEFINIDO',
             NODE_ENV: process.env.NODE_ENV || 'NÃO DEFINIDO',
             REDIS_HOST: process.env.REDIS_HOST || 'NÃO DEFINIDO',
             JWT_SECRET: process.env.JWT_SECRET ? '***DEFINIDO***' : 'NÃO DEFINIDO'
@@ -227,6 +232,8 @@ process.on('SIGINT', async () => {
     process.exit(0);
 });
 
-startServer();
+if (require.main === module) {
+    startServer();
+}
 
 module.exports = app;

@@ -3,6 +3,8 @@ node_modules/
 
 # Variáveis de ambiente
 .env
+.env.*
+!.env.example
 
 # Uploads
 uploads/

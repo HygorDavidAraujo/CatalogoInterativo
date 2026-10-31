@@ -6,6 +6,18 @@ const API_URL = window.APP_CONFIG
         ? 'http://localhost:3000/api'
         : window.location.origin + '/api');
 
+function resolverUrlImagem(imagem) {
+    if (!imagem) return imagem;
+    try {
+        return new URL(imagem, window.location.origin).href;
+    } catch (error) {
+        console.error('URL de imagem inválida:', error);
+        return '';
+    }
+}
+
+window.resolverUrlImagem = resolverUrlImagem;
+
 // Helper para obter headers com autenticação JWT
 function obterHeadersComAutenticacao(headers = {}) {
     const token = window.authManager ? window.authManager.obterToken() : 
@@ -48,22 +60,34 @@ class VinhoManager {
 
     async carregarVinhos(admin = false) {
         try {
-            const url = admin ? `${API_URL}/vinhos?admin=true` : `${API_URL}/vinhos`;
-            const fetchOptions = { cache: 'no-store' };
-            const response = await (window.fetchWithTimeout 
-                ? window.fetchWithTimeout(url, fetchOptions) 
-                : fetch(url, fetchOptions));
+            const vinhos = [];
+            let page = 1;
+            let totalPages = 1;
+
+            while (page <= totalPages) {
+                const url = new URL(`${API_URL}/vinhos`);
+                url.searchParams.set('page', page);
+                url.searchParams.set('limit', 100);
+                if (admin) url.searchParams.set('admin', 'true');
+
+                const fetchOptions = { cache: 'no-store' };
+                const response = await (window.fetchWithTimeout
+                    ? window.fetchWithTimeout(url, fetchOptions)
+                    : fetch(url, fetchOptions));
+
+                if (!response.ok) throw new Error(`Erro ao carregar vinhos: ${response.status}`);
+
+                const responseData = await response.json();
+                const pageVinhos = Array.isArray(responseData)
+                    ? responseData
+                    : (responseData.data || responseData);
+
+                vinhos.push(...pageVinhos);
+                totalPages = responseData.pagination?.totalPages || 1;
+                page += 1;
+            }
             
-            if (!response.ok) throw new Error(`Erro ao carregar vinhos: ${response.status}`);
-            
-            const responseData = await response.json();
-            
-            // Extrair array de vinhos (a API agora retorna {data, pagination})
-            let vinhos = Array.isArray(responseData) 
-                ? responseData 
-                : (responseData.data || responseData);
-            
-            vinhos = vinhos.map(vinho => {
+            const vinhosNormalizados = vinhos.map(vinho => {
                 const normalized = normalizarVinho(vinho);
                 if (window.optimizeCloudinaryUrl) {
                     return {
@@ -75,7 +99,7 @@ class VinhoManager {
                 return normalized;
             });
             
-            this.vinhos = vinhos;
+            this.vinhos = vinhosNormalizados;
             return this.vinhos;
         } catch (error) {
             console.error('Erro ao carregar vinhos:', error);
@@ -198,8 +222,8 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
     }
 
     container.innerHTML = vinhos.map(vinho => {
-        const imagemSrc = vinho.imagem ? 
-            (vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`) :
+        const imagemSrc = vinho.imagem ?
+            resolverUrlImagem(vinho.imagem) :
             'https://via.placeholder.com/300x300?text=Vinho';
         const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
         const pais = vinho.pais_origem || '';
@@ -290,7 +314,7 @@ async function renderizarDestaqueSemana() {
         }
 
         const imagemSrc = vinho.imagem ?
-            (vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`) :
+            resolverUrlImagem(vinho.imagem) :
             'https://via.placeholder.com/480x480?text=Vinho';
 
         const usuario = window.authManager?.usuarioLogado;
@@ -347,8 +371,8 @@ function abrirModal(id) {
     const modal = document.getElementById('modal-vinho');
     const modalBody = document.getElementById('modal-body');
 
-    const imagemSrc = vinho.imagem ? 
-        (vinho.imagem.startsWith('http') ? vinho.imagem : `http://localhost:3000${vinho.imagem}`) :
+    const imagemSrc = vinho.imagem ?
+        resolverUrlImagem(vinho.imagem) :
         'https://via.placeholder.com/400x400?text=Vinho';
 
     modalBody.innerHTML = `

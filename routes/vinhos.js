@@ -33,12 +33,12 @@ router.get('/', cacheService.cacheMiddleware(300), catchAsync(async (req, res) =
     
     // Contar total
     const countQuery = `SELECT COUNT(*) as total FROM vinhos${whereClause}`;
-    const [countResult] = await pool.query(countQuery);
-    const total = countResult[0].total;
+    const countResult = await pool.query(countQuery);
+    const total = Number(countResult.rows[0].total);
     
     // Buscar vinhos com paginação
-    const query = `SELECT * FROM vinhos${whereClause} ORDER BY ${safeOrderBy} ${safeOrder} LIMIT ? OFFSET ?`;
-    const [vinhos] = await pool.query(query, [limit, offset]);
+    const query = `SELECT * FROM vinhos${whereClause} ORDER BY ${safeOrderBy} ${safeOrder} LIMIT $1 OFFSET $2`;
+    const { rows: vinhos } = await pool.query(query, [limit, offset]);
     
     res.json({
         data: vinhos,
@@ -55,7 +55,7 @@ router.get('/', cacheService.cacheMiddleware(300), catchAsync(async (req, res) =
 
 // GET - Buscar vinho por ID - COM CACHE
 router.get('/:id', validateId, cacheService.cacheMiddleware(600), catchAsync(async (req, res) => {
-    const [vinhos] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [req.params.id]);
+    const { rows: vinhos } = await pool.query('SELECT * FROM vinhos WHERE id = $1', [req.params.id]);
     
     if (vinhos.length === 0) {
         throw new AppError('Vinho não encontrado', 404);
@@ -77,16 +77,17 @@ router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), val
     // Converter ativo para boolean
     const ativoBoolean = ativo === 'true' || ativo === true || ativo === '1';
 
-    const [result] = await pool.query(
-        'INSERT INTO vinhos (nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagem, ativo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    const result = await pool.query(
+        'INSERT INTO vinhos (nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagem, ativo) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id',
         [nome, tipo, uva, pais_origem || null, pais_codigo || null, bandeira_url || null, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean]
     );
 
-    const [novoVinho] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [result.insertId]);
+    const id = result.rows[0].id;
+    const { rows: novoVinho } = await pool.query('SELECT * FROM vinhos WHERE id = $1', [id]);
     
     // Invalidar cache de vinhos
     await cacheService.invalidateVinhosCache();
-    logger.info(`Vinho criado: ${nome} (ID: ${result.insertId})`);
+    logger.info(`Vinho criado: ${nome} (ID: ${id})`);
     
     res.status(201).json(novoVinho[0]);
 }));
@@ -97,7 +98,7 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
     const id = req.params.id;
 
     // Buscar vinho atual
-    const [vinhoAtual] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [id]);
+    const { rows: vinhoAtual } = await pool.query('SELECT * FROM vinhos WHERE id = $1', [id]);
     
     if (vinhoAtual.length === 0) {
         throw new AppError('Vinho não encontrado', 404);
@@ -149,7 +150,7 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
     }
 
     await pool.query(
-        'UPDATE vinhos SET nome = ?, tipo = ?, uva = ?, pais_origem = ?, pais_codigo = ?, bandeira_url = ?, ano = ?, guarda = ?, harmonizacao = ?, descricao = ?, preco = ?, imagem = ?, ativo = ? WHERE id = ?',
+        'UPDATE vinhos SET nome = $1, tipo = $2, uva = $3, pais_origem = $4, pais_codigo = $5, bandeira_url = $6, ano = $7, guarda = $8, harmonizacao = $9, descricao = $10, preco = $11, imagem = $12, ativo = $13 WHERE id = $14',
         [
             nome || vinhoAtual[0].nome,
             tipo || vinhoAtual[0].tipo,
@@ -168,7 +169,7 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
         ]
     );
 
-    const [vinhoAtualizado] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [id]);
+    const { rows: vinhoAtualizado } = await pool.query('SELECT * FROM vinhos WHERE id = $1', [id]);
     
     // Invalidar cache
     await cacheService.invalidateVinhosCache();
@@ -182,7 +183,7 @@ router.delete('/:id', verificarAdminAuth, validateId, catchAsync(async (req, res
     const id = req.params.id;
 
     // Buscar vinho para deletar imagem do Cloudinary
-    const [vinho] = await pool.query('SELECT * FROM vinhos WHERE id = ?', [id]);
+    const { rows: vinho } = await pool.query('SELECT * FROM vinhos WHERE id = $1', [id]);
     
     if (vinho.length === 0) {
         throw new AppError('Vinho não encontrado', 404);
@@ -200,7 +201,7 @@ router.delete('/:id', verificarAdminAuth, validateId, catchAsync(async (req, res
         }
     }
 
-    await pool.query('DELETE FROM vinhos WHERE id = ?', [id]);
+    await pool.query('DELETE FROM vinhos WHERE id = $1', [id]);
     
     // Invalidar cache
     await cacheService.invalidateVinhosCache();
@@ -211,8 +212,8 @@ router.delete('/:id', verificarAdminAuth, validateId, catchAsync(async (req, res
 
 // GET - Filtrar vinhos por tipo - COM CACHE
 router.get('/tipo/:tipo', cacheService.cacheMiddleware(300), catchAsync(async (req, res) => {
-    const [vinhos] = await pool.query(
-        'SELECT * FROM vinhos WHERE tipo = ? AND (ativo = TRUE OR ativo IS NULL) ORDER BY created_at DESC',
+    const { rows: vinhos } = await pool.query(
+        'SELECT * FROM vinhos WHERE tipo = $1 AND (ativo = TRUE OR ativo IS NULL) ORDER BY created_at DESC',
         [req.params.tipo]
     );
     res.json(vinhos);

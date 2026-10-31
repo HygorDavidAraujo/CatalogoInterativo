@@ -92,17 +92,17 @@ const catchAsync = (fn) => {
 };
 
 /**
- * Validar erros comuns do MySQL
+ * Transformar erros comuns do PostgreSQL em erros operacionais
  */
-const handleMySQLError = (err) => {
-    if (err.code === 'ER_DUP_ENTRY') {
+const handlePostgresError = (err) => {
+    if (err.code === '23505') {
         return new AppError('Este registro já existe no sistema', 409);
     }
-    if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+    if (err.code === '23503') {
         return new AppError('Referência inválida no banco de dados', 400);
     }
-    if (err.code === 'ER_ROW_IS_REFERENCED_2') {
-        return new AppError('Não é possível excluir este registro pois está sendo usado', 400);
+    if (err.code === '23502' || err.code === '22P02') {
+        return new AppError('Os dados informados são inválidos ou incompletos', 400);
     }
     return err;
 };
@@ -124,9 +124,8 @@ const handleJWTExpiredError = () => {
 const transformKnownErrors = (err, req, res, next) => {
     let error = err;
 
-    // Erros MySQL
-    if (err.code && err.code.startsWith('ER_')) {
-        error = handleMySQLError(err);
+    if (err.code && /^[0-9A-Z]{5}$/.test(err.code)) {
+        error = handlePostgresError(err);
     }
 
     // Erros JWT

@@ -21,7 +21,11 @@ const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/aut
 const { loginLimiter, cadastroLimiter } = require('../middleware/rateLimiter');
 const { validateLogin, validateCadastro, validatePerfil, validateId } = require('../middleware/validators');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'davini-vinhos-secret-key-2024';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET não definido. Configure uma chave forte no ambiente.');
+}
 const RESEND_FROM_ADDRESS = process.env.RESEND_FROM || process.env.SMTP_FROM || 'onboarding@resend.dev';
 let resendClient = null;
 
@@ -146,7 +150,7 @@ router.post('/atualizar-senha', async (req, res) => {
             return res.status(400).json({ error: 'Email e nova senha são obrigatórios.' });
         }
         // Buscar usuário
-        const [usuarios] = await pool.query('SELECT id, senha FROM usuarios WHERE email = ?', [email]);
+        const { rows: usuarios } = await pool.query('SELECT id, senha FROM usuarios WHERE email = $1', [email]);
         if (usuarios.length === 0) {
             return res.status(404).json({ error: 'Usuário não encontrado.' });
         }
@@ -157,7 +161,7 @@ router.post('/atualizar-senha', async (req, res) => {
         }
         // Gerar hash bcrypt
         const hash = await bcrypt.hash(novaSenha, 10);
-        await pool.query('UPDATE usuarios SET senha = ? WHERE id = ?', [hash, usuario.id]);
+        await pool.query('UPDATE usuarios SET senha = $1 WHERE id = $2', [hash, usuario.id]);
         res.json({ success: true, message: 'Senha atualizada com sucesso.' });
     } catch (error) {
         console.error('Erro ao atualizar senha:', error);
@@ -175,10 +179,10 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
         }
 
         // Buscar usuário por email
-        const [usuarios] = await pool.query(
+        const { rows: usuarios } = await pool.query(
             `SELECT id, nome_completo, telefone, email, senha, is_admin, is_vip, vip_tipo, cpf,
                     logradouro, numero, complemento, bairro, cep, cidade, estado 
-             FROM usuarios WHERE email = ?`,
+             FROM usuarios WHERE email = $1`,
             [email]
         );
 
@@ -241,10 +245,10 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
 // GET - Dados do usuário autenticado
 router.get('/me', verificarAutenticacao, async (req, res) => {
     try {
-        const [usuarios] = await pool.query(
+        const { rows: usuarios } = await pool.query(
             `SELECT id, nome_completo, telefone, email, is_admin, is_vip, vip_tipo, cpf,
                     logradouro, numero, complemento, bairro, cep, cidade, estado, created_at
-             FROM usuarios WHERE id = ?`,
+             FROM usuarios WHERE id = $1`,
             [req.usuario.id]
         );
 
@@ -305,8 +309,8 @@ router.post('/cadastro', cadastroLimiter, validateCadastro, async (req, res) => 
         }
 
         // Verificar se email já existe
-        const [usuarioExistente] = await pool.query(
-            'SELECT id FROM usuarios WHERE email = ?',
+        const { rows: usuarioExistente } = await pool.query(
+            'SELECT id FROM usuarios WHERE email = $1',
             [email]
         );
 
@@ -318,14 +322,14 @@ router.post('/cadastro', cadastroLimiter, validateCadastro, async (req, res) => 
         const senhaHash = await bcrypt.hash(senha, 10);
         
         // Inserir novo usuário (nunca é admin por padrão)
-        const [result] = await pool.query(
-            'INSERT INTO usuarios (nome_completo, telefone, email, senha, is_admin) VALUES (?, ?, ?, ?, FALSE)',
+        const result = await pool.query(
+            'INSERT INTO usuarios (nome_completo, telefone, email, senha, is_admin) VALUES ($1, $2, $3, $4, FALSE) RETURNING id',
             [nome_completo, telefone, email, senhaHash]
         );
 
-        const [novoUsuario] = await pool.query(
-            'SELECT id, nome_completo, telefone, email, is_admin FROM usuarios WHERE id = ?',
-            [result.insertId]
+        const { rows: novoUsuario } = await pool.query(
+            'SELECT id, nome_completo, telefone, email, is_admin FROM usuarios WHERE id = $1',
+            [result.rows[0].id]
         );
 
         res.status(201).json({
@@ -353,8 +357,8 @@ router.get('/verificar', async (req, res) => {
             return res.status(400).json({ error: 'Email não fornecido' });
         }
 
-        const [usuarios] = await pool.query(
-            'SELECT id, nome_completo, telefone, email, is_admin FROM usuarios WHERE email = ?',
+        const { rows: usuarios } = await pool.query(
+            'SELECT id, nome_completo, telefone, email, is_admin FROM usuarios WHERE email = $1',
             [email]
         );
 
@@ -383,7 +387,7 @@ router.get('/verificar', async (req, res) => {
 // GET - Listar todos os usuários (apenas para admin)
 router.get('/usuarios', verificarAdminAuth, async (req, res) => {
     try {
-        const [usuarios] = await pool.query(
+        const { rows: usuarios } = await pool.query(
             `SELECT id, nome_completo, email, telefone, is_admin, is_vip, vip_tipo, created_at, 
              cpf, logradouro, numero, complemento, bairro, cep, cidade, estado 
              FROM usuarios ORDER BY created_at DESC`
@@ -427,44 +431,44 @@ router.put('/perfil', verificarAutenticacao, validatePerfil, async (req, res) =>
         const valores = [];
 
         if (nome !== undefined) {
-            campos.push('nome_completo = ?');
             valores.push(nome);
+            campos.push(`nome_completo = $${valores.length}`);
         }
         if (telefone !== undefined) {
-            campos.push('telefone = ?');
             valores.push(telefone);
+            campos.push(`telefone = $${valores.length}`);
         }
         if (cpf !== undefined) {
-            campos.push('cpf = ?');
             valores.push(cpf);
+            campos.push(`cpf = $${valores.length}`);
         }
         if (logradouro !== undefined) {
-            campos.push('logradouro = ?');
             valores.push(logradouro);
+            campos.push(`logradouro = $${valores.length}`);
         }
         if (numero !== undefined) {
-            campos.push('numero = ?');
             valores.push(numero);
+            campos.push(`numero = $${valores.length}`);
         }
         if (complemento !== undefined) {
-            campos.push('complemento = ?');
             valores.push(complemento);
+            campos.push(`complemento = $${valores.length}`);
         }
         if (bairro !== undefined) {
-            campos.push('bairro = ?');
             valores.push(bairro);
+            campos.push(`bairro = $${valores.length}`);
         }
         if (cep !== undefined) {
-            campos.push('cep = ?');
             valores.push(cep);
+            campos.push(`cep = $${valores.length}`);
         }
         if (cidade !== undefined) {
-            campos.push('cidade = ?');
             valores.push(cidade);
+            campos.push(`cidade = $${valores.length}`);
         }
         if (estado !== undefined) {
-            campos.push('estado = ?');
             valores.push(estado);
+            campos.push(`estado = $${valores.length}`);
         }
 
         if (campos.length === 0) {
@@ -473,7 +477,7 @@ router.put('/perfil', verificarAutenticacao, validatePerfil, async (req, res) =>
 
         valores.push(usuario_id);
 
-        const query = `UPDATE usuarios SET ${campos.join(', ')} WHERE id = ?`;
+        const query = `UPDATE usuarios SET ${campos.join(', ')} WHERE id = $${valores.length}`;
         
         await pool.query(query, valores);
 
@@ -505,7 +509,7 @@ router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
         } = req.body;
 
         // Verificar se usuário existe
-        const [usuarioExiste] = await pool.query('SELECT id, is_admin FROM usuarios WHERE id = ?', [usuarioId]);
+        const { rows: usuarioExiste } = await pool.query('SELECT id, is_admin FROM usuarios WHERE id = $1', [usuarioId]);
         
         if (usuarioExiste.length === 0) {
             return res.status(404).json({ error: 'Usuário não encontrado' });
@@ -513,7 +517,7 @@ router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
 
         // Se estiver removendo privilégio admin, verificar se não é o último admin
         if (is_admin === false && usuarioExiste[0].is_admin) {
-            const [admins] = await pool.query('SELECT COUNT(*) as total FROM usuarios WHERE is_admin = TRUE');
+            const { rows: admins } = await pool.query('SELECT COUNT(*)::int AS total FROM usuarios WHERE is_admin = TRUE');
             if (admins[0].total <= 1) {
                 return res.status(400).json({ error: 'Não é possível remover o último administrador do sistema' });
             }
@@ -522,27 +526,27 @@ router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
         // Atualizar todos os campos
         await pool.query(
             `UPDATE usuarios SET 
-                nome_completo = ?, 
-                telefone = ?, 
-                cpf = ?, 
-                logradouro = ?, 
-                numero = ?, 
-                complemento = ?, 
-                bairro = ?, 
-                cep = ?, 
-                cidade = ?, 
-                estado = ?,
-                is_admin = ?,
-                is_vip = ?,
-                vip_tipo = ?
-            WHERE id = ?`,
-            [nome, telefone, cpf, logradouro, numero, complemento, bairro, cep, cidade, estado, is_admin, is_vip ? 1 : 0, vip_tipo || null, usuarioId]
+                nome_completo = $1,
+                telefone = $2,
+                cpf = $3,
+                logradouro = $4,
+                numero = $5,
+                complemento = $6,
+                bairro = $7,
+                cep = $8,
+                cidade = $9,
+                estado = $10,
+                is_admin = $11,
+                is_vip = $12,
+                vip_tipo = $13
+            WHERE id = $14`,
+            [nome, telefone, cpf, logradouro, numero, complemento, bairro, cep, cidade, estado, is_admin, Boolean(is_vip), vip_tipo || null, usuarioId]
         );
 
-        const [usuarioAtualizado] = await pool.query(
+        const { rows: usuarioAtualizado } = await pool.query(
             `SELECT id, nome_completo, email, telefone, is_admin, is_vip, vip_tipo, cpf,
                     logradouro, numero, complemento, bairro, cep, cidade, estado, created_at
-             FROM usuarios WHERE id = ?`,
+             FROM usuarios WHERE id = $1`,
             [usuarioId]
         );
 
@@ -567,7 +571,7 @@ router.post('/recuperar', async (req, res) => {
         if (!email) return res.status(400).json({ error: 'E-mail é obrigatório' });
 
         // Buscar usuário
-        const [usuarios] = await pool.query('SELECT id, email, nome_completo FROM usuarios WHERE email = ?', [email]);
+        const { rows: usuarios } = await pool.query('SELECT id, email, nome_completo FROM usuarios WHERE email = $1', [email]);
         if (usuarios.length === 0) {
             // Responder sempre OK para evitar enumeração
             return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
@@ -575,23 +579,10 @@ router.post('/recuperar', async (req, res) => {
 
         const usuario = usuarios[0];
 
-        // Garantir tabela password_resets existe
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS password_resets (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                usuario_id INT NOT NULL,
-                token VARCHAR(128) NOT NULL,
-                expires_at DATETIME NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX (usuario_id),
-                INDEX (token)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-        `);
-
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + (60 * 60 * 1000)); // 1 hora
 
-        await pool.query('INSERT INTO password_resets (usuario_id, token, expires_at) VALUES (?, ?, ?)', [usuario.id, token, expiresAt]);
+        await pool.query('INSERT INTO password_resets (usuario_id, token, expires_at) VALUES ($1, $2, $3)', [usuario.id, token, expiresAt]);
 
         const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
         const resetLink = `${appUrl}/reset-senha.html?token=${token}`;
@@ -631,22 +622,22 @@ router.post('/recuperar/confirmar', async (req, res) => {
         if (!token || !novaSenha) return res.status(400).json({ error: 'Token e novaSenha são obrigatórios' });
         if (typeof novaSenha !== 'string' || novaSenha.length < 6) return res.status(400).json({ error: 'Senha deve ter no mínimo 6 caracteres' });
 
-        const [rows] = await pool.query('SELECT pr.id AS pr_id, pr.usuario_id, pr.expires_at, u.email FROM password_resets pr JOIN usuarios u ON pr.usuario_id = u.id WHERE pr.token = ?', [token]);
+        const { rows } = await pool.query('SELECT pr.id AS pr_id, pr.usuario_id, pr.expires_at, u.email FROM password_resets pr JOIN usuarios u ON pr.usuario_id = u.id WHERE pr.token = $1', [token]);
         if (rows.length === 0) return res.status(400).json({ error: 'Token inválido ou expirado' });
 
         const pr = rows[0];
         const now = new Date();
         if (new Date(pr.expires_at) < now) {
             // remover token expirado
-            await pool.query('DELETE FROM password_resets WHERE id = ?', [pr.pr_id]);
+            await pool.query('DELETE FROM password_resets WHERE id = $1', [pr.pr_id]);
             return res.status(400).json({ error: 'Token expirado' });
         }
 
         const hash = await bcrypt.hash(novaSenha, 10);
-        await pool.query('UPDATE usuarios SET senha = ? WHERE id = ?', [hash, pr.usuario_id]);
+        await pool.query('UPDATE usuarios SET senha = $1 WHERE id = $2', [hash, pr.usuario_id]);
 
         // remover todos tokens desse usuário
-        await pool.query('DELETE FROM password_resets WHERE usuario_id = ?', [pr.usuario_id]);
+        await pool.query('DELETE FROM password_resets WHERE usuario_id = $1', [pr.usuario_id]);
 
         return res.json({ success: true, message: 'Senha atualizada com sucesso. Faça login com a nova senha.' });
     } catch (error) {
