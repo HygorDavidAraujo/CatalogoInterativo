@@ -44,6 +44,16 @@ const cadastroSchema = z.object({
 // Schema para vinho
 const tiposPermitidos = ['tinto', 'branco', 'rose', 'espumante', 'suco_integral', 'suco_integral_tinto', 'suco_integral_branco'];
 
+const urlImagemSchema = z.string().trim().max(500, 'URL deve ter no máximo 500 caracteres')
+    .refine(value => {
+        if (value === '') return true;
+        try {
+            return ['http:', 'https:'].includes(new URL(value).protocol);
+        } catch (_) {
+            return false;
+        }
+    }, 'Informe uma URL de imagem válida com http ou https');
+
 const vinhoSchema = z.object({
     nome: z.string()
         .min(3, 'Nome deve ter no mínimo 3 caracteres')
@@ -82,7 +92,12 @@ const vinhoSchema = z.object({
         .default(true),
     pais_origem: z.string()
         .max(100, 'País de origem deve ter no máximo 100 caracteres')
-        .optional()
+        .optional(),
+    pais_codigo: z.string().trim()
+        .regex(/^([a-zA-Z]{2})?$/, 'Código do país deve ter duas letras')
+        .transform(value => value.toUpperCase()).optional(),
+    bandeira_url: urlImagemSchema.optional(),
+    imagemUrl: urlImagemSchema.optional()
 });
 
 // Schema para vinho parcial (update)

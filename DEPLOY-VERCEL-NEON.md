@@ -75,7 +75,9 @@ O processo lê dados pessoais e hashes de senha para copiá-los, mas não os esc
 2. Configure as variáveis de ambiente de produção:
    - `DATABASE_URL`: URL pooled do Neon.
    - `JWT_SECRET`: valor aleatório forte e novo.
-   - Credenciais atuais do Cloudinary e do provedor de e-mail.
+   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` e `CLOUDINARY_API_SECRET`: dados
+     atuais da conta Cloudinary, no ambiente Production, para upload de fotos.
+   - Credenciais atuais do provedor de e-mail.
    - `APP_URL`: URL pública final do site.
    - `NODE_ENV=production`.
 3. Faça o deploy e teste a página principal, `/admin`, `/health`, catálogo, login, cadastro, pedidos, uploads e recuperação de senha.

@@ -190,6 +190,16 @@ O site inclui links para:
 
 ## 📤 Upload de Imagens
 
+Na Vercel, configure `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` e
+`CLOUDINARY_API_SECRET` para o ambiente **Production**, com os dados da conta
+Cloudinary. Depois gere um novo deployment pelo fluxo GitHub já configurado;
+variáveis adicionadas não atualizam um deployment existente. Não coloque os
+valores no código ou em arquivos versionados.
+
+Sem essas variáveis, o upload responde HTTP 503 com `UPLOAD_NOT_CONFIGURED` e
+não grava o produto. Cadastro sem foto e imagem por URL continuam disponíveis.
+O formulário preserva os dados em caso de falha e impede envios simultâneos.
+
 O sistema suporta duas formas de adicionar imagens:
 
 1. **Upload via Cloudinary**: Configure as variáveis Cloudinary no ambiente para armazenar as imagens de forma persistente. O disco local de funções Vercel não deve ser usado como armazenamento permanente.

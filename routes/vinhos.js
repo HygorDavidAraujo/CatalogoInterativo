@@ -66,6 +66,7 @@ router.get('/:id', validateId, cacheService.cacheMiddleware(600), catchAsync(asy
 
 // POST - Criar novo vinho (admin only, com upload de imagem no Cloudinary)
 router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), validateVinho, catchAsync(async (req, res) => {
+    req.etapaOperacao = 'cadastrar-vinho';
     const { nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo } = req.body;
 
     // Usar imagem do Cloudinary, URL fornecida ou vazio
@@ -94,6 +95,7 @@ router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), val
 
 // PUT - Atualizar vinho (admin only, com upload no Cloudinary)
 router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single('imagem'), validateVinhoUpdate, catchAsync(async (req, res) => {
+    req.etapaOperacao = 'atualizar-vinho';
     const { nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagemUrl, ativo, removerImagem } = req.body;
     const id = req.params.id;
 

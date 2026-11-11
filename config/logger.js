@@ -42,14 +42,22 @@ const consoleFormat = winston.format.combine(
     winston.format.colorize({ all: true }),
     winston.format.timestamp({ format: 'HH:mm:ss' }),
     winston.format.printf(
-        (info) => `${info.timestamp} [${info.level}]: ${info.message} ${info.stack || ''}`
+        (info) => {
+            const { timestamp, level, message, stack, ...metadata } = info;
+            const detalhes = Object.keys(metadata).length ? ` ${JSON.stringify(metadata)}` : '';
+            return `${timestamp} [${level}]: ${message}${detalhes}${stack ? ` ${stack}` : ''}`;
+        }
     )
 );
 
 // Vercel functions have an ephemeral, read-only filesystem; use platform logs there.
 const transports = [
     new winston.transports.Console({
-        format: consoleFormat,
+        format: process.env.NODE_ENV === 'production' || process.env.VERCEL
+            ? winston.format.json()
+            : consoleFormat,
+        stderrLevels: ['error'],
+        consoleWarnLevels: ['warn'],
         level: level()
     })
 ];

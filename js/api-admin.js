@@ -4,6 +4,7 @@ let imagemUpload = null;
 let removerImagem = false;
 let logoUpload = null;
 let removerLogo = false;
+let salvandoVinho = false;
 
 // Recupera cabeçalhos com JWT do authManager
 function getAuthHeaders() {
@@ -357,13 +358,9 @@ function configurarUploadImagem() {
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            imagemUpload = file;
-            if (vinhoEmEdicao) {
-                removerImagem = true;
-            }
-            
             // Validar tamanho
             if (file.size > 5 * 1024 * 1024) {
+                imagemUpload = null;
                 mostrarMensagem('Arquivo muito grande! Máximo 5MB.', 'erro');
                 fileInput.value = '';
                 return;
@@ -371,10 +368,13 @@ function configurarUploadImagem() {
 
             // Validar tipo
             if (!file.type.startsWith('image/')) {
+                imagemUpload = null;
                 mostrarMensagem('Apenas arquivos de imagem são permitidos!', 'erro');
                 fileInput.value = '';
                 return;
             }
+
+            imagemUpload = file;
 
             // Mostrar preview
             const reader = new FileReader();
@@ -445,11 +445,9 @@ function configurarUploadLogo() {
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            logoUpload = file;
-            removerLogo = false;
-            
             // Validar tamanho (2MB para logo)
             if (file.size > 2 * 1024 * 1024) {
+                logoUpload = null;
                 mostrarMensagem('Arquivo muito grande! Máximo 2MB.', 'erro');
                 fileInput.value = '';
                 return;
@@ -457,10 +455,14 @@ function configurarUploadLogo() {
 
             // Validar tipo
             if (!file.type.startsWith('image/')) {
+                logoUpload = null;
                 mostrarMensagem('Apenas arquivos de imagem são permitidos!', 'erro');
                 fileInput.value = '';
                 return;
             }
+
+            logoUpload = file;
+            removerLogo = false;
 
             // Mostrar preview
             const reader = new FileReader();
@@ -506,70 +508,68 @@ function configurarFormulario() {
     }
 
     console.log('Configurando formulário de vinhos');
+    if (form.dataset.formularioConfigurado === 'true') return;
+    form.dataset.formularioConfigurado = 'true';
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        console.log('Formulário de vinho submetido');
-
-        const formData = new FormData();
-        const dadosVinho = {
-            nome: document.getElementById('nome').value.trim(),
-            tipo: document.getElementById('tipo').value,
-            uva: document.getElementById('uva').value.trim(),
-            pais_origem: document.getElementById('pais-origem').value,
-            pais_codigo: document.getElementById('pais-codigo').value.trim().toUpperCase(),
-            bandeira_url: document.getElementById('bandeira-url').value.trim(),
-            ano: document.getElementById('ano').value,
-            guarda: document.getElementById('guarda').value.trim(),
-            harmonizacao: document.getElementById('harmonizacao').value.trim(),
-            descricao: document.getElementById('descricao').value.trim(),
-            preco: document.getElementById('preco').value
-        };
-        console.log('Dados coletados do vinho:', dadosVinho);
-
-        formData.append('nome', dadosVinho.nome);
-        formData.append('tipo', dadosVinho.tipo);
-        formData.append('uva', dadosVinho.uva);
-        formData.append('pais_origem', dadosVinho.pais_origem);
-        formData.append('pais_codigo', dadosVinho.pais_codigo);
-        formData.append('bandeira_url', dadosVinho.bandeira_url);
-        formData.append('ano', dadosVinho.ano);
-        formData.append('guarda', dadosVinho.guarda);
-        formData.append('harmonizacao', dadosVinho.harmonizacao);
-        formData.append('descricao', dadosVinho.descricao);
-        formData.append('preco', dadosVinho.preco);
-        
-        // Adicionar campo ativo (checkbox)
-        const ativo = document.getElementById('ativo').checked;
-        formData.append('ativo', ativo);
-        console.log('Campo ativo:', ativo);
-        
-        // Verificar se tem upload ou URL
-        const imagemUrl = document.getElementById('imagem-url').value.trim();
-        if (imagemUpload) {
-            console.log('Adicionando imagem do upload:', imagemUpload.name);
-            formData.append('imagem', imagemUpload);
-        } else if (imagemUrl) {
-            formData.append('imagemUrl', imagemUrl);
-        }
-
-        if (vinhoEmEdicao && removerImagem) {
-            formData.append('removerImagem', true);
-        }
+        if (salvandoVinho) return;
+        salvandoVinho = true;
+        const idEmEnvio = vinhoEmEdicao;
+        const controles = Array.from(form.querySelectorAll('input, select, textarea, button'))
+            .map(elemento => ({ elemento, disabled: elemento.disabled }));
+        const botaoSalvar = form.querySelector('button[type="submit"]');
+        const textoBotao = botaoSalvar?.innerHTML;
+        controles.forEach(({ elemento }) => { elemento.disabled = true; });
+        if (botaoSalvar) botaoSalvar.textContent = 'Salvando...';
 
         try {
+            console.log('Formulário de vinho submetido');
+
+            const formData = new FormData();
+            const dadosVinho = {
+                nome: document.getElementById('nome').value.trim(),
+                tipo: document.getElementById('tipo').value,
+                uva: document.getElementById('uva').value.trim(),
+                pais_origem: document.getElementById('pais-origem').value,
+                pais_codigo: document.getElementById('pais-codigo').value.trim().toUpperCase(),
+                bandeira_url: document.getElementById('bandeira-url').value.trim(),
+                ano: document.getElementById('ano').value,
+                guarda: document.getElementById('guarda').value.trim(),
+                harmonizacao: document.getElementById('harmonizacao').value.trim(),
+                descricao: document.getElementById('descricao').value.trim(),
+                preco: document.getElementById('preco').value
+            };
+            console.log('Dados coletados do vinho:', dadosVinho);
+
+            Object.entries(dadosVinho).forEach(([campo, valor]) => formData.append(campo, valor));
+            const ativo = document.getElementById('ativo').checked;
+            formData.append('ativo', ativo);
+            console.log('Campo ativo:', ativo);
+
+            const imagemUrl = document.getElementById('imagem-url').value.trim();
+            if (imagemUpload) {
+                console.log('Adicionando imagem do upload:', imagemUpload.name);
+                formData.append('imagem', imagemUpload);
+            } else if (imagemUrl) {
+                formData.append('imagemUrl', imagemUrl);
+            }
+
+            if (idEmEnvio && removerImagem) {
+                formData.append('removerImagem', true);
+            }
+
             exigirTokenOuAvisar();
             let response;
-            if (vinhoEmEdicao) {
+            if (idEmEnvio) {
                 // Atualizar vinho existente
                 console.log('Atualizando vinho com ID:', vinhoEmEdicao);
-                response = await fetch(`${API_URL}/vinhos/${vinhoEmEdicao}`, {
+                response = await fetch(`${API_URL}/vinhos/${idEmEnvio}`, {
                     method: 'PUT',
                     headers: getAuthHeaders(),
                     body: formData
                 });
                 console.log('Resposta da atualização:', response.status);
-                mostrarMensagem('Vinho atualizado com sucesso!', 'sucesso');
             } else {
                 // Adicionar novo vinho
                 console.log('Adicionando novo vinho');
@@ -579,34 +579,40 @@ function configurarFormulario() {
                     body: formData
                 });
                 console.log('Resposta do cadastro:', response.status);
-                mostrarMensagem('Vinho cadastrado com sucesso!', 'sucesso');
             }
 
             if (!response.ok) {
-                const erro = await response.text();
+                const erro = await response.json().catch(() => ({}));
                 console.error('Erro na resposta:', response.status, erro);
-                
-                // Tratamento específico para rate limiting do Cloudinary
-                if (response.status === 429) {
-                    try {
-                        const errorData = JSON.parse(erro);
-                        throw new Error(errorData.error || 'Limite de uploads excedido');
-                    } catch (e) {
-                        throw new Error('Limite de uploads excedido. Aguarde alguns minutos.');
-                    }
-                }
-                
-                throw new Error('Erro ao salvar vinho');
+                const detalhes = Array.isArray(erro.errors) ? erro.errors : erro.details;
+                const mensagemCampos = Array.isArray(detalhes)
+                    ? detalhes.map(campo => campo.message || campo.msg).filter(Boolean).join(' ')
+                    : '';
+                const mensagemPadrao = response.status === 413
+                    ? 'A imagem ou solicitação é muito grande. Reduza o arquivo e tente novamente.'
+                    : response.status === 429
+                        ? 'Muitas tentativas de envio. Aguarde alguns minutos.'
+                        : 'Erro ao salvar vinho. Tente novamente.';
+                throw new Error(mensagemCampos || erro.message || erro.error || mensagemPadrao);
             }
 
+            mostrarMensagem(idEmEnvio ? 'Vinho atualizado com sucesso!' : 'Vinho cadastrado com sucesso!', 'sucesso');
             console.log('Vinho salvo com sucesso, limpando formulário');
             limparFormulario();
             console.log('Recarregando lista de vinhos');
-            await renderizarListaAdmin();
+            try {
+                await renderizarListaAdmin();
+            } catch (error) {
+                mostrarMensagem('O produto foi salvo, mas a lista não pôde ser atualizada. Recarregue a página.', 'erro');
+            }
         } catch (error) {
             console.error('Erro ao salvar vinho:', error);
             const mensagem = error.message || 'Erro ao salvar vinho. Tente novamente.';
             mostrarMensagem(mensagem, 'erro');
+        } finally {
+            controles.forEach(({ elemento, disabled }) => { elemento.disabled = disabled; });
+            if (botaoSalvar) botaoSalvar.innerHTML = textoBotao;
+            salvandoVinho = false;
         }
     });
 
@@ -659,6 +665,10 @@ function limparFormulario() {
 
 // ===== EDIÇÃO DE VINHO =====
 async function editarVinho(id) {
+    if (salvandoVinho) {
+        mostrarMensagem('Aguarde o envio do produto atual terminar.', 'erro');
+        return;
+    }
     const vinho = vinhoManager.getVinhoPorId(id);
     if (!vinho) return;
 

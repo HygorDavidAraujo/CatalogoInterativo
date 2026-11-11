@@ -14,34 +14,49 @@ class AppError extends Error {
     }
 }
 
+function redigirSegredos(value) {
+    if (typeof value !== 'string') return value;
+    const chaves = ['DATABASE_URL', 'JWT_SECRET', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET', 'SMTP_PASS', 'RESEND_API_KEY'];
+    return chaves.reduce((texto, chave) => {
+        const segredo = process.env[chave]?.trim();
+        return segredo ? texto.split(segredo).join('[REDACTED]') : texto;
+    }, value);
+}
+
 /**
  * Middleware global de tratamento de erros
  * Deve ser o último middleware registrado no Express
  */
 const errorHandler = (err, req, res, next) => {
     const logger = require('../config/logger');
+    if (!err || typeof err !== 'object') {
+        err = new Error(typeof err === 'string' ? err : 'Erro interno do servidor');
+    }
     
     // Define valores padrão
-    err.statusCode = err.statusCode || 500;
+    const statusCode = Number(err.statusCode || err.status);
+    err.statusCode = Number.isInteger(statusCode) && statusCode >= 400 && statusCode <= 599 ? statusCode : 500;
     err.message = err.message || 'Erro interno do servidor';
+
+    const contexto = {
+        errorMessage: redigirSegredos(err.message),
+        causeMessage: redigirSegredos(typeof err.cause === 'string' ? err.cause : err.cause?.message),
+        code: err.code,
+        causeCode: err.cause?.code,
+        providerStatus: err.cause?.http_code,
+        missingVariables: err.missingVariables,
+        etapa: req.etapaOperacao,
+        url: req.originalUrl,
+        method: req.method,
+        statusCode: err.statusCode,
+        userId: req.usuario?.id
+    };
 
     // Log do erro
     if (err.statusCode >= 500) {
-        logger.error('Erro no servidor:', {
-            message: err.message,
-            stack: err.stack,
-            url: req.originalUrl,
-            method: req.method,
-            ip: req.ip,
-            userId: req.usuario?.id
-        });
+        logger.error('Erro no servidor', { ...contexto, stack: redigirSegredos(err.stack) });
     } else {
-        logger.warn('Erro do cliente:', {
-            message: err.message,
-            url: req.originalUrl,
-            method: req.method,
-            statusCode: err.statusCode
-        });
+        logger.warn('Erro do cliente', contexto);
     }
 
     // Resposta em desenvolvimento
@@ -61,14 +76,15 @@ const errorHandler = (err, req, res, next) => {
         return res.status(err.statusCode).json({
             status: 'error',
             message: err.message,
+            code: err.code,
             timestamp: err.timestamp
         });
     }
 
     // Erros de programação ou desconhecidos - não expor detalhes
-    return res.status(500).json({
+    return res.status(err.statusCode).json({
         status: 'error',
-        message: 'Algo deu errado. Tente novamente mais tarde.',
+        message: err.statusCode < 500 ? 'Não foi possível processar os dados enviados.' : 'Algo deu errado. Tente novamente mais tarde.',
         timestamp: new Date().toISOString()
     });
 };
@@ -122,7 +138,23 @@ const handleJWTExpiredError = () => {
  * Middleware para transformar erros conhecidos
  */
 const transformKnownErrors = (err, req, res, next) => {
+    if (!err || typeof err !== 'object') {
+        err = new Error(typeof err === 'string' ? err : 'Erro interno do servidor');
+    }
     let error = err;
+
+    if (err.name === 'MulterError') {
+        error = new AppError(
+            err.code === 'LIMIT_FILE_SIZE'
+                ? 'A imagem excede o limite de 5 MB.'
+                : 'Não foi possível receber a imagem. Selecione um arquivo válido novamente.',
+            err.code === 'LIMIT_FILE_SIZE' ? 413 : 400
+        );
+        error.code = err.code;
+        error.cause = err;
+    }
+    if (err.type === 'entity.too.large') error = new AppError('A solicitação excede o limite de tamanho permitido.', 413);
+    if (err.type === 'entity.parse.failed') error = new AppError('Os dados enviados não são válidos.', 400);
 
     if (err.code && /^[0-9A-Z]{5}$/.test(err.code)) {
         error = handlePostgresError(err);
