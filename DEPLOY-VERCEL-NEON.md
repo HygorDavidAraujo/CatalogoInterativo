@@ -36,6 +36,18 @@ Uma segunda sessão em outro dispositivo deve continuar válida após esse logou
 Teste também a recuperação de senha e a mudança de permissão com contas de teste:
 ambas devem invalidar as sessões anteriores da conta alterada.
 
+### Padronização de status em um banco Neon existente
+
+Execute [`database/migrations/20261110_status_pedidos.sql`](./database/migrations/20261110_status_pedidos.sql)
+no SQL Editor do banco usado pela aplicação, antes do push desta atualização.
+A migração pode ser aplicada com a versão anterior em uso: ela mantém os status
+antigos aceitos e não modifica os pedidos ou suas datas. Não é necessário repetir
+a migração de sessões se ela já foi aplicada.
+
+Após o deploy, confira um pedido antigo no painel e no perfil. Teste também a
+alteração para Aguardando Pagamento, Confirmado, Em Preparação, Em Rota de Entrega,
+Finalizado e Cancelado; recarregue ambas as telas para confirmar a persistência.
+
 ### Importação inicial de uma base MySQL
 
 Faça um backup controlado da origem antes de migrar. Depois de revogar as credenciais vazadas, obtenha credenciais novas para a origem e configure-as em um `.env` local ignorado pelo Git, junto com a URL do Neon:

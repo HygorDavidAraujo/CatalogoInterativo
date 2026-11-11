@@ -1011,6 +1011,26 @@
     color: #2E7D32;
 }
 
+.pedido-status-select.status-confirmado {
+    border-color: #17A2B8;
+    color: #0C5460;
+}
+
+.pedido-status-select.status-cancelado {
+    border-color: #DC3545;
+    color: #721C24;
+}
+
+.pedido-status-select.status-desconhecido {
+    border-color: #6C757D;
+    color: #495057;
+}
+
+.pedido-status-select:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
 .pedido-itens {
     margin: 1rem 0;
 }

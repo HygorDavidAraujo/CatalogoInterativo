@@ -1,4 +1,5 @@
 const { body, param, validationResult } = require('express-validator');
+const PedidoStatus = require('../js/pedido-status');
 
 // Middleware para processar erros de validação
 const handleValidationErrors = (req, res, next) => {
@@ -101,7 +102,10 @@ const validatePedido = [
 // Validação para status de pedido
 const validatePedidoStatus = [
     body('status')
-        .isIn(['pendente', 'em_preparacao', 'em_rota_entrega', 'aguardando_pagamento', 'finalizado', 'cancelado'])
+        .isString().withMessage('Status deve ser um texto')
+        .bail()
+        .customSanitizer(PedidoStatus.normalizar)
+        .isIn(PedidoStatus.valores)
         .withMessage('Status inválido'),
     handleValidationErrors
 ];

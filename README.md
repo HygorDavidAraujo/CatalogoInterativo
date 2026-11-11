@@ -198,6 +198,25 @@ O sistema suporta duas formas de adicionar imagens:
 
 ## 🔒 Segurança
 
+### Status dos pedidos
+
+API, administração e perfil usam as definições de `js/pedido-status.js`:
+Pendente, Aguardando Pagamento, Confirmado, Em Preparação, Em Rota de Entrega,
+Finalizado e Cancelado. A seleção do administrador só confirma a mudança após
+resposta da API; falhas restauram o status anterior. Apenas administradores
+podem atualizar status, e pedidos inexistentes retornam HTTP 404.
+
+Os registros antigos são preservados. Na leitura, `processando` é exibido como
+`em_preparacao`, `enviado` como `em_rota_entrega` e `entregue` como `finalizado`.
+A API também aceita esses nomes antigos ao atualizar e grava o valor padronizado.
+
+Antes do push desta atualização, execute no Neon
+`database/migrations/20261110_status_pedidos.sql`. A migração atualiza somente
+a restrição de status, mantendo os nomes antigos aceitos no banco e sem regravar
+pedidos. Para bancos novos, use o schema completo atualizado.
+
+### Autenticação e sessões
+
 Contas com senhas antigas devem usar **Esqueci minha senha**. O login encaminha
 essas contas para a recuperação por e-mail; a nova senha só é gravada após a
 confirmação de um token válido. A rota antiga `POST /api/auth/atualizar-senha`

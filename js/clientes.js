@@ -255,35 +255,8 @@ function calcularTotalGasto(pedidos) {
 }
 
 function renderizarPedido(pedido) {
-    const statusOptions = [
-        { valor: 'pendente', label: 'Pendente' },
-        { valor: 'em_preparacao', label: 'Em Preparação' },
-        { valor: 'em_rota_entrega', label: 'Em Rota de Entrega' },
-        { valor: 'aguardando_pagamento', label: 'Aguardando Pagamento' },
-        { valor: 'finalizado', label: 'Finalizado' }
-    ];
-
-    const statusClass = {
-        'pendente': 'status-pendente',
-        'em_preparacao': 'status-preparacao',
-        'em_rota_entrega': 'status-rota',
-        'aguardando_pagamento': 'status-pagamento',
-        'finalizado': 'status-finalizado',
-        'confirmado': 'status-confirmado',
-        'entregue': 'status-entregue',
-        'cancelado': 'status-cancelado'
-    }[pedido.status] || 'status-pendente';
-
-    const statusLabel = {
-        'pendente': 'Pendente',
-        'em_preparacao': 'Em Preparação',
-        'em_rota_entrega': 'Em Rota de Entrega',
-        'aguardando_pagamento': 'Aguardando Pagamento',
-        'finalizado': 'Finalizado',
-        'confirmado': 'Confirmado',
-        'entregue': 'Entregue',
-        'cancelado': 'Cancelado'
-    }[pedido.status] || pedido.status;
+    const statusOptions = window.PedidoStatus.opcoes;
+    const statusAtual = window.PedidoStatus.obter(pedido.status);
 
     return `
         <div class="pedido-card">
@@ -293,11 +266,14 @@ function renderizarPedido(pedido) {
                     <span class="pedido-data">${new Date(pedido.created_at).toLocaleString('pt-BR')}</span>
                 </div>
                 <div class="pedido-status-container">
-                    <select class="pedido-status-select ${statusClass}" 
+                    <select class="pedido-status-select ${statusAtual.classe}"
                             data-pedido-id="${pedido.id}"
+                            data-status-atual="${statusAtual.valor}"
+                            aria-label="Status do pedido #${pedido.id}"
                             onchange="alterarStatusPedido(${pedido.id}, this.value)">
+                        ${!statusAtual.valor ? '<option value="" disabled selected>Status não reconhecido</option>' : ''}
                         ${statusOptions.map(opt => `
-                            <option value="${opt.valor}" ${pedido.status === opt.valor ? 'selected' : ''}>
+                            <option value="${opt.valor}" ${statusAtual.valor === opt.valor ? 'selected' : ''}>
                                 ${opt.label}
                             </option>
                         `).join('')}
@@ -502,30 +478,44 @@ function mostrarMensagem(texto, tipo) {
 
 // ===== ALTERAR STATUS DO PEDIDO =====
 async function alterarStatusPedido(pedidoId, novoStatus) {
+    const select = document.querySelector(`.pedido-status-select[data-pedido-id="${pedidoId}"]`);
+    if (select?.disabled) return;
+    const statusAnterior = select?.dataset.statusAtual || '';
+    if (select) select.disabled = true;
     try {
         const response = await fetch(`${API_URL}/pedidos/${pedidoId}/status`, {
             method: 'PUT',
             headers: (typeof obterHeadersComAutenticacao === 'function')
                 ? obterHeadersComAutenticacao()
                 : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${window.authManager?.obterToken?.() || localStorage.getItem('jwt_token') || ''}` },
-            body: JSON.stringify({ status: novoStatus })
+            body: JSON.stringify({ status: window.PedidoStatus.normalizar(novoStatus) })
         });
 
         if (!response.ok) {
-            throw new Error('Erro ao atualizar status');
+            const erro = await response.json().catch(() => ({}));
+            throw new Error(erro.error || 'Erro ao atualizar status do pedido');
         }
 
         const result = await response.json();
-        mostrarMensagem('Status do pedido atualizado com sucesso!', 'sucesso');
-        
-        // Recarregar os dados do cliente para atualizar a exibição
-        const clienteId = parseInt(document.querySelector('.modal-cliente-detalhes').getAttribute('data-cliente-id') || 0);
-        if (clienteId > 0) {
-            abrirModalCliente(clienteId);
+        const statusSalvo = window.PedidoStatus.obter(result.status || novoStatus);
+        if (!statusSalvo.valor) throw new Error('Não foi possível confirmar o status do pedido');
+        if (select) {
+            select.value = statusSalvo.valor;
+            select.dataset.statusAtual = statusSalvo.valor;
+            select.className = `pedido-status-select ${statusSalvo.classe}`;
         }
+        mostrarMensagem('Status do pedido atualizado com sucesso!', 'sucesso');
+        return true;
     } catch (error) {
+        if (select) {
+            select.value = statusAnterior;
+            select.className = `pedido-status-select ${window.PedidoStatus.obter(statusAnterior).classe}`;
+        }
         console.error('Erro ao alterar status:', error);
-        mostrarMensagem('Erro ao atualizar status do pedido', 'erro');
+        mostrarMensagem(error.message || 'Erro ao atualizar status do pedido', 'erro');
+        return false;
+    } finally {
+        if (select) select.disabled = false;
     }
 }
 

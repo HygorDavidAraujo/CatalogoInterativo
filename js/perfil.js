@@ -524,18 +524,9 @@ class PerfilManager {
             minute: '2-digit'
         });
 
-        const statusClass = pedido.status.toLowerCase();
-        const statusLabel = {
-            'pendente': 'Pendente',
-            'em_preparacao': 'Em Preparação',
-            'em_rota_entrega': 'Em Rota de Entrega',
-            'aguardando_pagamento': 'Aguardando Pagamento',
-            'finalizado': 'Finalizado',
-            'confirmado': 'Confirmado',
-            'enviado': 'Enviado',
-            'entregue': 'Entregue',
-            'cancelado': 'Cancelado'
-        }[pedido.status.toLowerCase()] || pedido.status;
+        const status = window.PedidoStatus.obter(pedido.status);
+        const statusClass = status.valor || 'desconhecido';
+        const statusLabel = status.label;
 
         const itensHtml = (pedido.itens && pedido.itens.length > 0) 
             ? pedido.itens.map(item => {

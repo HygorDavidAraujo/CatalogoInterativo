@@ -4,6 +4,7 @@ const { pool } = require('../config/database');
 const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
 const { validatePedido, validatePedidoStatus, validateId, validateClienteId } = require('../middleware/validators');
 const { calcularPedido, ErroPedido } = require('../services/pedidoService');
+const PedidoStatus = require('../js/pedido-status');
 
 // GET - Listar pedidos de um cliente
 router.get('/cliente/:clienteId', verificarAutenticacao, validateClienteId, async (req, res) => {
@@ -27,6 +28,7 @@ router.get('/cliente/:clienteId', verificarAutenticacao, validateClienteId, asyn
 
         // Para cada pedido, buscar os itens
         for (let pedido of pedidos) {
+            pedido.status = PedidoStatus.normalizar(pedido.status);
             const { rows: itens } = await pool.query(
                 'SELECT * FROM pedidos_itens WHERE pedido_id = $1',
                 [pedido.id]
@@ -107,6 +109,7 @@ router.get('/', verificarAdminAuth, async (req, res) => {
         `);
 
         for (let pedido of pedidos) {
+            pedido.status = PedidoStatus.normalizar(pedido.status);
             const { rows: itens } = await pool.query(
                 'SELECT * FROM pedidos_itens WHERE pedido_id = $1',
                 [pedido.id]
@@ -127,12 +130,16 @@ router.put('/:id/status', verificarAdminAuth, validateId, validatePedidoStatus, 
         const { id } = req.params;
         const { status } = req.body;
 
-        await pool.query(
-            'UPDATE pedidos SET status = $1 WHERE id = $2',
+        const { rows } = await pool.query(
+            'UPDATE pedidos SET status = $1 WHERE id = $2 RETURNING id, status',
             [status, id]
         );
 
-        res.json({ success: true, message: 'Status atualizado' });
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Pedido não encontrado' });
+        }
+
+        res.json({ success: true, message: 'Status atualizado', pedidoId: rows[0].id, status: rows[0].status });
     } catch (error) {
         console.error('Erro ao atualizar status:', error);
         res.status(500).json({ error: 'Erro ao atualizar status' });

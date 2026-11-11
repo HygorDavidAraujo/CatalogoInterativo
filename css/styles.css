@@ -1988,6 +1988,11 @@ body {
     color: #2E7D32;
 }
 
+.status-badge.desconhecido {
+    background: #E9ECEF;
+    color: #495057;
+}
+
 /* Badges de status do vinho */
 .badge-ativo,
 .badge-inativo {
