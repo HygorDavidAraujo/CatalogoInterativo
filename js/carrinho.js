@@ -221,6 +221,7 @@ class CarrinhoManager {
     }
 
     async finalizarPedido() {
+        if (this.finalizandoPedido) return;
         if (this.itens.length === 0) {
             alert('Seu carrinho está vazio!');
             return;
@@ -251,15 +252,15 @@ class CarrinhoManager {
             return;
         }
         
+        this.finalizandoPedido = true;
+        const btnFinalizar = document.getElementById('btn-finalizar-pedido');
+        if (btnFinalizar) btnFinalizar.disabled = true;
+
         try {
-            // Preparar itens com preço com desconto VIP aplicado
-            const itensComDesconto = this.itens.map(item => ({
+            // O servidor consulta os preços e benefícios vigentes no banco.
+            const itensSolicitados = this.itens.map(item => ({
                 id: item.id,
-                nome: item.nome,
-                tipo: item.tipo,
-                quantidade: item.quantidade,
-                preco: this.getDescontoVip(item.preco), // Preço unitário com desconto VIP
-                preco_original: item.preco // Manter preço original apenas para referência
+                quantidade: item.quantidade
             }));
 
             // Salvar pedido no banco de dados
@@ -267,15 +268,14 @@ class CarrinhoManager {
                 method: 'POST',
                 headers: this.getAuthHeaders(),
                 body: JSON.stringify({
-                    usuario_id: usuario.id,
-                    total: this.getTotal(),
-                    itens: itensComDesconto,
+                    itens: itensSolicitados,
                     observacoes: 'Pedido via WhatsApp'
                 })
             });
 
             if (!response.ok) {
-                throw new Error('Erro ao salvar pedido');
+                const erro = await response.json().catch(() => ({}));
+                throw new Error(erro.error || 'Erro ao registrar pedido. Tente novamente.');
             }
 
             const resultado = await response.json();
@@ -296,9 +296,9 @@ class CarrinhoManager {
             mensagem += `*ITENS DO PEDIDO:*\n`;
             mensagem += `━━━━━━━━━━━━━━━━\n`;
 
-            this.itens.forEach((item, index) => {
-                const precoComDesconto = this.getDescontoVip(item.preco);
-                const subtotal = precoComDesconto * item.quantidade;
+            resultado.itens.forEach((item, index) => {
+                const precoComDesconto = item.preco;
+                const subtotal = item.subtotal;
                 mensagem += `\n${index + 1}. *${item.nome}*\n`;
                 mensagem += `   • Tipo: ${item.tipo}\n`;
                 mensagem += `   • Quantidade: ${item.quantidade}x\n`;
@@ -307,7 +307,7 @@ class CarrinhoManager {
             });
 
             mensagem += `\n━━━━━━━━━━━━━━━━\n`;
-            mensagem += `*TOTAL: R$ ${this.getTotal().toFixed(2).replace('.', ',')}*`;
+            mensagem += `*TOTAL: R$ ${resultado.total.toFixed(2).replace('.', ',')}*`;
 
             // Buscar número do WhatsApp das configurações
             await vinhoManager.carregarConfiguracoes();
@@ -327,7 +327,10 @@ class CarrinhoManager {
             this.mostrarMensagem('Pedido registrado com sucesso!', 'sucesso');
         } catch (error) {
             console.error('Erro ao finalizar pedido:', error);
-            this.mostrarMensagem('Erro ao registrar pedido. Tente novamente.', 'erro');
+            this.mostrarMensagem(error.message || 'Erro ao registrar pedido. Tente novamente.', 'erro');
+        } finally {
+            this.finalizandoPedido = false;
+            if (btnFinalizar) btnFinalizar.disabled = false;
         }
     }
 

@@ -80,22 +80,17 @@ const validateVinho = [
 // Validações para pedido
 const validatePedido = [
     body('usuario_id')
-        .isInt({ min: 1 }).withMessage('ID do usuário inválido')
+        .optional()
+        .isInt({ min: 1, max: 2147483647 }).withMessage('ID do usuário inválido')
         .toInt(),
-    body('total')
-        .isFloat({ min: 0 }).withMessage('Total deve ser maior ou igual a 0')
-        .toFloat(),
     body('itens')
-        .isArray({ min: 1 }).withMessage('Pedido deve ter pelo menos 1 item'),
+        .isArray({ min: 1, max: 1000 }).withMessage('Pedido deve ter entre 1 e 1000 itens'),
     body('itens.*.id')
-        .isInt({ min: 1 }).withMessage('ID do vinho inválido'),
-    body('itens.*.nome')
-        .trim()
-        .isLength({ min: 1 }).withMessage('Nome do vinho é obrigatório'),
+        .isInt({ min: 1, max: 2147483647 }).withMessage('ID do vinho inválido')
+        .toInt(),
     body('itens.*.quantidade')
-        .isInt({ min: 1, max: 999 }).withMessage('Quantidade deve estar entre 1 e 999'),
-    body('itens.*.preco')
-        .isFloat({ min: 0 }).withMessage('Preço inválido'),
+        .isInt({ min: 1, max: 999 }).withMessage('Quantidade deve estar entre 1 e 999')
+        .toInt(),
     body('observacoes')
         .optional()
         .trim()

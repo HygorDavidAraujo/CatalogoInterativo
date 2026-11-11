@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
 const { validatePedido, validatePedidoStatus, validateId, validateClienteId } = require('../middleware/validators');
+const { calcularPedido, ErroPedido } = require('../services/pedidoService');
 
 // GET - Listar pedidos de um cliente
 router.get('/cliente/:clienteId', verificarAutenticacao, validateClienteId, async (req, res) => {
@@ -45,27 +46,30 @@ router.get('/cliente/:clienteId', verificarAutenticacao, validateClienteId, asyn
 // POST - Criar novo pedido (autenticado)
 router.post('/', verificarAutenticacao, validatePedido, async (req, res) => {
     try {
-        const { usuario_id, total, itens, observacoes } = req.body;
+        const { usuario_id, itens, observacoes } = req.body;
+        const usuarioId = req.usuario.id;
         
         // Apenas o próprio usuário pode criar pedido para si
-        if (req.usuario.id !== Number(usuario_id)) {
+        if (usuario_id !== undefined && usuarioId !== Number(usuario_id)) {
             return res.status(403).json({ error: 'Acesso negado: você só pode criar pedidos para sua conta' });
         }
 
         const client = await pool.connect();
         let pedidoId;
+        let pedidoCalculado;
         try {
             await client.query('BEGIN');
+            pedidoCalculado = await calcularPedido(client, usuarioId, itens);
             const result = await client.query(
                 'INSERT INTO pedidos (usuario_id, total, observacoes) VALUES ($1, $2, $3) RETURNING id',
-                [usuario_id, total, observacoes || null]
+                [usuarioId, pedidoCalculado.total, observacoes || null]
             );
             pedidoId = result.rows[0].id;
 
-            for (const item of itens) {
+            for (const item of pedidoCalculado.itens) {
                 await client.query(
                     'INSERT INTO pedidos_itens (pedido_id, vinho_id, vinho_nome, quantidade, preco_unitario, subtotal) VALUES ($1, $2, $3, $4, $5, $6)',
-                    [pedidoId, item.id, item.nome, item.quantidade, item.preco, item.preco * item.quantidade]
+                    [pedidoId, item.id, item.nome, item.quantidade, item.preco, item.subtotal]
                 );
             }
             await client.query('COMMIT');
@@ -79,9 +83,14 @@ router.post('/', verificarAutenticacao, validatePedido, async (req, res) => {
         res.status(201).json({ 
             success: true, 
             pedidoId,
+            total: pedidoCalculado.total,
+            itens: pedidoCalculado.itens,
             message: 'Pedido criado com sucesso' 
         });
     } catch (error) {
+        if (error instanceof ErroPedido) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
         console.error('Erro ao criar pedido:', error);
         res.status(500).json({ error: 'Erro ao criar pedido' });
     }

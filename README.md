@@ -93,6 +93,19 @@ npm run dev
 - **Painel Admin**: http://localhost:3000/admin.html
 - **API Status**: http://localhost:3000/api/status
 
+### Testes de pedidos
+
+Execute `npm test` para verificar a criação de pedidos, autenticação, descontos VIP,
+validação de produtos, rollback e os valores enviados ao WhatsApp. Os testes usam
+um banco simulado, sem acessar o Neon ou enviar mensagens.
+
+Na criação do pedido, o navegador envia os IDs dos produtos e suas quantidades.
+A API consulta preços, nomes, disponibilidade e benefícios VIP no PostgreSQL e
+calcula os valores em centavos. Campos financeiros enviados por versões anteriores
+do carrinho são ignorados. A resposta mantém `pedidoId` e inclui `total` e `itens`
+confirmados, usados na mensagem do WhatsApp. A regra VIP atual de preços terminados
+em `,90` foi preservada. Não é necessária migração de banco para essa mudança.
+
 ## 📖 Como Usar
 
 ### Visualizar o Catálogo
