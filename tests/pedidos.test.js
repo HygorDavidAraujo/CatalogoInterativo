@@ -24,8 +24,6 @@ function carregarModulo(relativePath, overrides = {}, globals = {}) {
     return module.exports;
 }
 
-const auth = carregarModulo('middleware/auth.js', {}, { process: { env: { JWT_SECRET: secret } } });
-
 function criarBanco(options = {}) {
     const queries = [];
     const usuario = options.usuario === undefined
@@ -54,16 +52,26 @@ function criarBanco(options = {}) {
         },
         release() { this.released = true; }
     };
-    return { queries, client, pool: { async connect() { return client; } } };
+    return { queries, client, pool: {
+        async connect() { return client; },
+        async query() {
+            return { rows: usuario ? [{ id: 7, email: 'cliente@example.com', is_admin: false }] : [] };
+        }
+    } };
 }
 
 async function enviarPedido(body, options = {}) {
     const banco = criarBanco(options);
+    const auth = carregarModulo('middleware/auth.js', {
+        '../config/database': { pool: banco.pool }
+    }, { process: { env: { JWT_SECRET: secret } } });
     const router = carregarModulo('routes/pedidos.js', {
         '../config/database': { pool: banco.pool },
         '../middleware/auth': auth
     });
-    const token = options.semToken ? null : jwt.sign({ id: 7, isAdmin: false }, secret);
+    const token = options.semToken ? null : jwt.sign({ id: 7, isAdmin: false }, secret, {
+        jwtid: '11111111-1111-4111-8111-111111111111'
+    });
     const req = {
         method: 'POST', url: '/', originalUrl: '/api/pedidos',
         headers: token ? { authorization: `Bearer ${token}` } : {},
@@ -166,7 +174,7 @@ for (const [nome, body] of [
     ['ID inválido', { itens: [{ id: 'abc', quantidade: 1 }] }],
     ['ID acima do limite PostgreSQL', { itens: [{ id: 2147483648, quantidade: 1 }] }]
 ]) {
-    test(`${nome} é recusado pela validação antes de acessar o banco`, async () => {
+    test(`${nome} é recusado pela validação antes de iniciar a transação`, async () => {
         const result = await enviarPedido(body);
         assert.equal(result.status, 400);
         assert.equal(result.queries.length, 0);
@@ -196,11 +204,11 @@ test('continua exigindo autenticação e impede pedidos para outra conta', async
     assert.equal(semToken.queries.length + outraConta.queries.length, 0);
 });
 
-test('conta removida cancela a transação', async () => {
+test('conta removida é recusada sem iniciar a transação', async () => {
     const result = await enviarPedido({ itens: [{ id: 1, quantidade: 1 }] }, { usuario: null });
     assert.equal(result.status, 401);
-    assert.equal(result.queries.at(-1).sql, 'ROLLBACK');
-    assert.equal(result.client.released, true);
+    assert.equal(result.queries.length, 0);
+    assert.equal(result.client.released, false);
 });
 
 test('falha ao gravar item faz rollback e libera conexão', async () => {

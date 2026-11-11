@@ -55,17 +55,7 @@ class PerfilManager {
         console.log('Configurando formulários...');
         this.configurarFormularios();
         
-        // Configurar botão sair
-        const btnLogout = document.getElementById('btn-logout');
-        if (btnLogout) {
-            btnLogout.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Fazendo logout...');
-                window.authManager.logout();
-                window.location.href = 'index.html';
-            });
-            console.log('✓ Botão logout configurado');
-        }
+        // O logout é centralizado no AuthManager, que aguarda a revogação no servidor.
 
         // Configurar modal de confirmação
         this.configurarModal();

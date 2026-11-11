@@ -9,7 +9,8 @@ const requiredTables = [
     'pedidos',
     'pedidos_itens',
     'beneficios_vip',
-    'password_resets'
+    'password_resets',
+    'sessoes_usuario'
 ];
 
 router.get('/setup', async (req, res) => {

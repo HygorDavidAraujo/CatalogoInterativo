@@ -18,24 +18,109 @@ class AuthManager {
     carregarUsuarioSessao() {
         const usuarioSalvo = sessionStorage.getItem('usuario');
         if (usuarioSalvo) {
-            this.usuarioLogado = JSON.parse(usuarioSalvo);
-            this.atualizarInterface();
+            try {
+                const usuario = JSON.parse(usuarioSalvo);
+                if (!this.obterToken() || !usuario || typeof usuario.nome !== 'string') {
+                    this.limparSessao();
+                    return;
+                }
+                this.usuarioLogado = usuario;
+                this.atualizarInterface();
+            } catch (error) {
+                this.limparSessao();
+            }
         }
     }
 
     obterToken() {
-        return sessionStorage.getItem('jwt_token') || localStorage.getItem('jwt_token');
+        // O último login compartilhado entre abas prevalece sobre o cache da aba.
+        return localStorage.getItem('jwt_token') || sessionStorage.getItem('jwt_token');
     }
 
-    logout() {
+    limparSessao() {
         this.usuarioLogado = null;
-        sessionStorage.removeItem('usuario');
+        ['usuario', 'jwt_token'].forEach(chave => {
+            sessionStorage.removeItem(chave);
+            localStorage.removeItem(chave);
+        });
         this.atualizarInterface();
-        location.reload();
+        window.carrinhoManager?.atualizarInterface();
+    }
+
+    redirecionarSemSessao() {
+        const path = window.location.pathname;
+        if (/\/(admin(?:\.html)?|clientes\.html|meu-perfil\.html)$/.test(path)) {
+            window.location.href = 'index.html';
+        } else {
+            location.reload();
+        }
+    }
+
+    async logout() {
+        if (this.saindo) return;
+        this.saindo = true;
+        const token = this.obterToken();
+        // Limpa imediatamente, mesmo se a conexão estiver indisponível.
+        this.limparSessao();
+        let timeoutId;
+        try {
+            if (token) {
+                const controller = new AbortController();
+                timeoutId = setTimeout(() => controller.abort(), 5000);
+                const response = await fetch(`${API_URL}/auth/logout`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    keepalive: true,
+                    signal: controller.signal
+                });
+                if (!response.ok && response.status !== 401) {
+                    throw new Error('Falha ao encerrar sessão');
+                }
+            }
+        } catch (error) {
+            alert('Você saiu deste navegador, mas não foi possível encerrar a sessão no servidor. Se perdeu a conexão, redefina sua senha ao reconectar para revogar as sessões anteriores.');
+        } finally {
+            clearTimeout(timeoutId);
+            this.saindo = false;
+            this.redirecionarSemSessao();
+        }
+    }
+
+    async validarSessao() {
+        if (this.validandoSessao) return;
+        const token = this.obterToken();
+        if (!token) {
+            this.limparSessao();
+            return false;
+        }
+        this.validandoSessao = true;
+        try {
+            const response = await fetch(`${API_URL}/auth/me`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            // Não restaura uma sessão que foi encerrada/trocada durante a consulta.
+            if (token !== this.obterToken()) return false;
+            if (response.status === 401) {
+                const estavaLogado = this.usuarioLogado !== null;
+                this.limparSessao();
+                if (estavaLogado) this.redirecionarSemSessao();
+                return false;
+            }
+            // Falhas temporárias do banco ou da rede não apagam credenciais válidas.
+            if (!response.ok) return null;
+            const usuario = await response.json();
+            if (token !== this.obterToken()) return false;
+            this.salvarUsuarioSessao(usuario, token);
+            return true;
+        } catch (error) {
+            return null;
+        } finally {
+            this.validandoSessao = false;
+        }
     }
 
     isLogado() {
-        return this.usuarioLogado !== null;
+        return this.usuarioLogado !== null && !!this.obterToken();
     }
 
     isAdmin() {
@@ -345,6 +430,22 @@ function configurarFormCadastro() {
 
 // ===== CONFIGURAR BOTÕES E EVENTOS =====
 function configurarAuth() {
+    window.addEventListener('storage', (event) => {
+        if (event.key === 'jwt_token' && event.newValue === null) {
+            const estavaLogado = window.authManager.usuarioLogado !== null;
+            window.authManager.limparSessao();
+            if (estavaLogado) window.authManager.redirecionarSemSessao();
+        } else if (event.key === 'jwt_token' && event.newValue !== sessionStorage.getItem('jwt_token')) {
+            // Um login em outra aba não deve continuar exibindo o usuário anterior.
+            sessionStorage.removeItem('usuario');
+            sessionStorage.setItem('jwt_token', event.newValue);
+            window.authManager.usuarioLogado = null;
+            location.reload();
+        }
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) window.authManager.validarSessao();
+    });
     // Verificar se elementos existem antes de adicionar listeners
     const btnLogin = document.getElementById('btn-login');
     const btnLogout = document.getElementById('btn-logout');
@@ -491,6 +592,7 @@ function inicializarAuth() {
     console.log('Inicializando sistema de autenticação...');
     configurarAuth();
     window.authManager.atualizarInterface();
+    window.authManager.validarSessao();
     
     // Quando VipManager carregar, atualizar interface novamente para badges dinâmicas
     if (window.vipManager) {

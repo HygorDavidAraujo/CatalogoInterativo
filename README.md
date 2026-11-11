@@ -202,7 +202,20 @@ Contas com senhas antigas devem usar **Esqueci minha senha**. O login encaminha
 essas contas para a recuperação por e-mail; a nova senha só é gravada após a
 confirmação de um token válido. A rota antiga `POST /api/auth/atualizar-senha`
 responde com HTTP 410 e não consulta nem altera usuários. O login com bcrypt e
-os links de recuperação existentes continuam funcionando, sem migração de banco.
+os links de recuperação existentes continuam funcionando.
+
+As sessões são registradas no PostgreSQL e verificadas em cada chamada autenticada.
+O logout encerra a sessão atual e limpa as credenciais das abas do navegador,
+preservando o carrinho. Trocas de senha ou de permissão administrativa revogam
+todas as sessões da conta por um trigger no banco; alterações comuns de perfil
+ou de benefício VIP não encerram as sessões.
+
+**Antes de publicar esta versão em um banco já existente**, execute no SQL Editor
+do Neon o arquivo `database/migrations/20261110_sessoes_usuario.sql`. O arquivo é
+aditivo e pode ser aplicado com a versão anterior ainda em uso. Após o deploy,
+usuários com tokens anteriores precisarão entrar novamente uma vez. Para bancos
+novos, o schema completo já contém a tabela e o trigger. Veja também
+[DEPLOY-VERCEL-NEON.md](./DEPLOY-VERCEL-NEON.md).
 
 Execute `npm test` para rodar os testes de pedidos e autenticação. Os testes usam
 banco e envio de e-mail simulados, sem acessar o Neon ou enviar mensagens reais.

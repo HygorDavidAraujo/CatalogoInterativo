@@ -192,11 +192,28 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
         const isAdmin = usuario.is_admin === 1 || usuario.is_admin === true;
         
         // Gerar token JWT
+        const sessaoId = crypto.randomUUID();
         const token = jwt.sign(
             { id: usuario.id, email: usuario.email, isAdmin },
             JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '7d', jwtid: sessaoId }
         );
+
+        const expiraEm = new Date(jwt.decode(token).exp * 1000);
+        const { rowCount } = await pool.query(
+            `WITH usuario_atual AS (
+                 SELECT id FROM usuarios
+                 WHERE id = $2 AND senha = $4 AND is_admin IS NOT DISTINCT FROM $5
+                 FOR SHARE
+             )
+             INSERT INTO sessoes_usuario (id, usuario_id, expira_em)
+             SELECT $1, id, $3 FROM usuario_atual
+             RETURNING id`,
+            [sessaoId, usuario.id, expiraEm, usuario.senha, usuario.is_admin]
+        );
+        if (rowCount !== 1) {
+            return res.status(401).json({ error: 'Seus dados de acesso foram alterados. Faça login novamente.' });
+        }
         
         res.json({
             success: true,
@@ -222,6 +239,20 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
     } catch (error) {
         console.error('Erro ao fazer login:', error);
         res.status(500).json({ error: 'Erro ao fazer login' });
+    }
+});
+
+// POST - Encerrar somente a sessão autenticada, inclusive se o JWT foi copiado.
+router.post('/logout', verificarAutenticacao, async (req, res) => {
+    try {
+        await pool.query(
+            'DELETE FROM sessoes_usuario WHERE id = $1 AND usuario_id = $2',
+            [req.sessaoId, req.usuario.id]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao encerrar sessão:', error);
+        res.status(503).json({ error: 'Não foi possível encerrar sua sessão no servidor. Tente novamente.' });
     }
 });
 

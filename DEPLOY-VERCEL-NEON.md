@@ -20,6 +20,24 @@ Credenciais funcionais e dados de clientes foram encontrados em arquivos rastrea
 
 ## 3. Migrar os dados MySQL
 
+### Atualização de um catálogo que já está no Neon
+
+Para a versão que permite revogar sessões, execute
+[`database/migrations/20261110_sessoes_usuario.sql`](./database/migrations/20261110_sessoes_usuario.sql)
+no SQL Editor do banco usado pela Vercel **antes do push que publicará o novo código**.
+Essa migração pode ser aplicada enquanto a versão anterior continua atendendo.
+Ela cria a tabela de sessões e o trigger que as revoga quando senha ou permissão
+administrativa mudam; não altera senhas, produtos ou pedidos existentes.
+Não há novas variáveis de ambiente ou dependências para configurar.
+
+Após publicar, faça login novamente (tokens da versão anterior serão recusados),
+teste `/api/auth/me`, saia e confirme que o token anterior passa a receber HTTP 401.
+Uma segunda sessão em outro dispositivo deve continuar válida após esse logout.
+Teste também a recuperação de senha e a mudança de permissão com contas de teste:
+ambas devem invalidar as sessões anteriores da conta alterada.
+
+### Importação inicial de uma base MySQL
+
 Faça um backup controlado da origem antes de migrar. Depois de revogar as credenciais vazadas, obtenha credenciais novas para a origem e configure-as em um `.env` local ignorado pelo Git, junto com a URL do Neon:
 
 ```env
