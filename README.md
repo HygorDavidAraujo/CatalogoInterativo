@@ -198,6 +198,15 @@ O sistema suporta duas formas de adicionar imagens:
 
 ## 🔒 Segurança
 
+Contas com senhas antigas devem usar **Esqueci minha senha**. O login encaminha
+essas contas para a recuperação por e-mail; a nova senha só é gravada após a
+confirmação de um token válido. A rota antiga `POST /api/auth/atualizar-senha`
+responde com HTTP 410 e não consulta nem altera usuários. O login com bcrypt e
+os links de recuperação existentes continuam funcionando, sem migração de banco.
+
+Execute `npm test` para rodar os testes de pedidos e autenticação. Os testes usam
+banco e envio de e-mail simulados, sem acessar o Neon ou enviar mensagens reais.
+
 **Importante**:
 - Defina um `JWT_SECRET` forte e exclusivo na Vercel.
 - Armazene URLs e credenciais somente em variáveis de ambiente; não as versione.

@@ -144,7 +144,11 @@ class AuthManager {
             console.log('Resposta da API:', data);
 
             if (!response.ok) {
-                throw new Error(data.error || 'Erro ao fazer login');
+                return {
+                    success: false,
+                    error: data.error || 'Erro ao fazer login',
+                    code: data.code
+                };
             }
 
             console.log('Dados do usuário recebidos:', data.usuario);
@@ -186,61 +190,26 @@ window.authManager = new AuthManager();
 console.log('✓ authManager criado e disponível globalmente');
 
 // ===== MODAL DE AUTENTICAÇÃO =====
-// ===== MODAL DE ATUALIZAÇÃO DE SENHA FORÇADA =====
-document.addEventListener('DOMContentLoaded', function() {
-    const modalAtualizarSenha = document.getElementById('modal-atualizar-senha');
-    const closeAtualizarSenha = document.querySelector('.close-atualizar-senha');
-    if (closeAtualizarSenha) {
-        closeAtualizarSenha.addEventListener('click', function() {
-            modalAtualizarSenha.style.display = 'none';
-            document.getElementById('modal-auth').style.display = 'block';
-        });
-    }
+function abrirModalRecuperarSenha(email = '') {
+    const modalRecuperar = document.getElementById('modal-recuperar-senha');
+    if (!modalRecuperar) return false;
 
-    const formAtualizarSenha = document.getElementById('form-atualizar-senha');
-    if (formAtualizarSenha) {
-        formAtualizarSenha.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const novaSenha = document.getElementById('atualizar-nova-senha').value;
-            const confirmarSenha = document.getElementById('atualizar-confirmar-senha').value;
-            const erroDiv = document.getElementById('atualizar-senha-erro');
-            erroDiv.style.display = 'none';
-            if (novaSenha.length < 6) {
-                erroDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
-                erroDiv.style.display = 'block';
-                return;
-            }
-            if (novaSenha !== confirmarSenha) {
-                erroDiv.textContent = 'As senhas não coincidem.';
-                erroDiv.style.display = 'block';
-                return;
-            }
-            // Enviar nova senha ao backend
-            try {
-                const email = window.emailParaAtualizarSenha;
-                const response = await fetch(`${API_URL}/auth/atualizar-senha`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, novaSenha })
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    erroDiv.textContent = data.error || 'Erro ao atualizar senha.';
-                    erroDiv.style.display = 'block';
-                    return;
-                }
-                // Senha atualizada, tentar login automaticamente
-                modalAtualizarSenha.style.display = 'none';
-                document.getElementById('modal-auth').style.display = 'block';
-                document.getElementById('login-senha').value = novaSenha;
-                mostrarErro('login-erro', 'Senha atualizada! Faça login novamente.');
-            } catch (err) {
-                erroDiv.textContent = 'Erro ao atualizar senha.';
-                erroDiv.style.display = 'block';
-            }
-        });
-    }
-});
+    const modalAuth = document.getElementById('modal-auth');
+    if (modalAuth) modalAuth.style.display = 'none';
+    const senhaInput = document.getElementById('login-senha');
+    if (senhaInput) senhaInput.value = '';
+
+    const emailInput = document.getElementById('recuperar-email');
+    if (emailInput) emailInput.value = email;
+    ['recuperar-senha-erro', 'recuperar-senha-sucesso'].forEach(id => {
+        const mensagem = document.getElementById(id);
+        if (mensagem) mensagem.style.display = 'none';
+    });
+    modalRecuperar.style.display = 'block';
+    emailInput?.focus();
+    return true;
+}
+
 function abrirModalAuth() {
     console.log('Abrindo modal de autenticação...');
     const modal = document.getElementById('modal-auth');
@@ -318,13 +287,11 @@ function configurarFormLogin() {
             fecharModalAuth();
             location.reload(); // Recarregar para atualizar interface
         } else {
-            if (resultado.error && resultado.error.includes('precisa ser atualizada')) {
-                // Exibir modal de atualização de senha forçada
-                document.getElementById('modal-auth').style.display = 'none';
-                document.getElementById('modal-atualizar-senha').style.display = 'block';
-                document.getElementById('atualizar-senha-erro').style.display = 'none';
-                // Salvar email temporariamente para atualização
-                window.emailParaAtualizarSenha = document.getElementById('login-email').value.trim();
+            if (resultado.code === 'PASSWORD_RESET_REQUIRED' ||
+                resultado.error?.includes('precisa ser atualizada')) {
+                if (!abrirModalRecuperarSenha(email)) {
+                    mostrarErro('login-erro', resultado.error);
+                }
             } else {
                 mostrarErro('login-erro', resultado.error);
             }
@@ -419,8 +386,7 @@ function configurarAuth() {
     if (esqueciSenhaLink) {
         esqueciSenhaLink.addEventListener('click', (e) => {
             e.preventDefault();
-            document.getElementById('modal-auth').style.display = 'none';
-            if (modalRecuperar) modalRecuperar.style.display = 'block';
+            abrirModalRecuperarSenha(document.getElementById('login-email')?.value.trim() || '');
         });
     }
 
@@ -505,12 +471,7 @@ function configurarFormRecuperarSenha() {
                 return;
             }
 
-            // Se backend retornar senha temporária (fallback), exibir ao usuário
-            if (data.tempSenha) {
-                sucessoDiv.innerHTML = `Senha temporária: <strong>${data.tempSenha}</strong> — altere após o login.`;
-            } else {
-                sucessoDiv.textContent = data.message || 'Verifique seu e-mail para instruções de recuperação.';
-            }
+            sucessoDiv.textContent = data.message || 'Verifique seu e-mail para instruções de recuperação.';
             sucessoDiv.style.display = 'block';
         } catch (err) {
             erroDiv.textContent = 'Erro ao enviar solicitação. Tente novamente mais tarde.';

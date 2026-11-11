@@ -142,31 +142,13 @@ async function sendMailWithFallback(mailOptions) {
     }
 }
 
-// POST - Atualizar senha antiga para bcrypt
-router.post('/atualizar-senha', async (req, res) => {
-    try {
-        const { email, novaSenha } = req.body;
-        if (!email || !novaSenha) {
-            return res.status(400).json({ error: 'Email e nova senha são obrigatórios.' });
-        }
-        // Buscar usuário
-        const { rows: usuarios } = await pool.query('SELECT id, senha FROM usuarios WHERE email = $1', [email]);
-        if (usuarios.length === 0) {
-            return res.status(404).json({ error: 'Usuário não encontrado.' });
-        }
-        const usuario = usuarios[0];
-        // Só permite atualizar se a senha antiga não for bcrypt
-        if (usuario.senha && usuario.senha.startsWith('$2')) {
-            return res.status(400).json({ error: 'Senha já está atualizada.' });
-        }
-        // Gerar hash bcrypt
-        const hash = await bcrypt.hash(novaSenha, 10);
-        await pool.query('UPDATE usuarios SET senha = $1 WHERE id = $2', [hash, usuario.id]);
-        res.json({ success: true, message: 'Senha atualizada com sucesso.' });
-    } catch (error) {
-        console.error('Erro ao atualizar senha:', error);
-        res.status(500).json({ error: 'Erro ao atualizar senha.' });
-    }
+// Rota antiga desativada: versões anteriores do site recebem uma orientação,
+// sem consultar contas nem permitir troca de senha apenas pelo e-mail.
+router.post('/atualizar-senha', (req, res) => {
+    return res.status(410).json({
+        error: 'Use a opção "Esqueci minha senha" para receber um link de recuperação por e-mail.',
+        code: 'PASSWORD_RESET_REQUIRED'
+    });
 });
 
 // POST - Login
@@ -195,7 +177,8 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
         // Verificar senha (apenas bcrypt é aceito)
         if (!usuario.senha || !usuario.senha.startsWith('$2')) {
             return res.status(400).json({ 
-                error: 'Sua senha precisa ser atualizada. Contate um administrador para resetar seu acesso com hash bcrypt.' 
+                error: 'Sua senha precisa ser atualizada. Use a opção "Esqueci minha senha" para receber um link por e-mail.',
+                code: 'PASSWORD_RESET_REQUIRED'
             });
         }
 
