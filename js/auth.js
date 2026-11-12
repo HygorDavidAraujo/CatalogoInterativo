@@ -259,7 +259,17 @@ class AuthManager {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Erro ao cadastrar');
+                const detalhes = Array.isArray(data.details)
+                    ? [...new Set(data.details.map(item => item.message).filter(message => typeof message === 'string'))]
+                    : [];
+                let mensagem = detalhes.length ? detalhes.join('. ') : data.error || 'Erro ao cadastrar';
+                if (response.status === 429) {
+                    const segundos = Number(response.headers?.get('Retry-After'));
+                    if (Number.isFinite(segundos) && segundos > 0) {
+                        mensagem = `Muitas solicitações de cadastro. Aguarde ${Math.ceil(segundos / 60)} minuto(s) antes de tentar novamente.`;
+                    }
+                }
+                throw new Error(mensagem);
             }
 
             this.salvarUsuarioSessao(data.usuario);
@@ -389,6 +399,8 @@ function configurarFormCadastro() {
     const form = document.getElementById('form-cadastro');
     const telefoneInput = document.getElementById('cadastro-telefone');
     if (!form) return; // página sem modal de cadastro
+    if (form.dataset.cadastroConfigurado) return;
+    form.dataset.cadastroConfigurado = 'true';
 
     // Formatar telefone enquanto digita
     if (telefoneInput) {
@@ -399,6 +411,7 @@ function configurarFormCadastro() {
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (form.dataset.enviando === 'true') return;
         
         const nome = document.getElementById('cadastro-nome').value.trim();
         const telefone = document.getElementById('cadastro-telefone').value.trim();
@@ -412,18 +425,31 @@ function configurarFormCadastro() {
             return;
         }
 
-        const resultado = await authManager.cadastrar({
-            nome_completo: nome,
-            telefone: telefone,
-            email: email,
-            senha: senha
-        });
+        if (senha.length < 6 || senha.length > 100 || !/[a-z]/.test(senha)) {
+            mostrarErro('cadastro-erro', 'Senha deve ter entre 6 e 100 caracteres e pelo menos uma letra minúscula.');
+            return;
+        }
 
-        if (resultado.success) {
-            fecharModalAuth();
-            location.reload(); // Recarregar para atualizar interface
-        } else {
-            mostrarErro('cadastro-erro', resultado.error);
+        const botao = form.querySelector('button[type="submit"]');
+        form.dataset.enviando = 'true';
+        if (botao) botao.disabled = true;
+        try {
+            const resultado = await authManager.cadastrar({
+                nome_completo: nome,
+                telefone: telefone,
+                email: email,
+                senha: senha
+            });
+
+            if (resultado.success) {
+                fecharModalAuth();
+                location.reload(); // Recarregar para atualizar interface
+            } else {
+                mostrarErro('cadastro-erro', resultado.error);
+            }
+        } finally {
+            form.dataset.enviando = 'false';
+            if (botao) botao.disabled = false;
         }
     });
 }

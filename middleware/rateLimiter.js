@@ -10,13 +10,23 @@ const loginLimiter = rateLimit({
     skipSuccessfulRequests: true // Não conta logins bem-sucedidos
 });
 
-// Rate limiter para cadastro (previne spam)
+// Tentativas têm janela curta; erros de preenchimento não consomem a cota de contas.
+const cadastroTentativasLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { error: 'Muitas tentativas de cadastro. Tente novamente em 15 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+// Limita contas efetivamente criadas por IP.
 const cadastroLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hora
     max: 3, // 3 cadastros por hora
-    message: { error: 'Muitos cadastros. Tente novamente mais tarde.' },
+    message: { error: 'Limite de 3 cadastros por hora atingido. Tente novamente em até 1 hora.' },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skipFailedRequests: true
 });
 
 const recuperacaoLimiter = rateLimit({
@@ -48,6 +58,7 @@ const uploadLimiter = rateLimit({
 module.exports = {
     loginLimiter,
     cadastroLimiter,
+    cadastroTentativasLimiter,
     recuperacaoLimiter,
     apiLimiter,
     uploadLimiter

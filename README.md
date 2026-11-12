@@ -280,6 +280,12 @@ criada e não bloqueia o login. Essa mensagem é uma confirmação do cadastro r
 sem exigir ativação da conta por link. O envio vale para novos cadastros; não há
 disparo retroativo para contas existentes.
 
+O cadastro exige senha de 6 a 100 caracteres com pelo menos uma letra minúscula.
+A tela apresenta os motivos da validação e evita dois envios simultâneos. Por IP,
+há limite de 3 contas criadas por hora e 20 tentativas a cada 15 minutos; requisições
+recusadas não consomem a cota de contas criadas. Respostas 429 incluem `Retry-After`,
+usado pela interface para informar o tempo de espera.
+
 Configure as variáveis de `.env.example` também na hospedagem:
 
 - `APP_URL`: endereço público HTTPS do catálogo, sem caminho de página. Em produção,

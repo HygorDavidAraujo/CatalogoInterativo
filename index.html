@@ -213,7 +213,7 @@
                     </div>
                     <div class="form-group">
                         <label for="cadastro-senha">Senha *</label>
-                        <input type="password" id="cadastro-senha" name="senha" required placeholder="Mínimo 6 caracteres">
+                        <input type="password" id="cadastro-senha" name="senha" required minlength="6" maxlength="100" pattern="(?=.*[a-z]).{6,100}" title="Use de 6 a 100 caracteres, incluindo pelo menos uma letra minúscula" placeholder="Mínimo 6 caracteres e uma letra minúscula">
                     </div>
                     <div class="form-group">
                         <label for="cadastro-confirmar-senha">Confirmar Senha *</label>

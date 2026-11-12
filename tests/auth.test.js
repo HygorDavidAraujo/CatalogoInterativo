@@ -131,7 +131,7 @@ function criarSistema(options = {}) {
     const router = carregarModulo('routes/auth.js', {
         '../services/emailService': emailService,
         '../config/database': { pool }, '../middleware/auth': auth,
-        '../middleware/rateLimiter': { loginLimiter: passthrough, cadastroLimiter: passthrough, recuperacaoLimiter: passthrough },
+        '../middleware/rateLimiter': { loginLimiter: passthrough, cadastroLimiter: passthrough, cadastroTentativasLimiter: passthrough, recuperacaoLimiter: passthrough },
         resend: { Resend: ResendSimulado },
         nodemailer: { createTransport() { throw new Error('SMTP real não deve ser acessado nos testes'); } }
     }, { process: { env } });
@@ -367,9 +367,12 @@ function criarPagina(fetchImpl, semModal = false) {
     const location = { pathname: '/', reload() { recarregamentos++; } };
     const ids = ['form-login', 'login-email', 'login-senha', 'login-erro', 'modal-auth',
         'modal-recuperar-senha', 'recuperar-email', 'recuperar-senha-erro',
-        'recuperar-senha-sucesso', 'form-recuperar-senha', 'esqueci-senha-link'];
+        'recuperar-senha-sucesso', 'form-recuperar-senha', 'esqueci-senha-link',
+        'form-cadastro', 'cadastro-nome', 'cadastro-telefone', 'cadastro-email',
+        'cadastro-senha', 'cadastro-confirmar-senha', 'cadastro-erro'];
     const elements = Object.fromEntries(ids.map(id => [id, {
-        value: '', textContent: '', style: { display: 'none' }, handlers: {},
+        value: '', textContent: '', style: { display: 'none' }, handlers: {}, dataset: {},
+        querySelector() { return this.botao || null; },
         addEventListener(event, handler) { this.handlers[event] = handler; },
         focus() { this.focused = true; }, reset() {}
     }]));
@@ -398,6 +401,113 @@ function criarPagina(fetchImpl, semModal = false) {
     context.authManager = context.window.authManager;
     return { context, elements, windowEvents, documentEvents, avisos, getRecarregamentos: () => recarregamentos };
 }
+
+function preencherCadastro(pagina, senha = 'senha-valida') {
+    const values = { 'cadastro-nome': 'Cliente Novo', 'cadastro-telefone': '(11)99999-9999',
+        'cadastro-email': 'cliente@example.com', 'cadastro-senha': senha, 'cadastro-confirmar-senha': senha };
+    for (const [id, value] of Object.entries(values)) pagina.elements[id].value = value;
+    pagina.elements['form-cadastro'].botao = { disabled: false };
+    pagina.context.configurarFormCadastro();
+}
+
+test('cadastro mostra na tela os motivos do 400 retornados pela API', async () => {
+    const sistema = criarSistema({ cadastro: true });
+    const pagina = criarPagina(async (url, options) => {
+        assert.equal(url, '/api/auth/cadastro');
+        const result = await sistema.post('/cadastro', JSON.parse(options.body));
+        return { ok: false, status: result.status, json: async () => result.body };
+    });
+    preencherCadastro(pagina);
+    pagina.elements['cadastro-nome'].value = 'AB';
+    pagina.elements['cadastro-telefone'].value = '123';
+    await pagina.elements['form-cadastro'].handlers.submit({ preventDefault() {} });
+    const erro = pagina.elements['cadastro-erro'];
+    assert.match(erro.textContent, /Nome deve ter entre 3 e 255 caracteres/);
+    assert.match(erro.textContent, /Telefone deve estar no formato/);
+    assert.equal(erro.style.display, 'block');
+    assert.equal(sistema.emails.length, 0);
+    assert.equal(pagina.elements['cadastro-nome'].value, 'AB');
+    assert.equal(pagina.elements['form-cadastro'].botao.disabled, false);
+});
+
+test('senha fora das regras é explicada antes de consumir tentativa na API', async () => {
+    const pagina = criarPagina(() => { throw new Error('Não deve chamar API'); });
+    preencherCadastro(pagina, '123456');
+    await pagina.elements['form-cadastro'].handlers.submit({ preventDefault() {} });
+    assert.match(pagina.elements['cadastro-erro'].textContent, /letra minúscula/);
+});
+
+test('429 de cadastro informa tempo de espera do Retry-After', async () => {
+    const pagina = criarPagina(async () => ({ ok: false, status: 429,
+        headers: { get: () => '125' }, json: async () => ({ error: 'Muitos cadastros' }) }));
+    preencherCadastro(pagina);
+    await pagina.elements['form-cadastro'].handlers.submit({ preventDefault() {} });
+    assert.match(pagina.elements['cadastro-erro'].textContent, /3 minuto/);
+});
+
+test('cadastro evita dois envios simultâneos e libera nova tentativa após erro', async () => {
+    let resolver, chamadas = 0;
+    const pagina = criarPagina(() => {
+        chamadas++;
+        return new Promise(resolve => { resolver = resolve; });
+    });
+    preencherCadastro(pagina);
+    const form = pagina.elements['form-cadastro'];
+    const handler = form.handlers.submit;
+    pagina.context.configurarFormCadastro();
+    assert.equal(form.handlers.submit, handler);
+    const primeiro = handler({ preventDefault() {} });
+    assert.equal(form.botao.disabled, true);
+    await handler({ preventDefault() {} });
+    assert.equal(chamadas, 1);
+    resolver({ ok: false, status: 400, json: async () => ({ error: 'Email já cadastrado' }) });
+    await primeiro;
+    assert.equal(form.botao.disabled, false);
+    const segundo = handler({ preventDefault() {} });
+    assert.equal(chamadas, 2);
+    resolver({ ok: false, status: 400, json: async () => ({ error: 'Email já cadastrado' }) });
+    await segundo;
+});
+
+test('formulário de cadastro válido chega à API, grava conta e envia boas-vindas', async () => {
+    const sistema = criarSistema({ cadastro: true });
+    const pagina = criarPagina(async (url, options) => {
+        const result = await sistema.post('/cadastro', JSON.parse(options.body));
+        return { ok: result.status === 201, status: result.status, json: async () => result.body };
+    });
+    preencherCadastro(pagina);
+    await pagina.elements['form-cadastro'].handlers.submit({ preventDefault() {} });
+    assert.equal(sistema.emails.length, 1);
+    assert.equal(pagina.getRecarregamentos(), 1);
+});
+
+test('limite de cadastros permite corrigir erros, limita contas criadas e mantém proteção contra abuso', async t => {
+    const express = require('express');
+    // Instâncias novas dos limitadores, sem consumir limites de outros testes.
+    const { cadastroLimiter, cadastroTentativasLimiter } = carregarModulo('middleware/rateLimiter.js');
+    const app = express();
+    app.use(express.json());
+    app.post('/cadastro', cadastroTentativasLimiter, cadastroLimiter, (req, res) => {
+        res.status(req.body.valido ? 201 : 400).json({ success: Boolean(req.body.valido) });
+    });
+    const server = app.listen(0, '127.0.0.1');
+    await new Promise(resolve => server.once('listening', resolve));
+    t.after(() => { server.closeAllConnections(); server.close(); });
+    const request = valido => fetch(`http://127.0.0.1:${server.address().port}/cadastro`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valido })
+    });
+    for (let i = 0; i < 4; i++) assert.equal((await request(false)).status, 400);
+    for (let i = 0; i < 3; i++) assert.equal((await request(true)).status, 201);
+    const bloqueioContas = await request(true);
+    assert.equal(bloqueioContas.status, 429);
+    assert.match((await bloqueioContas.json()).error, /3 cadastros por hora/);
+    assert.ok(Number(bloqueioContas.headers.get('retry-after')) > 0);
+    // Mesmo sem criar novas contas, muitas tentativas são limitadas pela janela curta.
+    for (let i = 8; i < 20; i++) await request(false);
+    const bloqueioTentativas = await request(false);
+    assert.equal(bloqueioTentativas.status, 429);
+    assert.match((await bloqueioTentativas.json()).error, /15 minutos/);
+});
 
 test('login da interface abre recuperação com e-mail preenchido sem enviar nova senha ou e-mail automaticamente', async () => {
     const sistema = criarSistema();

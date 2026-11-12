@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendMail: sendMailWithFallback, escapeHtml, getAppUrl } = require('../services/emailService');
 const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
-const { loginLimiter, cadastroLimiter, recuperacaoLimiter } = require('../middleware/rateLimiter');
+const { loginLimiter, cadastroLimiter, cadastroTentativasLimiter, recuperacaoLimiter } = require('../middleware/rateLimiter');
 const { validateLogin, validateCadastro, validatePerfil, validateId, validateRecuperacao } = require('../middleware/validators');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -169,7 +169,7 @@ router.get('/me', verificarAutenticacao, async (req, res) => {
 });
 
 // POST - Cadastro
-router.post('/cadastro', cadastroLimiter, validateCadastro, async (req, res) => {
+router.post('/cadastro', cadastroTentativasLimiter, cadastroLimiter, validateCadastro, async (req, res) => {
     try {
         const { nome_completo, telefone, email, senha } = req.body;
 
