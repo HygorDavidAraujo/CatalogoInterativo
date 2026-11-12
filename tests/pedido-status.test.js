@@ -40,19 +40,21 @@ function pedido(status = 'pendente', id = 42) {
 function criarApi(options = {}) {
     const pedidos = new Map((options.pedidos || [pedido()]).map(row => [row.id, structuredClone(row)]));
     const updates = [];
+    const notificacoes = [];
     const pool = {
         async query(sql, params) {
             if (sql.includes('FROM sessoes_usuario s')) {
                 return { rows: [{ id: 7, email: 'admin@example.com', is_admin: options.admin !== false }] };
             }
-            if (sql.startsWith('UPDATE pedidos SET status')) {
+            if (sql.includes('UPDATE pedidos p SET status')) {
                 updates.push({ sql, params });
                 if (options.falharGravacao) throw new Error('Falha de banco simulada');
                 if (!estadosBanco.has(params[0])) throw new Error('Status recusado pelo schema PostgreSQL');
                 const row = pedidos.get(params[1]);
                 if (!row) return { rows: [], rowCount: 0 };
+                const anterior = row.status;
                 row.status = params[0];
-                return { rows: [{ id: row.id, status: row.status }], rowCount: 1 };
+                return { rows: [{ id: row.id, status: row.status, status_anterior: anterior }], rowCount: 1 };
             }
             if (sql.startsWith('SELECT * FROM pedidos WHERE usuario_id')) {
                 return { rows: [...pedidos.values()].filter(row => row.usuario_id === Number(params[0])).map(row => ({ ...row })) };
@@ -66,6 +68,9 @@ function criarApi(options = {}) {
         process: { env: { JWT_SECRET: secret } }
     });
     const router = carregarModulo('routes/pedidos.js', {
+        '../services/pedidoEmailService': { async notificarPedido(pool, id, evento) {
+            notificacoes.push({ id, status: evento.status });
+        } },
         '../config/database': { pool }, '../middleware/auth': auth
     });
     const token = jwt.sign({ id: 7, isAdmin: true }, secret, {
@@ -87,7 +92,7 @@ function criarApi(options = {}) {
             router.handle(req, res, error => reject(error || new Error('Rota não encontrada')));
         });
     }
-    return { request, pedidos, updates, token };
+    return { request, pedidos, updates, token, notificacoes };
 }
 
 function criarTelas(fetchImpl = async () => { throw new Error('Requisição inesperada'); }, options = {}) {
@@ -137,6 +142,7 @@ for (const status of PedidoStatus.valores) {
         assert.equal(result.body.status, status);
         assert.equal(result.body.pedidoId, 42);
         assert.equal(api.pedidos.get(42).status, status);
+        assert.equal(api.notificacoes.length, status === 'pendente' ? 0 : 1);
         const historico = await api.request('GET', '/cliente/7');
         assert.equal(historico.body[0].status, status);
     });
@@ -176,6 +182,14 @@ test('status inválido ou com tipo incorreto não chega à gravação', async ()
     }
     assert.equal(api.updates.length, 0);
     assert.equal(api.pedidos.get(42).status, 'pendente');
+});
+
+test('repetir o mesmo status não reenvia e-mail ao cliente', async () => {
+    const api = criarApi();
+    await api.request('PUT', '/42/status', { status: 'confirmado' });
+    await api.request('PUT', '/42/status', { status: 'confirmado' });
+    assert.equal(api.notificacoes.length, 1);
+    assert.equal(api.notificacoes[0].status, 'confirmado');
 });
 
 test('API normaliza espaços e caixa de nomes conhecidos', async () => {

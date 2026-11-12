@@ -5,143 +5,16 @@ const { pool } = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-let nodemailer;
-try {
-    nodemailer = require('nodemailer');
-} catch (e) {
-    nodemailer = null;
-}
-let Resend;
-try {
-    ({ Resend } = require('resend'));
-} catch (e) {
-    Resend = null;
-}
+const { sendMail: sendMailWithFallback, escapeHtml, getAppUrl } = require('../services/emailService');
 const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
-const { loginLimiter, cadastroLimiter } = require('../middleware/rateLimiter');
-const { validateLogin, validateCadastro, validatePerfil, validateId } = require('../middleware/validators');
+const { loginLimiter, cadastroLimiter, recuperacaoLimiter } = require('../middleware/rateLimiter');
+const { validateLogin, validateCadastro, validatePerfil, validateId, validateRecuperacao } = require('../middleware/validators');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
     throw new Error('JWT_SECRET não definido. Configure uma chave forte no ambiente.');
 }
-const RESEND_FROM_ADDRESS = process.env.RESEND_FROM || process.env.SMTP_FROM || 'onboarding@resend.dev';
-let resendClient = null;
-
-function getResendClient() {
-    if (!Resend || !process.env.RESEND_API_KEY) return null;
-    if (!resendClient) {
-        resendClient = new Resend(process.env.RESEND_API_KEY);
-    }
-    return resendClient;
-}
-
-async function sendWithResend(mailOptions) {
-    const client = getResendClient();
-    if (!client) {
-        return { success: false, transporterType: 'resend-disabled', error: 'RESEND_API_KEY não configurado' };
-    }
-
-    try {
-        const response = await client.emails.send({
-            from: mailOptions.from || RESEND_FROM_ADDRESS,
-            to: Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to],
-            subject: mailOptions.subject,
-            text: mailOptions.text || '',
-            html: mailOptions.html || ''
-        });
-
-        return { success: true, transporterType: 'resend', info: response };
-    } catch (error) {
-        return { success: false, transporterType: 'resend', error };
-    }
-}
-
-function createGmailSmtpTransporter(port) {
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const secure = port === 465;
-
-    return {
-        transporter: nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port,
-            secure,
-            auth: { user: smtpUser, pass: smtpPass },
-            requireTLS: true,
-            tls: { rejectUnauthorized: false },
-            logger: true,
-            debug: process.env.NODE_ENV !== 'production'
-        }),
-        transporterType: `gmail-smtp:${port}`
-    };
-}
-
-function createSmtpTransporter() {
-    if (!nodemailer) return { transporter: null, transporterType: 'nodemailer-missing' };
-
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : undefined;
-    const smtpSecure = process.env.SMTP_SECURE === 'true';
-
-    if (smtpUser && smtpPass && smtpUser.endsWith('@gmail.com')) {
-        return createGmailSmtpTransporter(smtpPort || 587);
-    }
-
-    if (smtpHost && smtpUser && smtpPass) {
-        return {
-            transporter: nodemailer.createTransport({
-                host: smtpHost,
-                port: smtpPort || 587,
-                secure: smtpSecure,
-                auth: { user: smtpUser, pass: smtpPass },
-                requireTLS: true,
-                tls: { rejectUnauthorized: false },
-                logger: true,
-                debug: process.env.NODE_ENV !== 'production'
-            }),
-            transporterType: 'custom-smtp'
-        };
-    }
-
-    return { transporter: null, transporterType: 'none' };
-}
-
-async function sendMailWithFallback(mailOptions) {
-    if (process.env.RESEND_API_KEY) {
-        const resendResult = await sendWithResend(mailOptions);
-        if (resendResult.success) {
-            return resendResult;
-        }
-        console.warn('Resend falhou, tentando SMTP como fallback:', resendResult.error?.message || resendResult.error);
-    }
-
-    let { transporter, transporterType } = createSmtpTransporter();
-    if (!transporter) return { success: false, transporterType, error: 'SMTP não configurado' };
-
-    try {
-        const info = await transporter.sendMail(mailOptions);
-        return { success: true, transporterType, info };
-    } catch (error) {
-        if (transporterType === 'gmail-smtp:587' && error && error.message && error.message.includes('Connection timeout')) {
-            console.warn('Connection timeout em 587, tentando fallback para 465');
-            const fallback = createGmailSmtpTransporter(465);
-            transporter = fallback.transporter;
-            transporterType = fallback.transporterType;
-            try {
-                const info = await transporter.sendMail(mailOptions);
-                return { success: true, transporterType, info };
-            } catch (fallbackError) {
-                return { success: false, transporterType, error: fallbackError };
-            }
-        }
-        return { success: false, transporterType, error };
-    }
-}
-
 // Rota antiga desativada: versões anteriores do site recebem uma orientação,
 // sem consultar contas nem permitir troca de senha apenas pelo e-mail.
 router.post('/atualizar-senha', (req, res) => {
@@ -575,14 +448,14 @@ router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
     }
 });
 
-module.exports = router;
-
 // ===== Rotas de recuperação de senha =====
-// POST /auth/recuperar - solicita reset de senha (gera token, grava em password_resets e envia e-mail/console)
-router.post('/recuperar', async (req, res) => {
+// POST /auth/recuperar - solicita reset sem revelar contas cadastradas.
+router.post('/recuperar', recuperacaoLimiter, validateRecuperacao, async (req, res) => {
     try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'E-mail é obrigatório' });
+        const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'E-mail válido é obrigatório' });
+
+        const appUrl = getAppUrl();
 
         // Buscar usuário
         const { rows: usuarios } = await pool.query('SELECT id, email, nome_completo FROM usuarios WHERE email = $1', [email]);
@@ -598,30 +471,20 @@ router.post('/recuperar', async (req, res) => {
 
         await pool.query('INSERT INTO password_resets (usuario_id, token, expires_at) VALUES ($1, $2, $3)', [usuario.id, token, expiresAt]);
 
-        const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
         const resetLink = `${appUrl}/reset-senha.html?token=${token}`;
 
-        // Tentar enviar por e-mail se nodemailer disponível
+        // O serviço escolhe o remetente correto para cada provedor.
         const mailOptions = {
-            from: RESEND_FROM_ADDRESS,
             to: usuario.email,
             subject: 'Recuperação de senha - Davini Vinhos',
             text: `Olá ${usuario.nome_completo || ''},\n\nRecebemos uma solicitação para redefinir sua senha. Acesse o link abaixo para criar uma nova senha (válido por 1 hora):\n\n${resetLink}\n\nSe você não solicitou, ignore esta mensagem.`,
-            html: `<p>Olá ${usuario.nome_completo || ''},</p><p>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para criar uma nova senha (válido por 1 hora):</p><p><a href="${resetLink}">${resetLink}</a></p><p>Se você não solicitou, ignore esta mensagem.</p>`
+            html: `<p>Olá ${escapeHtml(usuario.nome_completo)},</p><p>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para criar uma nova senha (válido por 1 hora):</p><p><a href="${escapeHtml(resetLink)}">Redefinir minha senha</a></p><p>Se você não solicitou, ignore esta mensagem.</p>`
         };
 
-        const { success, transporterType, info, error } = await sendMailWithFallback(mailOptions);
-        if (success) {
-            console.log(`✓ [${transporterType}] E-mail de recuperação enviado para ${usuario.email}:`, info.response || info);
-        } else {
-            console.error(`✗ [${transporterType}] Erro ao enviar e-mail de recuperação para ${usuario.email}:`, error.message || error);
+        const result = await sendMailWithFallback(mailOptions);
+        if (!result.success) {
+            console.error('[email] Recuperação não aceita pelo provedor ' + result.transporterType);
         }
-
-        return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
-
-        // Fallback: logar o link no console (útil em desenvolvimento sem SMTP)
-        console.log(`Password reset link for ${usuario.email}: ${resetLink}`);
-
         return res.json({ success: true, message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperar a senha.' });
     } catch (error) {
         console.error('Erro em /auth/recuperar:', error);
@@ -660,91 +523,31 @@ router.post('/recuperar/confirmar', async (req, res) => {
     }
 });
 
-// GET /auth/test-email - Endpoint de diagnóstico SMTP (apenas em desenvolvimento)
-router.get('/test-email', async (req, res) => {
-    try {
-        // Apenas em desenvolvimento
-        if (process.env.NODE_ENV === 'production') {
-            return res.status(403).json({ error: 'Endpoint não disponível em produção' });
-        }
-
-        const results = {
-            timestamp: new Date().toISOString(),
-            environment: process.env.NODE_ENV || 'development',
-            smtp: {
-                user: process.env.SMTP_USER || 'NÃO DEFINIDO',
-                pass: process.env.SMTP_PASS ? '***DEFINIDO***' : 'NÃO DEFINIDO',
-                port: process.env.SMTP_PORT || 'NÃO DEFINIDO',
-                secure: process.env.SMTP_SECURE || 'NÃO DEFINIDO',
-                from: process.env.SMTP_FROM || 'NÃO DEFINIDO',
-                appUrl: process.env.APP_URL || 'NÃO DEFINIDO'
-            },
-            resend: {
-                apiKey: process.env.RESEND_API_KEY ? '***DEFINIDO***' : 'NÃO DEFINIDO',
-                from: process.env.RESEND_FROM || 'NÃO DEFINIDO'
-            },
-            test: {}
-        };
-
-        if (process.env.RESEND_API_KEY) {
-            const resendResult = await sendWithResend({
-                from: RESEND_FROM_ADDRESS,
-                to: process.env.SMTP_USER || 'teste@exemplo.com',
-                subject: 'Teste Resend - Catálogo Interativo',
-                text: `Teste de e-mail enviado em ${new Date().toISOString()}`
-            });
-
-            if (resendResult.success) {
-                results.test.provider = 'resend';
-                results.test.sendMail = '✓ E-mail de teste enviado com sucesso via Resend';
-                results.test.sendMail_response = resendResult.info?.id || JSON.stringify(resendResult.info);
-            } else {
-                results.test.provider = 'resend';
-                results.test.sendMail_error = resendResult.error?.message || String(resendResult.error);
-            }
-        }
-
-        if (!process.env.RESEND_API_KEY || results.test.sendMail_error) {
-            if (!nodemailer) {
-                results.test.error = 'Nodemailer não instalado';
-                return res.json(results);
-            }
-
-            const { transporter, transporterType } = createSmtpTransporter();
-            if (!transporter) {
-                results.test.error = 'SMTP não configurado (faltam SMTP_USER/SMTP_PASS ou SMTP_HOST)';
-                return res.json(results);
-            }
-            results.test.transporterType = transporterType;
-
-            try {
-                await transporter.verify();
-                results.test.verify = '✓ Conexão SMTP verificada com sucesso';
-            } catch (err) {
-                results.test.verify_error = err.message || String(err);
-                return res.json(results);
-            }
-
-            try {
-                const testEmail = process.env.SMTP_USER || process.env.RESEND_FROM || 'teste@exemplo.com';
-                const info = await transporter.sendMail({
-                    from: process.env.SMTP_FROM || `Teste <${testEmail}>`,
-                    to: testEmail,
-                    subject: 'Teste SMTP - Catálogo Interativo',
-                    text: `Teste de e-mail enviado em ${new Date().toISOString()}`
-                });
-                results.test.sendMail = '✓ E-mail de teste enviado com sucesso';
-                results.test.sendMail_response = info.response || String(info);
-            } catch (err) {
-                results.test.sendMail_error = err.message || String(err);
-            }
-        }
-
-        res.json(results);
-    } catch (error) {
-        console.error('Erro em /auth/test-email:', error);
-        res.status(500).json({ error: 'Erro ao testar e-mail', details: error.message });
+// GET apenas diagnostica. Envio exige POST autenticado de administrador.
+router.get('/test-email', verificarAdminAuth, (req, res) => {
+    let appUrlValida = true;
+    try { getAppUrl(); } catch { appUrlValida = false; }
+    res.json({
+        resendConfigurado: Boolean(process.env.RESEND_API_KEY),
+        resendRemetenteTeste: !process.env.RESEND_FROM || /@resend\.dev/i.test(process.env.RESEND_FROM),
+        smtpConfigurado: Boolean(process.env.SMTP_USER && process.env.SMTP_PASS &&
+            (process.env.SMTP_HOST || /@(gmail|googlemail)\.com$/i.test(process.env.SMTP_USER))),
+        appUrlValida,
+        destinatarioLojaExplicito: Boolean(process.env.ORDER_NOTIFICATION_EMAIL)
+    });
+});
+router.post('/test-email', verificarAdminAuth, async (req, res) => {
+    if (typeof req.body.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.email)) {
+        return res.status(400).json({ error: 'Informe um e-mail de destino válido' });
     }
+    const result = await sendMailWithFallback({
+        to: req.body.email.trim(), subject: 'Teste de e-mail - Davini Vinhos',
+        text: 'Este é um teste de envio de e-mail do catálogo Davini Vinhos.'
+    });
+    return res.status(result.success ? 200 : 502).json({
+        success: result.success, provider: result.transporterType,
+        message: result.success ? 'E-mail aceito pelo provedor' : 'Falha no envio. Verifique a configuração dos provedores.'
+    });
 });
 
 module.exports = router;

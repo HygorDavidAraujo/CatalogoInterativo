@@ -5,6 +5,7 @@ const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/aut
 const { validatePedido, validatePedidoStatus, validateId, validateClienteId } = require('../middleware/validators');
 const { calcularPedido, ErroPedido } = require('../services/pedidoService');
 const PedidoStatus = require('../js/pedido-status');
+const { notificarPedido } = require('../services/pedidoEmailService');
 
 // GET - Listar pedidos de um cliente
 router.get('/cliente/:clienteId', verificarAutenticacao, validateClienteId, async (req, res) => {
@@ -82,6 +83,8 @@ router.post('/', verificarAutenticacao, validatePedido, async (req, res) => {
             client.release();
         }
 
+        await notificarPedido(pool, pedidoId, { novo: true });
+
         res.status(201).json({ 
             success: true, 
             pedidoId,
@@ -131,7 +134,11 @@ router.put('/:id/status', verificarAdminAuth, validateId, validatePedidoStatus, 
         const { status } = req.body;
 
         const { rows } = await pool.query(
-            'UPDATE pedidos SET status = $1 WHERE id = $2 RETURNING id, status',
+            `WITH anterior AS (
+                SELECT id, status FROM pedidos WHERE id = $2 FOR UPDATE
+            )
+            UPDATE pedidos p SET status = $1 FROM anterior a WHERE p.id = a.id
+            RETURNING p.id, p.status, a.status AS status_anterior`,
             [status, id]
         );
 
@@ -139,6 +146,9 @@ router.put('/:id/status', verificarAdminAuth, validateId, validatePedidoStatus, 
             return res.status(404).json({ error: 'Pedido não encontrado' });
         }
 
+        if (PedidoStatus.normalizar(rows[0].status_anterior) !== rows[0].status) {
+            await notificarPedido(pool, rows[0].id, { status: rows[0].status });
+        }
         res.json({ success: true, message: 'Status atualizado', pedidoId: rows[0].id, status: rows[0].status });
     } catch (error) {
         console.error('Erro ao atualizar status:', error);

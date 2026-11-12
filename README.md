@@ -255,6 +255,56 @@ banco e envio de e-mail simulados, sem acessar o Neon ou enviar mensagens reais.
 - Faça backups protegidos e teste a restauração.
 - Depois de remover segredos do diretório de trabalho, avalie também a limpeza coordenada do histórico Git.
 
+## Envio de e-mails
+
+O envio é centralizado em `services/emailService.js`: tenta primeiro a API do
+Resend e, em caso de erro, tenta SMTP (Gmail ou outro provedor). O Gmail usa SMTP
+com senha de aplicativo, sem integração com a API do Google. Uma resposta do
+Resend com `error` ou sem ID não é considerada sucesso.
+
+| Evento | Destinatário |
+| --- | --- |
+| Recuperação de senha | Titular da conta, link válido por uma hora |
+| Novo pedido confirmado no banco | Cliente e loja, em mensagens separadas |
+| Mudança de status, incluindo cancelamento | Cliente |
+
+Salvar novamente o mesmo status não reenvia a mensagem. Notificações de pedidos
+são aguardadas antes da resposta HTTP, inclusive em ambiente serverless, e somente
+começam após a confirmação da transação. Os valores vêm do pedido gravado.
+
+Configure as variáveis de `.env.example` também na hospedagem:
+
+- `APP_URL`: endereço público HTTPS do catálogo, sem caminho de página. Em produção,
+  localhost é recusado. Na ausência da variável, utiliza
+  `VERCEL_PROJECT_PRODUCTION_URL`, se disponível.
+- `RESEND_API_KEY` e `RESEND_FROM`: chave e remetente de domínio verificado. O domínio
+  `resend.dev` é destinado a testes e restringe destinatários. Consulte a
+  [documentação do Resend](https://resend.com/docs/send-with-nodejs).
+- `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_PORT`: credenciais e remetente do
+  fallback. Gmail exige senha de aplicativo; use 465 para TLS ou 587 para STARTTLS.
+  Para outros provedores, configure também `SMTP_HOST`. O remetente SMTP deve ser
+  autorizado pelo provedor e é independente de `RESEND_FROM`. Não omita as
+  dependências opcionais na instalação se precisar do Nodemailer.
+- `ORDER_NOTIFICATION_EMAIL`: e-mails da loja separados por vírgula. Sem essa
+  variável, usa o e-mail das configurações do catálogo; se vazio, usa as contas
+  administrativas cadastradas.
+
+Administradores autenticados podem consultar `GET /api/auth/test-email` para
+diagnosticar a presença da configuração sem enviar mensagens. Para um envio real,
+use `POST /api/auth/test-email` com `Authorization: Bearer <token-do-admin>` e
+corpo JSON `{"email":"destinatario@dominio.com"}`. Sucesso significa aceitação pelo
+provedor; confirme também o recebimento, a pasta de spam e os registros do provedor.
+
+`npm test` inclui testes com banco e provedores simulados para recuperação,
+fallback, destinatários, conteúdo, permissões e eventos dos pedidos. Esses testes
+não comprovam credenciais, DNS, acesso SMTP da hospedagem ou entrega real.
+
+Falhas dos dois provedores ficam nos logs com prefixo `[email]`, sem conteúdo dos
+e-mails ou links de recuperação. O pedido permanece gravado; não há fila persistente
+de reenvio automático após a falha de ambos os provedores. Na recuperação, a resposta
+continua genérica para não revelar contas cadastradas; o cliente pode solicitar
+outro link. Há limite de cinco solicitações por IP a cada 15 minutos.
+
 ## 🎯 Melhorias Futuras
 
 - ✅ Sistema completo de backend com Node.js

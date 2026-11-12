@@ -19,6 +19,14 @@ const cadastroLimiter = rateLimit({
     legacyHeaders: false
 });
 
+const recuperacaoLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { error: 'Muitas solicitações de recuperação. Tente novamente em 15 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 // Rate limiter para APIs gerais (previne DDoS)
 const apiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minuto
@@ -40,6 +48,7 @@ const uploadLimiter = rateLimit({
 module.exports = {
     loginLimiter,
     cadastroLimiter,
+    recuperacaoLimiter,
     apiLimiter,
     uploadLimiter
 };

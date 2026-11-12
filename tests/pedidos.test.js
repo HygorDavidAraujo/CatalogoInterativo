@@ -62,11 +62,17 @@ function criarBanco(options = {}) {
 
 async function enviarPedido(body, options = {}) {
     const banco = criarBanco(options);
+    const notificacoes = [];
     const auth = carregarModulo('middleware/auth.js', {
         '../config/database': { pool: banco.pool }
     }, { process: { env: { JWT_SECRET: secret } } });
     const router = carregarModulo('routes/pedidos.js', {
         '../config/database': { pool: banco.pool },
+        '../services/pedidoEmailService': { async notificarPedido(pool, id, evento) {
+            assert.equal(banco.queries.at(-1).sql, 'COMMIT');
+            assert.equal(banco.client.released, true);
+            notificacoes.push({ id, evento });
+        } },
         '../middleware/auth': auth
     });
     const token = options.semToken ? null : jwt.sign({ id: 7, isAdmin: false }, secret, {
@@ -89,6 +95,7 @@ async function enviarPedido(body, options = {}) {
     return {
         ...JSON.parse(JSON.stringify(response)),
         ...banco,
+        notificacoes,
         queries: JSON.parse(JSON.stringify(banco.queries))
     };
 }
@@ -109,6 +116,7 @@ test('pedido usa nome, preço e total do banco mesmo com valores adulterados no 
         [42, 1, 'Merlot do banco', 2, 100, 200]);
     assert.equal(result.queries.at(-1).sql, 'COMMIT');
     assert.equal(result.client.released, true);
+    assert.deepEqual(result.notificacoes.map(n => ({ id: n.id, novo: n.evento.novo })), [{ id: 42, novo: true }]);
 });
 
 test('aceita apenas IDs e quantidades e soma centavos sem erro de ponto flutuante', async () => {
@@ -163,6 +171,7 @@ for (const [nome, options] of [
         assert.equal(result.queries.some(q => q.sql.startsWith('INSERT')), false);
         assert.equal(result.queries.at(-1).sql, 'ROLLBACK');
         assert.equal(result.client.released, true);
+        assert.equal(result.notificacoes.length, 0);
     });
 }
 

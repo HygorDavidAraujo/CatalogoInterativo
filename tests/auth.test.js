@@ -102,21 +102,27 @@ function criarSistema(options = {}) {
     };
     const env = {
         JWT_SECRET: secret, NODE_ENV: 'production', APP_URL: 'https://catalogo.example.com',
-        RESEND_API_KEY: 'chave-simulada', RESEND_FROM: 'loja@example.com'
+        RESEND_API_KEY: 'chave-simulada', RESEND_FROM: 'loja@example.com', ...options.env
     };
     const auth = carregarModulo('middleware/auth.js', { '../config/database': { pool } }, { process: { env } });
     class ResendSimulado {
         constructor() {
             this.emails = { send: async mail => {
                 emails.push(mail);
+                if (options.resendError) return { data: null, error: { name: 'validation_error', message: 'Recusado' } };
                 return { data: { id: 'email-simulado' }, error: null };
             } };
         }
     }
     const passthrough = (req, res, next) => next();
+    const emailService = carregarModulo('services/emailService.js', {
+        resend: { Resend: ResendSimulado },
+        nodemailer: { createTransport() { throw new Error('SMTP real não deve ser acessado nos testes'); } }
+    }, { process: { env }, URL, AbortSignal });
     const router = carregarModulo('routes/auth.js', {
+        '../services/emailService': emailService,
         '../config/database': { pool }, '../middleware/auth': auth,
-        '../middleware/rateLimiter': { loginLimiter: passthrough, cadastroLimiter: passthrough },
+        '../middleware/rateLimiter': { loginLimiter: passthrough, cadastroLimiter: passthrough, recuperacaoLimiter: passthrough },
         resend: { Resend: ResendSimulado },
         nodemailer: { createTransport() { throw new Error('SMTP real não deve ser acessado nos testes'); } }
     }, { process: { env } });
@@ -232,6 +238,50 @@ test('token inválido, expirado ou ausente não altera a senha', async () => {
     }
     assert.equal(sistema.usuario.senha, 'senha-antiga');
     assert.equal(sistema.queries.some(q => q.sql.startsWith('UPDATE usuarios')), false);
+});
+
+test('diagnóstico e envio de teste exigem administrador autenticado', async () => {
+    const sistema = criarSistema({ usuario: { senha: await bcrypt.hash('senha-valida', 10) } });
+    assert.equal((await sistema.get('/test-email')).status, 401);
+    assert.equal((await sistema.post('/test-email', { email: 'teste@example.com' })).status, 401);
+    const login = await sistema.post('/login', { email: sistema.usuario.email, senha: 'senha-valida' });
+    assert.equal((await sistema.get('/test-email', login.body.token)).status, 403);
+    assert.equal((await sistema.post('/test-email', { email: 'teste@example.com' }, login.body.token)).status, 403);
+    assert.equal(sistema.emails.length, 0);
+});
+
+test('administrador diagnostica sem enviar e testa com destinatário explícito', async () => {
+    const sistema = criarSistema({ usuario: { is_admin: true, senha: await bcrypt.hash('senha-valida', 10) } });
+    const login = await sistema.post('/login', { email: sistema.usuario.email, senha: 'senha-valida' });
+    const token = login.body.token;
+    const diagnostico = await sistema.get('/test-email', token);
+    assert.equal(diagnostico.status, 200);
+    assert.equal(diagnostico.body.resendConfigurado, true);
+    assert.ok(!JSON.stringify(diagnostico.body).includes('chave-simulada'));
+    assert.equal(sistema.emails.length, 0);
+    assert.equal((await sistema.post('/test-email', {}, token)).status, 400);
+    const enviado = await sistema.post('/test-email', { email: 'teste@example.com' }, token);
+    assert.equal(enviado.status, 200);
+    assert.equal(enviado.body.provider, 'resend');
+    assert.equal(sistema.emails[0].to[0], 'teste@example.com');
+});
+
+test('falha de provedor na recuperação mantém resposta genérica e não retorna token', async () => {
+    const sistema = criarSistema({ resendError: true });
+    const existente = await sistema.post('/recuperar', { email: sistema.usuario.email });
+    const ausente = await sistema.post('/recuperar', { email: 'outro@example.com' });
+    assert.deepEqual(existente, ausente);
+    assert.equal(existente.body.token, undefined);
+});
+
+test('recuperação normaliza e-mail igual ao cadastro e rejeita entradas inválidas', async () => {
+    const sistema = criarSistema({ usuario: { email: 'clienteteste@gmail.com' } });
+    const result = await sistema.post('/recuperar', { email: ' Cliente.Teste+loja@gmail.com ' });
+    assert.equal(result.status, 200);
+    assert.equal(sistema.emails.length, 1);
+    for (const email of ['', 'invalido', {}, ['cliente@example.com']]) {
+        assert.equal((await sistema.post('/recuperar', { email })).status, 400);
+    }
 });
 
 test('recuperação não revela se o e-mail está cadastrado nem devolve senha ou token', async () => {

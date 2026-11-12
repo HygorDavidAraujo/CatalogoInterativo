@@ -26,6 +26,11 @@ const validateLogin = [
 ];
 
 // Validações para cadastro
+const validateRecuperacao = [
+    body('email').trim().isEmail().withMessage('Email inválido').normalizeEmail(),
+    handleValidationErrors
+];
+
 const validateCadastro = [
     body('nome_completo')
         .trim()
@@ -155,6 +160,7 @@ const validateClienteId = [
 
 module.exports = {
     validateLogin,
+    validateRecuperacao,
     validateCadastro,
     validateVinho,
     validatePedido,
