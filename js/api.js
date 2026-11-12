@@ -541,7 +541,7 @@ async function atualizarInformacoesContato() {
 
     if (emailElement) {
         console.log('Atualizando email de:', emailElement.textContent, 'para:', config.email);
-        emailElement.textContent = config.email || 'contato@davinivinhos.com.br';
+        emailElement.textContent = config.email || 'davinivinhosfinos@gmail.com';
     }
 
     if (enderecoElement) {

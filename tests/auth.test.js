@@ -32,6 +32,7 @@ function criarSistema(options = {}) {
     const queries = [];
     const emails = [];
     const sessoes = new Map();
+    let cadastrado = !options.cadastro;
     let resets = structuredClone(options.resets || []);
     const pool = {
         async query(sql, params) {
@@ -56,7 +57,15 @@ function criarSistema(options = {}) {
                 return { rows: [] };
             }
             if (sql.includes('FROM usuarios WHERE email = $1')) {
-                return { rows: params[0] === usuario.email ? [{ ...usuario }] : [] };
+                return { rows: cadastrado && params[0] === usuario.email ? [{ ...usuario }] : [] };
+            }
+            if (sql.startsWith('INSERT INTO usuarios')) {
+                if (options.falharCadastro) throw new Error('Falha ao gravar cadastro');
+                Object.assign(usuario, {
+                    nome_completo: params[0], telefone: params[1], email: params[2], senha: params[3], is_admin: false
+                });
+                cadastrado = true;
+                return { rows: [{ id: usuario.id }], rowCount: 1 };
             }
             if (sql.startsWith('INSERT INTO password_resets')) {
                 resets.push({ id: resets.length + 1, usuario_id: params[0], token: params[1], expires_at: params[2] });
@@ -238,6 +247,63 @@ test('token inválido, expirado ou ausente não altera a senha', async () => {
     }
     assert.equal(sistema.usuario.senha, 'senha-antiga');
     assert.equal(sistema.queries.some(q => q.sql.startsWith('UPDATE usuarios')), false);
+});
+
+test('cadastro envia boas-vindas com dados e acesso após gravar a conta com senha protegida', async () => {
+    const sistema = criarSistema({ cadastro: true });
+    const senha = 'senha-exclusiva-cadastro-123';
+    const result = await sistema.post('/cadastro', {
+        nome_completo: 'Cliente Novo', telefone: '(11)99999-9999',
+        email: 'cliente@example.com', senha, is_admin: true
+    });
+    assert.equal(result.status, 201);
+    assert.equal(result.body.usuario.isAdmin, false);
+    assert.equal(sistema.emails.length, 1);
+    const email = sistema.emails[0];
+    assert.deepEqual(Array.from(email.to), ['cliente@example.com']);
+    for (const campo of ['Cliente Novo', 'cliente@example.com', '(11)99999-9999']) {
+        assert.ok(email.text.includes(campo));
+        assert.ok(email.html.includes(campo));
+    }
+    assert.match(email.subject, /Cadastro realizado com sucesso/);
+    assert.ok(email.text.includes('https://catalogo.example.com/index.html'));
+    assert.ok(email.html.includes('href="https://catalogo.example.com/index.html"'));
+    assert.match(email.text, /Esqueci minha senha/);
+    assert.ok(!JSON.stringify(email).includes(senha));
+    assert.ok(!JSON.stringify(email).includes(sistema.usuario.senha));
+    assert.ok(!JSON.stringify(result.body).includes(senha));
+    assert.ok(await bcrypt.compare(senha, sistema.usuario.senha));
+});
+
+test('cadastro duplicado ou inválido não dispara boas-vindas', async () => {
+    const sistema = criarSistema();
+    const dados = { nome_completo: 'Cliente Novo', telefone: '(11)99999-9999', email: sistema.usuario.email, senha: 'senha-valida' };
+    assert.equal((await sistema.post('/cadastro', dados)).status, 400);
+    assert.equal((await sistema.post('/cadastro', { ...dados, email: 'invalido' })).status, 400);
+    assert.equal(sistema.emails.length, 0);
+    assert.equal(sistema.queries.some(q => q.sql.startsWith('INSERT INTO usuarios')), false);
+});
+
+test('falha ao gravar cadastro não envia e-mail de sucesso', async () => {
+    const sistema = criarSistema({ cadastro: true, falharCadastro: true });
+    const result = await sistema.post('/cadastro', {
+        nome_completo: 'Cliente Novo', telefone: '(11)99999-9999', email: 'cliente@example.com', senha: 'senha-valida'
+    });
+    assert.equal(result.status, 500);
+    assert.equal(sistema.emails.length, 0);
+});
+
+test('falha de envio ou URL inválida preserva o cadastro e permite login', async () => {
+    for (const options of [{ resendError: true }, { env: { APP_URL: 'http://localhost:3000' } }]) {
+        const sistema = criarSistema({ cadastro: true, ...options });
+        const dados = { nome_completo: 'Cliente Novo', telefone: '(11)99999-9999', email: 'cliente@example.com', senha: 'senha-valida' };
+        const cadastro = await sistema.post('/cadastro', dados);
+        assert.equal(cadastro.status, 201);
+        assert.equal(cadastro.body.success, true);
+        const login = await sistema.post('/login', { email: dados.email, senha: dados.senha });
+        assert.equal(login.status, 200);
+        assert.equal(login.body.success, true);
+    }
 });
 
 test('diagnóstico e envio de teste exigem administrador autenticado', async () => {

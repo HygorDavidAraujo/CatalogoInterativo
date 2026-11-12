@@ -264,6 +264,7 @@ Resend com `error` ou sem ID não é considerada sucesso.
 
 | Evento | Destinatário |
 | --- | --- |
+| Cadastro de nova conta | Cliente: boas-vindas, nome, e-mail, telefone e link do catálogo |
 | Recuperação de senha | Titular da conta, link válido por uma hora |
 | Novo pedido confirmado no banco | Cliente e loja, em mensagens separadas |
 | Mudança de status, incluindo cancelamento | Cliente |
@@ -271,6 +272,13 @@ Resend com `error` ou sem ID não é considerada sucesso.
 Salvar novamente o mesmo status não reenvia a mensagem. Notificações de pedidos
 são aguardadas antes da resposta HTTP, inclusive em ambiente serverless, e somente
 começam após a confirmação da transação. Os valores vêm do pedido gravado.
+
+O e-mail de cadastro é enviado depois de gravar a conta e usa os mesmos provedores
+e fallback. Inclui orientação para recuperar o acesso em "Esqueci minha senha";
+a senha e seu hash nunca entram na mensagem. Uma falha de envio preserva a conta
+criada e não bloqueia o login. Essa mensagem é uma confirmação do cadastro realizado,
+sem exigir ativação da conta por link. O envio vale para novos cadastros; não há
+disparo retroativo para contas existentes.
 
 Configure as variáveis de `.env.example` também na hospedagem:
 

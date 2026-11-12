@@ -219,6 +219,25 @@ router.post('/cadastro', cadastroLimiter, validateCadastro, async (req, res) => 
             [result.rows[0].id]
         );
 
+        // A conta já foi gravada. Falha na notificação não deve induzir novo cadastro.
+        try {
+            const cliente = novoUsuario[0];
+            const link = `${getAppUrl()}/index.html`;
+            const dados = `Nome: ${cliente.nome_completo}\nE-mail de acesso: ${cliente.email}\nTelefone: ${cliente.telefone}`;
+            const orientacao = 'Para entrar, use seu e-mail e a senha escolhida no cadastro. Se esquecer a senha, clique em "Entrar" e depois em "Esqueci minha senha" para receber um link de redefinição.';
+            const envio = await sendMailWithFallback({
+                to: cliente.email,
+                subject: 'Cadastro realizado com sucesso - Davini Vinhos',
+                text: `Olá ${cliente.nome_completo},\n\nBem-vindo à Davini Vinhos! Seu cadastro foi realizado com sucesso.\n\n${dados}\n\nAcesse o catálogo: ${link}\n\n${orientacao}`,
+                html: `<p>Olá ${escapeHtml(cliente.nome_completo)},</p><p>Bem-vindo à Davini Vinhos! Seu cadastro foi realizado com sucesso.</p><p><strong>Seus dados de cadastro:</strong><br>Nome: ${escapeHtml(cliente.nome_completo)}<br>E-mail de acesso: ${escapeHtml(cliente.email)}<br>Telefone: ${escapeHtml(cliente.telefone)}</p><p><a href="${escapeHtml(link)}">Acessar o catálogo</a></p><p>${escapeHtml(orientacao)}</p>`
+            });
+            if (!envio.success) {
+                console.error(`[email] Cadastro: notificação não aceita pelo provedor ${envio.transporterType}`);
+            }
+        } catch (error) {
+            console.error(`[email] Cadastro: falha ao preparar notificação (${error.code || error.name})`);
+        }
+
         res.status(201).json({
             success: true,
             usuario: {
