@@ -220,6 +220,7 @@ router.post('/cadastro', cadastroTentativasLimiter, cadastroLimiter, validateCad
         );
 
         // A conta já foi gravada. Falha na notificação não deve induzir novo cadastro.
+        let emailEnviado = false;
         try {
             const cliente = novoUsuario[0];
             const link = `${getAppUrl()}/index.html`;
@@ -231,7 +232,8 @@ router.post('/cadastro', cadastroTentativasLimiter, cadastroLimiter, validateCad
                 text: `Olá ${cliente.nome_completo},\n\nBem-vindo à Davini Vinhos! Seu cadastro foi realizado com sucesso.\n\n${dados}\n\nAcesse o catálogo: ${link}\n\n${orientacao}`,
                 html: `<p>Olá ${escapeHtml(cliente.nome_completo)},</p><p>Bem-vindo à Davini Vinhos! Seu cadastro foi realizado com sucesso.</p><p><strong>Seus dados de cadastro:</strong><br>Nome: ${escapeHtml(cliente.nome_completo)}<br>E-mail de acesso: ${escapeHtml(cliente.email)}<br>Telefone: ${escapeHtml(cliente.telefone)}</p><p><a href="${escapeHtml(link)}">Acessar o catálogo</a></p><p>${escapeHtml(orientacao)}</p>`
             });
-            if (!envio.success) {
+            emailEnviado = envio.success === true;
+            if (!emailEnviado) {
                 console.error(`[email] Cadastro: notificação não aceita pelo provedor ${envio.transporterType}`);
             }
         } catch (error) {
@@ -240,6 +242,7 @@ router.post('/cadastro', cadastroTentativasLimiter, cadastroLimiter, validateCad
 
         res.status(201).json({
             success: true,
+            emailEnviado,
             usuario: {
                 id: novoUsuario[0].id,
                 nome: novoUsuario[0].nome_completo,

@@ -272,8 +272,8 @@ class AuthManager {
                 throw new Error(mensagem);
             }
 
-            this.salvarUsuarioSessao(data.usuario);
-            return { success: true };
+            // Cadastro não emite sessão. O cliente entra pelo formulário de login.
+            return { success: true, email: data.usuario?.email || dados.email, emailEnviado: data.emailEnviado };
         } catch (error) {
             return { success: false, error: error.message };
         }
@@ -340,10 +340,12 @@ function limparFormsAuth() {
     const formCadastro = document.getElementById('form-cadastro');
     const loginErro = document.getElementById('login-erro');
     const cadastroErro = document.getElementById('cadastro-erro');
+    const cadastroSucesso = document.getElementById('cadastro-sucesso');
     if (formLogin) formLogin.reset();
     if (formCadastro) formCadastro.reset();
     if (loginErro) loginErro.style.display = 'none';
     if (cadastroErro) cadastroErro.style.display = 'none';
+    if (cadastroSucesso) cadastroSucesso.style.display = 'none';
 }
 
 function mostrarErro(elementId, mensagem) {
@@ -442,8 +444,23 @@ function configurarFormCadastro() {
             });
 
             if (resultado.success) {
-                fecharModalAuth();
-                location.reload(); // Recarregar para atualizar interface
+                mostrarFormLogin();
+                document.getElementById('login-email').value = resultado.email;
+                document.getElementById('login-senha').value = '';
+                const sucesso = document.getElementById('cadastro-sucesso');
+                const confirmacao = resultado.emailEnviado === true
+                    ? `Enviamos uma mensagem para ${resultado.email}. Se não a encontrar, verifique a caixa de spam ou lixo eletrônico.`
+                    : resultado.emailEnviado === false
+                        ? 'Não foi possível enviar o e-mail de boas-vindas neste momento.'
+                        : 'Confira seu e-mail, incluindo a caixa de spam ou lixo eletrônico.';
+                const mensagem = `Cadastro realizado com sucesso! ${confirmacao} Você já pode entrar com seu e-mail e senha.`;
+                if (sucesso) {
+                    sucesso.textContent = mensagem;
+                    sucesso.style.display = 'block';
+                    sucesso.focus();
+                } else {
+                    alert(mensagem);
+                }
             } else {
                 mostrarErro('cadastro-erro', resultado.error);
             }

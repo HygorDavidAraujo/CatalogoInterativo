@@ -258,6 +258,7 @@ test('cadastro envia boas-vindas com dados e acesso após gravar a conta com sen
     });
     assert.equal(result.status, 201);
     assert.equal(result.body.usuario.isAdmin, false);
+    assert.equal(result.body.emailEnviado, true);
     assert.equal(sistema.emails.length, 1);
     const email = sistema.emails[0];
     assert.deepEqual(Array.from(email.to), ['cliente@example.com']);
@@ -300,6 +301,7 @@ test('falha de envio ou URL inválida preserva o cadastro e permite login', asyn
         const cadastro = await sistema.post('/cadastro', dados);
         assert.equal(cadastro.status, 201);
         assert.equal(cadastro.body.success, true);
+        assert.equal(cadastro.body.emailEnviado, false);
         const login = await sistema.post('/login', { email: dados.email, senha: dados.senha });
         assert.equal(login.status, 200);
         assert.equal(login.body.success, true);
@@ -369,7 +371,8 @@ function criarPagina(fetchImpl, semModal = false) {
         'modal-recuperar-senha', 'recuperar-email', 'recuperar-senha-erro',
         'recuperar-senha-sucesso', 'form-recuperar-senha', 'esqueci-senha-link',
         'form-cadastro', 'cadastro-nome', 'cadastro-telefone', 'cadastro-email',
-        'cadastro-senha', 'cadastro-confirmar-senha', 'cadastro-erro'];
+        'cadastro-senha', 'cadastro-confirmar-senha', 'cadastro-erro', 'cadastro-sucesso',
+        'form-login-container', 'form-cadastro-container'];
     const elements = Object.fromEntries(ids.map(id => [id, {
         value: '', textContent: '', style: { display: 'none' }, handlers: {}, dataset: {},
         querySelector() { return this.botao || null; },
@@ -478,7 +481,46 @@ test('formulário de cadastro válido chega à API, grava conta e envia boas-vin
     preencherCadastro(pagina);
     await pagina.elements['form-cadastro'].handlers.submit({ preventDefault() {} });
     assert.equal(sistema.emails.length, 1);
-    assert.equal(pagina.getRecarregamentos(), 1);
+    assert.equal(pagina.getRecarregamentos(), 0);
+    const sucesso = pagina.elements['cadastro-sucesso'];
+    assert.equal(sucesso.style.display, 'block');
+    assert.match(sucesso.textContent, /Enviamos uma mensagem para cliente@example.com/);
+    assert.match(sucesso.textContent, /spam ou lixo eletrônico/);
+    assert.equal(sucesso.focused, true);
+    assert.equal(pagina.elements['form-login-container'].style.display, 'block');
+    assert.equal(pagina.elements['form-cadastro-container'].style.display, 'none');
+    assert.equal(pagina.elements['login-email'].value, 'cliente@example.com');
+    assert.equal(pagina.context.authManager.usuarioLogado, null);
+    assert.equal(pagina.context.sessionStorage.getItem('usuario'), null);
+    pagina.context.fecharModalAuth();
+    assert.equal(sucesso.style.display, 'none');
+});
+
+test('cadastro com falha de envio avisa que conta existe sem afirmar que e-mail foi enviado', async () => {
+    const sistema = criarSistema({ cadastro: true, resendError: true });
+    const pagina = criarPagina(async (url, options) => {
+        const result = await sistema.post('/cadastro', JSON.parse(options.body));
+        return { ok: result.status === 201, json: async () => result.body };
+    });
+    preencherCadastro(pagina);
+    await pagina.elements['form-cadastro'].handlers.submit({ preventDefault() {} });
+    const mensagem = pagina.elements['cadastro-sucesso'].textContent;
+    assert.match(mensagem, /Cadastro realizado com sucesso/);
+    assert.match(mensagem, /Não foi possível enviar/);
+    assert.ok(!mensagem.includes('Enviamos uma mensagem'));
+    assert.match(mensagem, /Você já pode entrar/);
+    assert.equal(pagina.getRecarregamentos(), 0);
+});
+
+test('cadastro mostra orientação genérica quando API anterior não informa status do envio', async () => {
+    const pagina = criarPagina(async () => ({ ok: true, json: async () => ({
+        success: true, usuario: { email: 'cliente@example.com' }
+    }) }));
+    preencherCadastro(pagina);
+    await pagina.elements['form-cadastro'].handlers.submit({ preventDefault() {} });
+    const mensagem = pagina.elements['cadastro-sucesso'].textContent;
+    assert.match(mensagem, /spam ou lixo eletrônico/);
+    assert.ok(!mensagem.includes('Enviamos uma mensagem'));
 });
 
 test('limite de cadastros permite corrigir erros, limita contas criadas e mantém proteção contra abuso', async t => {

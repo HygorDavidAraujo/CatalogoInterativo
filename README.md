@@ -280,6 +280,12 @@ criada e não bloqueia o login. Essa mensagem é uma confirmação do cadastro r
 sem exigir ativação da conta por link. O envio vale para novos cadastros; não há
 disparo retroativo para contas existentes.
 
+Após o cadastro, o formulário de login mostra uma confirmação persistente com o
+endereço de destino e orientação para verificar spam ou lixo eletrônico. A API
+informa `emailEnviado` conforme a aceitação pelo provedor. Se o envio falhar, a tela
+informa a falha e confirma que a conta já pode ser acessada. O aviso não afirma que
+a mensagem chegou à caixa de entrada. Cadastro não inicia uma sessão automaticamente.
+
 O cadastro exige senha de 6 a 100 caracteres com pelo menos uma letra minúscula.
 A tela apresenta os motivos da validação e evita dois envios simultâneos. Por IP,
 há limite de 3 contas criadas por hora e 20 tentativas a cada 15 minutos; requisições
