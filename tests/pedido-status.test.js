@@ -102,7 +102,7 @@ function criarTelas(fetchImpl = async () => { throw new Error('Requisição ines
     };
     const mensagens = [];
     const context = {
-        window: { authManager: { obterToken: () => 'token-simulado' } },
+        window: { RenderSeguro: require('../js/render-seguro'), authManager: { obterToken: () => 'token-simulado' } },
         document: {
             readyState: 'loading', addEventListener() {},
             querySelector: selector => selector.startsWith('.pedido-status-select[') ? select : null

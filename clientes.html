@@ -20,15 +20,8 @@
     <meta name="mobile-web-app-capable" content="yes">
 
     <!-- Registro do Service Worker -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(() => console.log('Service Worker registrado'))
-                    .catch(err => console.error('SW registro falhou:', err));
-            });
-        }
-    </script>
+    <script src="js/render-seguro.js"></script>
+    <script src="js/pwa.js"></script>
 </head>
 <body class="admin-body">
     <!-- Skip to content para acessibilidade -->
@@ -73,7 +66,7 @@
                                placeholder="Buscar por nome, email ou telefone..."
                                class="input-filtro">
                     </div>
-                    <button class="btn btn-secondary" onclick="limparFiltros()">
+                    <button class="btn btn-secondary" data-clientes-limpar>
                         <i class="fas fa-times"></i> Limpar
                     </button>
                 </div>
@@ -108,7 +101,7 @@
     <!-- Modal Detalhes Cliente -->
     <div id="modal-cliente" class="modal">
         <div class="modal-content modal-cliente-detalhes">
-            <span class="close" onclick="fecharModalCliente()">&times;</span>
+            <span class="close" data-fechar-cliente>&times;</span>
             <div class="modal-cliente-header">
                 <h2><i class="fas fa-user-circle"></i> Detalhes do Cliente</h2>
             </div>
@@ -121,7 +114,7 @@
     <!-- Modal Editar Cliente -->
     <div id="modal-editar-cliente" class="modal">
         <div class="modal-content modal-editar-cliente">
-            <span class="close" onclick="fecharModalEditar()">&times;</span>
+            <span class="close" data-fechar-editar>&times;</span>
             <div class="modal-header">
                 <h2><i class="fas fa-user-edit"></i> Editar Cliente</h2>
             </div>
@@ -258,25 +251,11 @@
                                 <option value="">Carregando benefícios...</option>
                             </select>
                         </div>
-                        <script>
-                        // Bloquear edição VIP para não-admins
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const usuarioSalvo = sessionStorage.getItem('usuario');
-                            let isAdmin = false;
-                            if (usuarioSalvo) {
-                                const usuario = JSON.parse(usuarioSalvo);
-                                isAdmin = usuario.isAdmin === true;
-                            }
-                            if (!isAdmin) {
-                                document.getElementById('edit-is-vip').disabled = true;
-                                document.getElementById('edit-vip-tipo').disabled = true;
-                            }
-                        });
-                        </script>
+                        <script src="js/clientes-vip.js"></script>
                     </div>
 
                     <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" onclick="fecharModalEditar()">
+                        <button type="button" class="btn btn-secondary" data-fechar-editar>
                             <i class="fas fa-times"></i> Cancelar
                         </button>
                         <button type="submit" class="btn btn-primary">
@@ -296,19 +275,6 @@
     <script src="js/vip-manager.js"></script>
     <script src="js/pedido-status.js"></script>
     <script src="js/clientes.js"></script>
-    <script>
-        // Proteger página admin
-        (function() {
-            const usuarioSalvo = sessionStorage.getItem('usuario');
-            if (usuarioSalvo) {
-                const usuario = JSON.parse(usuarioSalvo);
-                if (usuario.isAdmin === true) {
-                    return;
-                }
-            }
-            alert('Acesso negado! Apenas administradores podem acessar esta página.');
-            window.location.href = 'index.html';
-        })();
-    </script>
+    <script src="js/clientes-acesso.js"></script>
 </body>
 </html>

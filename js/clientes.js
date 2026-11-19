@@ -53,7 +53,8 @@ function renderizarClientes(usuarios) {
     }
 
     const headers = ['ID', 'Nome', 'Email', 'Telefone', 'Cadastro', 'Pedidos', 'Admin', 'Ações'];
-    tbody.innerHTML = usuarios.map(usuario => {
+    tbody.innerHTML = usuarios.map(original => {
+        const usuario = window.RenderSeguro.dados(original);
         const dataCadastro = usuario.created_at ? 
             new Date(usuario.created_at).toLocaleDateString('pt-BR') : 
             'N/A';
@@ -62,7 +63,7 @@ function renderizarClientes(usuarios) {
             '-';
         
         return `
-            <tr>
+            <tr data-cliente-id="${usuario.id}">
                 <td data-label="${headers[0]}">${usuario.id}</td>
                 <td data-label="${headers[1]}"><strong>${usuario.nome_completo || '-'}</strong></td>
                 <td data-label="${headers[2]}">${usuario.email}</td>
@@ -71,16 +72,24 @@ function renderizarClientes(usuarios) {
                 <td data-label="${headers[5]}" style="text-align: center;"><span class="badge-pedidos" id="pedidos-${usuario.id}">-</span></td>
                 <td data-label="${headers[6]}" style="text-align: center;">${isAdmin}</td>
                 <td data-label="${headers[7]}" style="text-align: center;">
-                    <button class="btn-icon btn-visualizar" onclick="abrirModalCliente(${usuario.id})" title="Ver detalhes">
+                    <button class="btn-icon btn-visualizar" data-cliente-acao="visualizar" title="Ver detalhes">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn-icon btn-editar" onclick="abrirModalEditar(${usuario.id})" title="Editar">
+                    <button class="btn-icon btn-editar" data-cliente-acao="editar" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
                 </td>
             </tr>
         `;
     }).join('');
+    tbody.querySelectorAll('[data-cliente-acao]').forEach(button => {
+        button.addEventListener('click', () => {
+            const id = window.RenderSeguro.id(button.closest('[data-cliente-id]').dataset.clienteId);
+            if (!id) return;
+            if (button.dataset.clienteAcao === 'visualizar') abrirModalCliente(id);
+            else abrirModalEditar(id);
+        });
+    });
     
     // Carregar quantidade de pedidos para cada cliente
     usuarios.forEach(usuario => {
@@ -161,7 +170,7 @@ async function abrirModalCliente(clienteId) {
 
     try {
         // Buscar dados do cliente
-        const cliente = todosClientes.find(c => c.id === clienteId);
+        const cliente = window.RenderSeguro.dados(todosClientes.find(c => c.id === clienteId));
         
         // Buscar histórico de pedidos
         const response = await fetch(`${API_URL}/pedidos/cliente/${clienteId}`, {
@@ -233,6 +242,12 @@ async function abrirModalCliente(clienteId) {
                 `}
             </div>
         `;
+        modalBody.querySelectorAll('.pedido-status-select').forEach(select => {
+            select.addEventListener('change', () => {
+                const id = window.RenderSeguro.id(select.dataset.pedidoId);
+                if (id) alterarStatusPedido(id, select.value);
+            });
+        });
     } catch (error) {
         console.error('Erro ao carregar detalhes:', error);
         modalBody.innerHTML = `
@@ -255,6 +270,7 @@ function calcularTotalGasto(pedidos) {
 }
 
 function renderizarPedido(pedido) {
+    pedido = window.RenderSeguro.dados(pedido);
     const statusOptions = window.PedidoStatus.opcoes;
     const statusAtual = window.PedidoStatus.obter(pedido.status);
 
@@ -269,8 +285,7 @@ function renderizarPedido(pedido) {
                     <select class="pedido-status-select ${statusAtual.classe}"
                             data-pedido-id="${pedido.id}"
                             data-status-atual="${statusAtual.valor}"
-                            aria-label="Status do pedido #${pedido.id}"
-                            onchange="alterarStatusPedido(${pedido.id}, this.value)">
+                            aria-label="Status do pedido #${pedido.id}">
                         ${!statusAtual.valor ? '<option value="" disabled selected>Status não reconhecido</option>' : ''}
                         ${statusOptions.map(opt => `
                             <option value="${opt.valor}" ${statusAtual.valor === opt.valor ? 'selected' : ''}>
@@ -464,8 +479,9 @@ function mostrarMensagem(texto, tipo) {
     mensagem.className = `toast-message toast-${tipo}`;
     mensagem.innerHTML = `
         <i class="fas fa-${tipo === 'sucesso' ? 'check-circle' : 'exclamation-circle'}"></i>
-        <span>${texto}</span>
+        <span></span>
     `;
+    mensagem.querySelector('span').textContent = texto;
 
     document.body.appendChild(mensagem);
 
@@ -521,6 +537,9 @@ async function alterarStatusPedido(pedidoId, novoStatus) {
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-clientes-limpar]').forEach(button => button.addEventListener('click', limparFiltros));
+    document.querySelectorAll('[data-fechar-cliente]').forEach(button => button.addEventListener('click', fecharModalCliente));
+    document.querySelectorAll('[data-fechar-editar]').forEach(button => button.addEventListener('click', fecharModalEditar));
     carregarClientes();
     configurarFiltros();
     configurarTabsEditar();

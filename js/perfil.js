@@ -507,13 +507,14 @@ class PerfilManager {
             listaPedidos.innerHTML = `
                 <div class="sem-pedidos">
                     <p>❌ Erro ao carregar pedidos</p>
-                    <small>${error.message}</small>
+                    <small>${window.RenderSeguro.texto(error.message)}</small>
                 </div>
             `;
         }
     }
 
     renderizarPedido(pedido) {
+        pedido = window.RenderSeguro.dados(pedido);
         console.log('Renderizando pedido:', pedido);
         
         const data = new Date(pedido.created_at).toLocaleDateString('pt-BR', {

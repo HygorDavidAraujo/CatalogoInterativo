@@ -152,7 +152,8 @@ class CarrinhoManager {
             if (carrinhoFooter) carrinhoFooter.style.display = 'none';
         } else {
 
-            carrinhoBody.innerHTML = this.itens.map(item => {
+            carrinhoBody.innerHTML = this.itens.map(original => {
+                const item = window.RenderSeguro.dados(original);
                 let precoOriginal = parseFloat(item.preco);
                 let precoFinal = this.getDescontoVip(precoOriginal);
                 let usuario = window.authManager?.usuarioLogado;
@@ -171,26 +172,27 @@ class CarrinhoManager {
                         // Fallback com labels hardcoded
                         const label = labels[vipTipo] || vipTipo;
                         const icon = icons[vipTipo] || '<i class="fas fa-star"></i>';
-                        badge = `<span class="badge-vip badge-${vipTipo}">${icon} VIP ${label}</span>`;
+                        const classe = typeof vipTipo === 'string' && /^[a-z0-9_-]+$/i.test(vipTipo) ? ` badge-${vipTipo}` : '';
+                        badge = `<span class="badge-vip${classe}">${icon} VIP ${window.RenderSeguro.texto(label)}</span>`;
                     }
                 }
                 return `
                 <div class="carrinho-item" data-id="${item.id}">
-                    <img src="${item.imagem || 'https://via.placeholder.com/60x80?text=Vinho'}" 
+                    <img src="${item.imagem || '/images/placeholder-80x80.svg'}"
                          alt="${item.nome}" 
                          class="carrinho-item-img">
                     <div class="carrinho-item-info">
                         <div class="carrinho-item-nome">${item.nome}</div>
                         ${precoFinal !== precoOriginal ? `<div class='carrinho-item-preco'><span class='preco-original' style='text-decoration:line-through;color:#888;'>R$ ${precoOriginal.toFixed(2).replace('.', ',')}</span> ${badge} <span class='preco-final' style='color:#1976d2;font-weight:bold;'>R$ ${precoFinal.toFixed(2).replace('.', ',')}</span></div>` : `<div class="carrinho-item-preco">R$ ${precoOriginal.toFixed(2).replace('.', ',')}</div>`}
                         <div class="carrinho-item-qtd">
-                            <button class="btn-qtd" onclick="window.carrinhoManager.atualizarQuantidade(${item.id}, ${item.quantidade - 1})">
+                            <button class="btn-qtd" data-carrinho-acao="diminuir" aria-label="Diminuir quantidade">
                                 <i class="fas fa-minus"></i>
                             </button>
                             <span class="quantidade">${item.quantidade}</span>
-                            <button class="btn-qtd" onclick="window.carrinhoManager.atualizarQuantidade(${item.id}, ${item.quantidade + 1})">
+                            <button class="btn-qtd" data-carrinho-acao="aumentar" aria-label="Aumentar quantidade">
                                 <i class="fas fa-plus"></i>
                             </button>
-                            <button class="btn-remover-item" onclick="window.carrinhoManager.removerItem(${item.id})">
+                            <button class="btn-remover-item" data-carrinho-acao="remover" aria-label="Remover produto">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -198,6 +200,16 @@ class CarrinhoManager {
                 </div>
                 `;
             }).join('');
+            window.RenderSeguro.imagens(carrinhoBody);
+            carrinhoBody.querySelectorAll('[data-carrinho-acao]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const id = window.RenderSeguro.id(button.closest('.carrinho-item').dataset.id);
+                    const item = this.itens.find(item => item.id === id);
+                    if (!item) return;
+                    if (button.dataset.carrinhoAcao === 'remover') this.removerItem(id);
+                    else this.atualizarQuantidade(id, Number(item.quantidade) + (button.dataset.carrinhoAcao === 'aumentar' ? 1 : -1));
+                });
+            });
 
             if (carrinhoFooter) {
                 carrinhoFooter.style.display = 'block';
@@ -340,8 +352,9 @@ class CarrinhoManager {
         mensagem.className = `mensagem-flutuante mensagem-${tipo}`;
         mensagem.innerHTML = `
             <i class="fas fa-${tipo === 'sucesso' ? 'check-circle' : 'exclamation-circle'}"></i>
-            <span>${texto}</span>
+            <span></span>
         `;
+        mensagem.querySelector('span').textContent = texto;
         mensagem.style.cssText = `
             position: fixed;
             top: 20px;
@@ -393,6 +406,8 @@ function configurarEventosCarrinho() {
         btnFinalizar.addEventListener('click', () => window.carrinhoManager.finalizarPedido());
     }
 }
+
+document.addEventListener('DOMContentLoaded', configurarEventosCarrinho);
 
 // Quando VipManager carregar, atualizar interface para exibir badges dinâmicas
 if (window.vipManager) {

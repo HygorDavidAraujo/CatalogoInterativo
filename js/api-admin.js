@@ -49,7 +49,7 @@ function atualizarPreviewBandeira(paisNome, paisCodigo, bandeiraUrl) {
     inputBandeira.value = url;
 
     if (preview && img && label && url) {
-        img.src = url;
+        img.src = window.RenderSeguro.url(url);
         img.alt = `Bandeira de ${paisNome || codigo}`;
         label.textContent = paisNome || codigo;
         preview.style.display = 'inline-flex';
@@ -108,7 +108,7 @@ async function carregarConfiguracoes() {
             const previewImg = document.getElementById('logo-preview-img');
             const uploadPreview = document.getElementById('logo-upload-preview');
             const uploadActions = document.getElementById('logo-upload-actions');
-            previewImg.src = config.logo_url;
+            previewImg.src = window.RenderSeguro.url(config.logo_url);
             previewImg.style.display = 'block';
             uploadPreview.style.display = 'none';
             if (uploadActions) uploadActions.style.display = 'flex';
@@ -212,7 +212,8 @@ async function preencherDestaqueSemana(config) {
     const vinhosAtivos = vinhoManager.vinhos.filter(vinho => isVinhoAtivo(vinho.ativo));
     const opcoes = ['<option value="">Aleatorio (sem fixar)</option>'];
 
-    vinhosAtivos.forEach(vinho => {
+    vinhosAtivos.forEach(original => {
+        const vinho = window.RenderSeguro.dados(original);
         opcoes.push(`<option value="${vinho.id}">${vinho.nome}</option>`);
     });
 
@@ -274,16 +275,15 @@ async function renderizarListaAdmin(filtros = {}) {
         return;
     }
 
-    container.innerHTML = vinhos.map(vinho => {
-        const imagemSrc = vinho.imagem ?
-            window.resolverUrlImagem(vinho.imagem) :
-            '/images/placeholder-80x80.svg';
+    container.innerHTML = vinhos.map(original => {
+        const vinho = window.RenderSeguro.dados(original);
+        const imagemSrc = vinho.imagem || '/images/placeholder-80x80.svg';
         const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
         const paisHtml = vinho.pais_origem ? ` | <span class="vinho-item-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14">` : ''}${vinho.pais_origem}</span>` : '';
         
         return `
             <div class="vinho-item-admin ${isVinhoAtivo(vinho.ativo) ? '' : 'vinho-inativo'}" data-id="${vinho.id}">
-                <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-item-imagem" onerror="this.src='/images/placeholder-80x80.svg'">
+                <img src="${imagemSrc}" alt="${vinho.nome}" class="vinho-item-imagem">
                 <div class="vinho-item-info">
                     <div class="vinho-item-nome">${vinho.nome}</div>
                     <div class="vinho-item-detalhes">
@@ -292,14 +292,14 @@ async function renderizarListaAdmin(filtros = {}) {
                     <div class="vinho-item-preco">R$ ${formatarPreco(vinho.preco)}</div>
                 </div>
                 <div class="vinho-item-acoes">
-                    <button class="btn-icon-small btn-editar" onclick="editarVinho(${vinho.id})" title="Editar">
+                    <button class="btn-icon-small btn-editar" data-admin-acao="editar" title="Editar">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                    <button class="btn-icon-small btn-excluir" onclick="confirmarExclusao(${vinho.id})" title="Excluir">
+                    <button class="btn-icon-small btn-excluir" data-admin-acao="excluir" title="Excluir">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                     <label class="toggle-switch" title="${isVinhoAtivo(vinho.ativo) ? 'Clique para ocultar do site' : 'Clique para mostrar no site'}">
-                        <input type="checkbox" ${isVinhoAtivo(vinho.ativo) ? 'checked' : ''} onchange="toggleVisibilidade(this, ${vinho.id})">
+                        <input type="checkbox" ${isVinhoAtivo(vinho.ativo) ? 'checked' : ''} data-admin-visibilidade>
                         <span class="toggle-slider"></span>
                         <span class="toggle-label">${isVinhoAtivo(vinho.ativo) ? 'Visível' : 'Oculto'}</span>
                     </label>
@@ -307,6 +307,21 @@ async function renderizarListaAdmin(filtros = {}) {
             </div>
         `;
     }).join('');
+    window.RenderSeguro.imagens(container);
+    container.querySelectorAll('[data-admin-acao]').forEach(button => {
+        button.addEventListener('click', () => {
+            const id = window.RenderSeguro.id(button.closest('.vinho-item-admin').dataset.id);
+            if (!id) return;
+            if (button.dataset.adminAcao === 'editar') editarVinho(id);
+            else confirmarExclusao(id);
+        });
+    });
+    container.querySelectorAll('[data-admin-visibilidade]').forEach(input => {
+        input.addEventListener('change', () => {
+            const id = window.RenderSeguro.id(input.closest('.vinho-item-admin').dataset.id);
+            if (id) toggleVisibilidade(input, id);
+        });
+    });
 }
 
 // ===== UPLOAD DE IMAGEM =====
@@ -341,7 +356,7 @@ function configurarUploadImagem() {
         imagemUrlInput.addEventListener('change', () => {
             const url = imagemUrlInput.value.trim();
             if (url) {
-                previewImg.src = url;
+                previewImg.src = window.RenderSeguro.url(url);
                 previewImg.style.display = 'block';
                 uploadPreview.style.display = 'none';
                 if (uploadActions) uploadActions.style.display = 'flex';
@@ -988,7 +1003,9 @@ function renderizarBeneficios() {
         return;
     }
 
-    container.innerHTML = beneficiosVip.map(beneficio => `
+    container.innerHTML = beneficiosVip.map(original => {
+        const beneficio = window.RenderSeguro.dados(original);
+        return `
         <div class="beneficio-item" data-id="${beneficio.id}">
             <div class="beneficio-info">
                 <div class="beneficio-nome">
@@ -1002,15 +1019,24 @@ function renderizarBeneficios() {
                 </div>
             </div>
             <div class="beneficio-acoes">
-                <button class="btn-icon-small btn-editar-beneficio" onclick="editarBeneficio(${beneficio.id})" title="Editar">
+                <button class="btn-icon-small btn-editar-beneficio" data-beneficio-acao="editar" title="Editar">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="btn-icon-small btn-excluir-beneficio" onclick="excluirBeneficio(${beneficio.id})" title="Excluir">
+                <button class="btn-icon-small btn-excluir-beneficio" data-beneficio-acao="excluir" title="Excluir">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
+    container.querySelectorAll('[data-beneficio-acao]').forEach(button => {
+        button.addEventListener('click', () => {
+            const id = window.RenderSeguro.id(button.closest('.beneficio-item').dataset.id);
+            if (!id) return;
+            if (button.dataset.beneficioAcao === 'editar') editarBeneficio(id);
+            else excluirBeneficio(id);
+        });
+    });
 }
 
 async function adicionarBeneficio() {

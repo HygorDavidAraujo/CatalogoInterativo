@@ -140,7 +140,8 @@ function criarSistema(options = {}) {
         const req = {
             method, url, originalUrl: `/api/auth${url}`,
             headers: token ? { authorization: `Bearer ${token}` } : {},
-            body: structuredClone(body), params: {}, query: {}
+            body: structuredClone(body), params: {},
+            query: Object.fromEntries(new URL(url, 'https://catalogo.example.com').searchParams)
         };
         return new Promise((resolve, reject) => {
             const res = {
@@ -179,6 +180,45 @@ test('rota desativada responde igualmente para e-mail desconhecido ou dados ause
     const vazio = await sistema.post('/atualizar-senha', {});
     assert.deepEqual(desconhecido, vazio);
     assert.equal(sistema.queries.length, 0);
+});
+
+for (const is_admin of [false, true]) {
+    test(`consulta legada por e-mail não revela dados nem existência da conta (admin=${is_admin})`, async () => {
+        const sistema = criarSistema({ usuario: { is_admin } });
+        const esperado = {
+            status: 410,
+            body: {
+                error: 'Esta consulta foi desativada. Use /api/auth/me com autenticação.',
+                code: 'AUTH_ENDPOINT_RETIRED'
+            }
+        };
+        for (const url of [
+            `/verificar?email=${encodeURIComponent(sistema.usuario.email)}`,
+            '/verificar?email=desconhecido%40example.com',
+            '/verificar?email=',
+            '/verificar'
+        ]) {
+            assert.deepEqual(await sistema.get(url), esperado);
+            assert.deepEqual(await sistema.get(url, 'token-invalido'), esperado);
+        }
+        assert.equal(sistema.queries.length, 0);
+        assert.equal(sistema.emails.length, 0);
+    });
+}
+
+test('consulta legada permanece desativada com sessão válida e /me identifica somente o titular', async () => {
+    const sistema = await sistemaComLogin({ usuario: { is_admin: true } });
+    const consultasAntes = sistema.queries.length;
+    const result = await sistema.get('/verificar?email=outra-conta%40example.com', sistema.token);
+    assert.equal(result.status, 410);
+    assert.equal(result.body.code, 'AUTH_ENDPOINT_RETIRED');
+    assert.equal(result.body.usuario, undefined);
+    assert.equal(sistema.queries.length, consultasAntes);
+    assert.equal((await sistema.get('/me')).status, 401);
+    const me = await sistema.get('/me?email=outra-conta%40example.com', sistema.token);
+    assert.equal(me.status, 200);
+    assert.equal(me.body.id, sistema.usuario.id);
+    assert.equal(me.body.email, sistema.usuario.email);
 });
 
 test('login legado encaminha à recuperação sem emitir JWT ou alterar senha', async () => {

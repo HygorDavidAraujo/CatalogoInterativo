@@ -184,7 +184,7 @@ class AuthManager {
                     const iconMap = { 'diamante': '💎', 'ouro': '✨', 'prata': '⭐', 'default': '⭐' };
                     const icon = iconMap[vipTipo] || iconMap['default'];
                     const nomeBeneficio = window.vipManager?.getNomeBeneficio(vipTipo) || `VIP ${vipTipo}`;
-                    badgeVipHeader.innerHTML = `${icon} ${nomeBeneficio}`;
+                    badgeVipHeader.textContent = `${icon} ${nomeBeneficio}`;
                     badgeVipHeader.style.display = 'inline-block';
                 }
             } else if (badgeVipHeader) {

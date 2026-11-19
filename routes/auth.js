@@ -257,40 +257,14 @@ router.post('/cadastro', cadastroTentativasLimiter, cadastroLimiter, validateCad
     }
 });
 
-// GET - Verificar se usuário está logado (usando session storage)
-router.get('/verificar', async (req, res) => {
-    try {
-        const { email } = req.query;
-
-        if (!email) {
-            return res.status(400).json({ error: 'Email não fornecido' });
-        }
-
-        const { rows: usuarios } = await pool.query(
-            'SELECT id, nome_completo, telefone, email, is_admin FROM usuarios WHERE email = $1',
-            [email]
-        );
-
-        if (usuarios.length === 0) {
-            return res.status(404).json({ error: 'Usuário não encontrado' });
-        }
-
-        const usuario = usuarios[0];
-        
-        res.json({
-            success: true,
-            usuario: {
-                id: usuario.id,
-                nome: usuario.nome_completo,
-                telefone: usuario.telefone,
-                email: usuario.email,
-                isAdmin: Boolean(usuario.is_admin)
-            }
-        });
-    } catch (error) {
-        console.error('Erro ao verificar usuário:', error);
-        res.status(500).json({ error: 'Erro ao verificar usuário' });
-    }
+// Consulta legada desativada: e-mail não comprova identidade nem sessão.
+// Resposta uniforme, sem consultar o banco ou revelar a existência da conta.
+// O frontend atual já utiliza /me, protegido por verificarAutenticacao.
+router.get('/verificar', (req, res) => {
+    return res.status(410).json({
+        error: 'Esta consulta foi desativada. Use /api/auth/me com autenticação.',
+        code: 'AUTH_ENDPOINT_RETIRED'
+    });
 });
 
 // GET - Listar todos os usuários (apenas para admin)

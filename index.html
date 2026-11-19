@@ -19,15 +19,8 @@
     <meta name="mobile-web-app-capable" content="yes">
 
     <!-- Registro do Service Worker -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(() => console.log('Service Worker registrado'))
-                    .catch(err => console.error('SW registro falhou:', err));
-            });
-        }
-    </script>
+    <script src="js/render-seguro.js"></script>
+    <script src="js/pwa.js"></script>
 </head>
 <body>
     <!-- Skip to content para acessibilidade -->
@@ -44,7 +37,7 @@
                     <li><a href="#catalogo" class="nav-link active">Catálogo</a></li>
                     <li><a href="#contato" class="nav-link">Contato</a></li>
                     <li id="menu-perfil" style="display: none;"><a href="meu-perfil.html" class="nav-link"><i class="fas fa-user-circle"></i> Meu Perfil</a></li>
-                    <li id="menu-admin" style="display: none;"><a href="admin.html" class="nav-link" id="link-admin" onclick="console.log('Link Painel ADM clicado!')">Painel ADM</a></li>
+                    <li id="menu-admin" style="display: none;"><a href="admin.html" class="nav-link" id="link-admin">Painel ADM</a></li>
                     <li id="menu-login"><a href="#" class="nav-link" id="btn-login"><i class="fas fa-user"></i> Login</a></li>
                     <li id="menu-usuario" style="display: none;">
                         <span id="badge-vip-header" class="badge-vip-header" style="display: none;"></span>
@@ -64,7 +57,6 @@
 
         </div>
     </section>
-
                         <!-- Scripts Mobile (menu hamburguer, lazyload, web vitals) -->
                         <script src="js/mobile.js"></script>
     <!-- Catálogo Section -->
@@ -307,18 +299,11 @@
             </button>
         </div>
     </div>
-
     <script src="js/config.js"></script>
     <script src="js/idade.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/vip-manager.js"></script>
     <script src="js/carrinho.js"></script>
     <script src="js/api.js"></script>
-    <script>
-        // Inicializar carrinho quando a página carregar
-        document.addEventListener('DOMContentLoaded', () => {
-            configurarEventosCarrinho();
-        });
-    </script>
 </body>
 </html>

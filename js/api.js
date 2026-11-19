@@ -7,13 +7,7 @@ const API_URL = window.APP_CONFIG
         : window.location.origin + '/api');
 
 function resolverUrlImagem(imagem) {
-    if (!imagem) return imagem;
-    try {
-        return new URL(imagem, window.location.origin).href;
-    } catch (error) {
-        console.error('URL de imagem inválida:', error);
-        return '';
-    }
+    return window.RenderSeguro.url(imagem);
 }
 
 window.resolverUrlImagem = resolverUrlImagem;
@@ -213,18 +207,20 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
             <div class="mensagem-erro" role="alert">
                 <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
                 <p>Erro ao carregar vinhos. Tente novamente.</p>
-                <button class="btn btn-primary" onclick="renderizarVinhos('${filtro}', '${busca}', '${ordenacao}')">
+                <button class="btn btn-primary" data-repetir-catalogo>
                     <i class="fas fa-redo"></i> Tentar Novamente
                 </button>
             </div>
         `;
+        container.querySelector('[data-repetir-catalogo]').addEventListener('click', () => {
+            renderizarVinhos(filtro, busca, ordenacao);
+        });
         return;
     }
 
-    container.innerHTML = vinhos.map(vinho => {
-        const imagemSrc = vinho.imagem ?
-            resolverUrlImagem(vinho.imagem) :
-            'https://via.placeholder.com/300x300?text=Vinho';
+    container.innerHTML = vinhos.map(vinhoOriginal => {
+        const vinho = window.RenderSeguro.dados(vinhoOriginal);
+        const imagemSrc = vinho.imagem || '/images/placeholder-80x80.svg';
         const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
         const pais = vinho.pais_origem || '';
         
@@ -242,7 +238,7 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
                 // Fallback básico se VipManager não carregou
                 const labels = {prata: 'Prata', ouro: 'Ouro', diamante: 'Diamante', atacado: 'Atacado'};
                 const label = labels[vipTipo] || vipTipo.charAt(0).toUpperCase() + vipTipo.slice(1);
-                badge = `<span class="badge-vip" style="background:#6B1C40;color:white;padding:4px 8px;border-radius:4px;font-size:0.8rem;">🎁 ${label}</span>`;
+                badge = `<span class="badge-vip" style="background:#6B1C40;color:white;padding:4px 8px;border-radius:4px;font-size:0.8rem;">🎁 ${window.RenderSeguro.texto(label)}</span>`;
             }
         }
         
@@ -254,8 +250,7 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
                 <img src="${imagemSrc}" 
                      alt="${vinho.nome}" 
                      class="vinho-imagem" 
-                     loading="lazy"
-                     onerror="this.src='https://via.placeholder.com/300x300?text=Vinho'">
+                     loading="lazy">
                 <div class="vinho-info">
                     <span class="vinho-tipo tipo-${vinho.tipo}">${capitalizar(vinho.tipo)}</span>
                     <h3 class="vinho-nome">${vinho.nome}</h3>
@@ -263,13 +258,22 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
                     <p class="vinho-ano"><i class="fas fa-calendar"></i> Safra ${vinho.ano}</p>
                     ${pais ? `<p class="vinho-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14" loading="lazy">` : ''}<span>${pais}</span></p>` : ''}
                     ${precoFinal !== precoOriginal ? `<p class='vinho-preco'><span class='preco-original' style='text-decoration:line-through;color:#888;'>R$ ${formatarPreco(precoOriginal)}</span> ${badge} <span class='preco-final' style='color:#1976d2;font-weight:bold;'>R$ ${formatarPreco(precoFinal)}</span></p>` : `<p class="vinho-preco">R$ ${formatarPreco(precoOriginal)}</p>`}
-                    <button class="btn btn-adicionar-carrinho" onclick="event.stopPropagation(); window.carrinhoManager.adicionarItem(${JSON.stringify(vinho).replace(/"/g, '&quot;')})">
+                    <button class="btn btn-adicionar-carrinho" data-adicionar-vinho="${vinho.id}">
                         <i class="fas fa-shopping-cart"></i> Adicionar
                     </button>
                 </div>
             </div>
         `;
     }).join('');
+    window.RenderSeguro.imagens(container);
+    container.querySelectorAll('[data-adicionar-vinho]').forEach(button => {
+        button.addEventListener('click', event => {
+            event.stopPropagation();
+            const id = window.RenderSeguro.id(button.dataset.adicionarVinho);
+            const vinho = id && vinhoManager.getVinhoPorId(id);
+            if (vinho) window.carrinhoManager.adicionarItem(vinho);
+        });
+    });
 
     // Adicionar event listeners aos cards
     document.querySelectorAll('.vinho-card').forEach(card => {
@@ -312,16 +316,15 @@ async function renderizarDestaqueSemana() {
             const index = calcularIndiceAleatorioDoDia(vinhosAtivos.length);
             vinho = vinhosAtivos[index];
         }
+        vinho = window.RenderSeguro.dados(vinho);
 
-        const imagemSrc = vinho.imagem ?
-            resolverUrlImagem(vinho.imagem) :
-            'https://via.placeholder.com/480x480?text=Vinho';
+        const imagemSrc = vinho.imagem || '/images/placeholder-80x80.svg';
 
         const usuario = window.authManager?.usuarioLogado;
         const vipTipo = usuario?.is_vip ? usuario?.vip_tipo : null;
         const precoOriginal = parseFloat(vinho.preco);
         const precoFinal = calcularPrecoComDesconto(precoOriginal, vipTipo);
-        const badgeVip = vipTipo ? `VIP ${vipTipo.charAt(0).toUpperCase()}${vipTipo.slice(1)}` : '';
+        const badgeVip = vipTipo ? window.RenderSeguro.texto(`VIP ${vipTipo.charAt(0).toUpperCase()}${vipTipo.slice(1)}`) : '';
 
         container.innerHTML = `
             <div class="destaque-card" data-id="${vinho.id}">
@@ -329,7 +332,7 @@ async function renderizarDestaqueSemana() {
                     <span>Destaque da Semana</span>
                 </div>
                 <div class="destaque-media">
-                    <img src="${imagemSrc}" alt="${vinho.nome}" loading="lazy" onerror="this.src='https://via.placeholder.com/480x480?text=Vinho'">
+                    <img src="${imagemSrc}" alt="${vinho.nome}" loading="lazy">
                 </div>
                 <div class="destaque-conteudo">
                     <div class="destaque-topo">
@@ -343,16 +346,26 @@ async function renderizarDestaqueSemana() {
                         <span class="preco-final">R$ ${formatarPreco(precoFinal)}</span>
                     </div>
                     <div class="destaque-acoes">
-                        <button class="btn btn-adicionar-carrinho" onclick="event.stopPropagation(); window.carrinhoManager.adicionarItem(${JSON.stringify(vinho).replace(/"/g, '&quot;')})">
+                        <button class="btn btn-adicionar-carrinho" data-destaque-adicionar>
                             <i class="fas fa-shopping-cart"></i> Adicionar
                         </button>
-                        <button class="btn btn-outline" onclick="event.stopPropagation(); abrirModal(${vinho.id})">
+                        <button class="btn btn-outline" data-destaque-detalhes>
                             Ver detalhes
                         </button>
                     </div>
                 </div>
             </div>
         `;
+        window.RenderSeguro.imagens(container);
+        container.querySelector('[data-destaque-adicionar]').addEventListener('click', event => {
+            event.stopPropagation();
+            const original = vinhoManager.getVinhoPorId(window.RenderSeguro.id(vinho.id));
+            if (original) window.carrinhoManager.adicionarItem(original);
+        });
+        container.querySelector('[data-destaque-detalhes]').addEventListener('click', event => {
+            event.stopPropagation();
+            abrirModal(window.RenderSeguro.id(vinho.id));
+        });
 
         container.querySelector('.destaque-card')?.addEventListener('click', () => {
             abrirModal(vinho.id);
@@ -365,20 +378,19 @@ async function renderizarDestaqueSemana() {
 
 // ===== MODAL DE DETALHES =====
 function abrirModal(id) {
-    const vinho = vinhoManager.getVinhoPorId(id);
-    if (!vinho) return;
+    const original = vinhoManager.getVinhoPorId(id);
+    if (!original) return;
+    const vinho = window.RenderSeguro.dados(original);
 
     const modal = document.getElementById('modal-vinho');
     const modalBody = document.getElementById('modal-body');
 
-    const imagemSrc = vinho.imagem ?
-        resolverUrlImagem(vinho.imagem) :
-        'https://via.placeholder.com/400x400?text=Vinho';
+    const imagemSrc = vinho.imagem || '/images/placeholder-80x80.svg';
 
     modalBody.innerHTML = `
         <div class="modal-vinho-detalhes">
             <div class="modal-imagem">
-                <img src="${imagemSrc}" alt="${vinho.nome}" onerror="this.src='https://via.placeholder.com/400x400?text=Vinho'">
+                <img src="${imagemSrc}" alt="${vinho.nome}">
             </div>
             <div class="modal-info">
                 <span class="vinho-tipo tipo-${vinho.tipo}">${capitalizar(vinho.tipo)}</span>
@@ -424,6 +436,7 @@ function abrirModal(id) {
             </div>
         </div>
     `;
+    window.RenderSeguro.imagens(modalBody);
 
     modal.style.display = 'block';
 }
@@ -513,12 +526,12 @@ async function atualizarInformacoesContato() {
     
     if (config.logo_url) {
         if (logoImg) {
-            logoImg.src = config.logo_url;
+            logoImg.src = window.RenderSeguro.url(config.logo_url);
             logoImg.style.display = 'block';
             console.log('Logo renderizada no site:', config.logo_url);
         }
         if (logoAdminImg) {
-            logoAdminImg.src = config.logo_url;
+            logoAdminImg.src = window.RenderSeguro.url(config.logo_url);
             logoAdminImg.style.display = 'block';
         }
     }
@@ -581,11 +594,11 @@ async function atualizarInformacoesContato() {
     console.log('Social links encontrados:', socialLinks.length);
     if (socialLinks[0] && config.instagram) {
         console.log('Atualizando Instagram:', config.instagram);
-        socialLinks[0].href = config.instagram;
+        socialLinks[0].href = window.RenderSeguro.url(config.instagram, '#');
     }
     if (socialLinks[1] && config.facebook) {
         console.log('Atualizando Facebook:', config.facebook);
-        socialLinks[1].href = config.facebook;
+        socialLinks[1].href = window.RenderSeguro.url(config.facebook, '#');
     }
     if (socialLinks[2] && config.whatsapp) {
         const whatsappLink = `https://wa.me/${config.whatsapp.replace(/\D/g, '')}`;

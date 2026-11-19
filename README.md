@@ -208,6 +208,30 @@ O sistema suporta duas formas de adicionar imagens:
 
 ## 🔒 Segurança
 
+### Renderização e política de conteúdo
+
+O helper `js/render-seguro.js` trata texto e atributos HTML, valida URLs HTTP/HTTPS
+e limita cores VIP a hexadecimal. Catálogo, destaque, carrinho, administração,
+clientes e históricos escapam os dados no momento de exibição, preservando os
+valores originais usados pelos formulários e pedidos. Mensagens dinâmicas usam
+`textContent`. Descrições são exibidas como texto, sem suporte a HTML cadastrado.
+
+Botões e seletores utilizam `addEventListener`; os scripts das páginas são externos.
+A CSP permite scripts somente da própria origem e bloqueia eventos inline e
+`eval`. O Express configura essa política pelo Helmet; `vercel.json` também
+configura a política para os arquivos estáticos servidos diretamente pela Vercel.
+Estilos inline permanecem permitidos para compatibilidade com a interface atual.
+
+O Service Worker usa uma nova versão de cache e revalidação de `/sw.js` na Vercel.
+As alterações seguem o deploy GitHub → Vercel e não exigem migração no Neon,
+novas dependências ou variáveis de ambiente. Depois do deploy, confira os headers
+na página principal e em uma página HTML, além dos fluxos de catálogo e administração.
+
+`npm test` inclui regressões com conteúdo malicioso em produtos, clientes,
+pedidos e benefícios, além de conferir scripts externos e CSP. A verificação
+adicional em navegador foi feita com API e dados simulados locais, sem gravar no
+Neon, enviar pedidos reais ou comprovar a configuração do deployment publicado.
+
 ### Status dos pedidos
 
 API, administração e perfil usam as definições de `js/pedido-status.js`:
@@ -234,6 +258,13 @@ responde com HTTP 410 e não consulta nem altera usuários. O login com bcrypt e
 os links de recuperação existentes continuam funcionando.
 
 As sessões são registradas no PostgreSQL e verificadas em cada chamada autenticada.
+O endpoint legado `GET /api/auth/verificar` está desativado: responde HTTP 410
+com `AUTH_ENDPOINT_RETIRED`, independentemente do e-mail ou token informado,
+sem consultar usuários nem revelar dados ou a existência de uma conta.
+O frontend utiliza `GET /api/auth/me`, que exige uma sessão válida e retorna
+somente os dados do titular autenticado. Esta desativação não exige migração
+de banco. Os testes cobrem consultas anônimas, tokens inválidos e sessões válidas.
+
 O logout encerra a sessão atual e limpa as credenciais das abas do navegador,
 preservando o carrinho. Trocas de senha ou de permissão administrativa revogam
 todas as sessões da conta por um trigger no banco; alterações comuns de perfil

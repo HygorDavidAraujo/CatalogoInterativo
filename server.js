@@ -27,8 +27,8 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-            scriptSrcAttr: ["'unsafe-inline'"], // Permite onclick, onchange, etc
+            scriptSrc: ["'self'"],
+            scriptSrcAttr: ["'none'"],
             imgSrc: ["'self'", "data:", "https:", "res.cloudinary.com", "flagcdn.com"],
             connectSrc: ["'self'", "res.cloudinary.com", "api.cloudinary.com", "cdnjs.cloudflare.com", "flagcdn.com"],
             fontSrc: ["'self'", "cdnjs.cloudflare.com"],
