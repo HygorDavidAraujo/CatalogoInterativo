@@ -5,6 +5,7 @@ const { pool } = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { z } = require('zod');
 const { sendMail: sendMailWithFallback, escapeHtml, getAppUrl } = require('../services/emailService');
 const { verificarAutenticacao, verificarAdminAuth } = require('../middleware/auth');
 const { loginLimiter, cadastroLimiter, cadastroTentativasLimiter, recuperacaoLimiter } = require('../middleware/rateLimiter');
@@ -372,7 +373,28 @@ router.put('/perfil', verificarAutenticacao, validatePerfil, async (req, res) =>
 });
 
 // PUT - Atualizar usuário completo (apenas admin)
+const textoOpcional = max => z.string().trim().max(max, `Use no máximo ${max} caracteres`).nullable().optional().transform(valor => valor || null);
+const edicaoUsuarioSchema = z.object({
+    nome: z.string().trim().min(3, 'Nome deve ter pelo menos 3 caracteres').max(255),
+    telefone: textoOpcional(20),
+    cpf: textoOpcional(14).refine(valor => !valor || /^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(valor) || /^\d{11}$/.test(valor),
+        'Informe o CPF com 11 dígitos ou no formato XXX.XXX.XXX-XX')
+        .transform(valor => valor && /^\d{11}$/.test(valor) ? valor.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : valor),
+    logradouro: textoOpcional(255), numero: textoOpcional(10), complemento: textoOpcional(255),
+    bairro: textoOpcional(100), cep: textoOpcional(10), cidade: textoOpcional(100),
+    estado: textoOpcional(2).refine(valor => !valor || /^[a-z]{2}$/i.test(valor), 'Informe a UF com duas letras')
+        .transform(valor => valor?.toUpperCase() || null),
+    is_admin: z.boolean().optional(), is_vip: z.boolean().optional(), vip_tipo: textoOpcional(50)
+});
 router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
+    if (!/^[1-9]\d*$/.test(req.params.id) || Number(req.params.id) > 2147483647) {
+        return res.status(400).json({ error: 'ID do usuário inválido' });
+    }
+    const validacao = edicaoUsuarioSchema.safeParse(req.body);
+    if (!validacao.success) {
+        return res.status(400).json({ error: 'Revise os dados do usuário',
+            details: validacao.error.issues.map(erro => ({ field: erro.path.join('.'), message: erro.message })) });
+    }
     try {
         const usuarioId = req.params.id;
         const { 
@@ -389,7 +411,7 @@ router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
             is_admin,
             is_vip,
             vip_tipo
-        } = req.body;
+        } = validacao.data;
 
         // Verificar se usuário existe
         const { rows: usuarioExiste } = await pool.query('SELECT id, is_admin FROM usuarios WHERE id = $1', [usuarioId]);
@@ -423,7 +445,8 @@ router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
                 is_vip = $12,
                 vip_tipo = $13
             WHERE id = $14`,
-            [nome, telefone, cpf, logradouro, numero, complemento, bairro, cep, cidade, estado, is_admin, Boolean(is_vip), vip_tipo || null, usuarioId]
+            [nome, telefone, cpf, logradouro, numero, complemento, bairro, cep, cidade, estado,
+                is_admin ?? usuarioExiste[0].is_admin, Boolean(is_vip), is_vip ? vip_tipo : null, usuarioId]
         );
 
         const { rows: usuarioAtualizado } = await pool.query(
@@ -439,7 +462,18 @@ router.put('/usuarios/:id', verificarAdminAuth, async (req, res) => {
             usuario: usuarioAtualizado[0]
         });
     } catch (error) {
-        console.error('Erro ao atualizar usuário:', error);
+        console.error('Erro ao atualizar usuário:', { code: error.code, constraint: error.constraint });
+        if (error.code === '23505') {
+            const cpfDuplicado = /cpf/i.test(error.constraint || '');
+            return res.status(409).json({ error: cpfDuplicado ? 'Este CPF já está cadastrado para outro usuário.' : 'Já existe um usuário com esses dados.',
+                code: cpfDuplicado ? 'CPF_DUPLICADO' : 'USUARIO_DUPLICADO' });
+        }
+        if (error.code === '22001') {
+            return res.status(400).json({ error: 'Um dos campos excede o tamanho permitido. Revise os dados informados.' });
+        }
+        if (error.code === '42703') {
+            return res.status(503).json({ error: 'O cadastro de usuários precisa de atualização na estrutura do banco. Contate o administrador.', code: 'SCHEMA_USUARIOS_DESATUALIZADO' });
+        }
         res.status(500).json({ error: 'Erro ao atualizar usuário' });
     }
 });

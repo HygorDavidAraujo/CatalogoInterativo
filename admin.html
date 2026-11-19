@@ -36,19 +36,49 @@
                 <h1><i class="fa-solid fa-wine-bottle"></i> Painel Administrativo</h1>
             </div>
             <div class="admin-nav">
+                <a href="#pedidos-recebidos" class="btn btn-secondary" id="atalho-pedidos">
+                    <i class="fa-solid fa-bell" aria-hidden="true"></i> Pedidos <span id="pedidos-contador" aria-label="Pedidos em aberto">0</span>
+                </a>
                 <a href="clientes.html" class="btn btn-secondary">
                     <i class="fa-solid fa-users"></i> Gerenciar Clientes
                 </a>
                 <a href="index.html" class="btn-voltar">
                     <i class="fa-solid fa-house"></i> Ver Site
                 </a>
+                <button type="button" id="btn-logout" class="btn btn-secondary">
+                    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> Sair
+                </button>
             </div>
         </div>
     </header>
 
     <!-- Admin Content -->
-    <main class="admin-main">
+    <main class="admin-main" id="main">
         <div class="container">
+            <section class="admin-card admin-card-full pedidos-painel" id="pedidos-recebidos" aria-labelledby="titulo-pedidos">
+                <div class="pedidos-cabecalho">
+                    <div><h2 id="titulo-pedidos">Pedidos recebidos</h2><p id="pedidos-resumo" role="status">Carregando resumo…</p></div>
+                    <button type="button" class="btn btn-secondary" id="pedidos-atualizar">Atualizar pedidos</button>
+                </div>
+                <p>Consulte os itens, acompanhe o status e acesse o histórico do cliente.</p>
+                <div id="pedidos-novos" class="pedidos-aviso" hidden>
+                    <span id="pedidos-aviso-texto" role="status"></span>
+                    <button type="button" class="btn btn-primary" id="pedidos-ver-novos">Ver novos pedidos</button>
+                </div>
+                <form id="pedidos-filtros" class="pedidos-filtros" role="search" aria-label="Buscar pedidos">
+                    <div><label for="pedidos-busca">Cliente, e-mail ou número do pedido</label><input type="search" id="pedidos-busca" maxlength="150" placeholder="Nome, e-mail ou número"></div>
+                    <div><label for="pedidos-status">Status</label><select id="pedidos-status"><option value="">Todos os pedidos</option><option value="abertos">Em aberto</option></select></div>
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                </form>
+                <p id="pedidos-feedback" role="status"></p>
+                <div id="pedidos-lista" aria-busy="true"></div>
+                <nav class="pedidos-paginacao" aria-label="Páginas de pedidos">
+                    <button type="button" class="btn btn-secondary" id="pedidos-anterior" disabled>Anterior</button>
+                    <span id="pedidos-pagina"></span>
+                    <button type="button" class="btn btn-secondary" id="pedidos-proxima" disabled>Próxima</button>
+                </nav>
+                <section id="pedido-detalhe" class="pedido-detalhe" aria-label="Detalhes do pedido" hidden></section>
+            </section>
             <!-- Configurações de Contato -->
             <div class="admin-card admin-card-full">
                 <h2><i class="fa-solid fa-gear"></i> Configurações do Site</h2>
@@ -502,5 +532,7 @@
     <script src="js/vip-manager.js"></script>
     <script src="js/api-admin.js"></script>
     <script src="js/admin-acesso.js"></script>
+    <script src="js/pedido-status.js"></script>
+    <script src="js/pedidos-admin.js"></script>
 </body>
 </html>

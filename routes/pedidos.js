@@ -101,6 +101,70 @@ router.post('/', verificarAutenticacao, validatePedido, async (req, res) => {
     }
 });
 
+// Fila operacional: consultas limitadas, sem carregar todos os itens a cada atualização.
+const statusSql = `CASE p.status WHEN 'processando' THEN 'em_preparacao'
+    WHEN 'enviado' THEN 'em_rota_entrega' WHEN 'entregue' THEN 'finalizado' ELSE p.status END`;
+function semCache(req, res, next) {
+    res.set('Cache-Control', 'private, no-store');
+    next();
+}
+
+router.get('/resumo', verificarAdminAuth, semCache, async (req, res) => {
+    try {
+        const [contagem, recentes] = await Promise.all([
+            pool.query(`SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE ${statusSql} NOT IN ('finalizado', 'cancelado'))::int AS em_aberto
+                FROM pedidos p`),
+            pool.query('SELECT id FROM pedidos ORDER BY id DESC LIMIT 50')
+        ]);
+        res.json({ ...contagem.rows[0], recentes: recentes.rows.map(p => p.id) });
+    } catch (error) {
+        console.error('Erro ao resumir pedidos:', error);
+        res.status(500).json({ error: 'Erro ao atualizar notificações de pedidos' });
+    }
+});
+
+router.get('/recebidos', verificarAdminAuth, semCache, async (req, res) => {
+    const pagina = String(req.query.pagina ?? '1');
+    const status = req.query.status ?? '';
+    const busca = req.query.busca ?? '';
+    if (!/^[1-9]\d{0,5}$/.test(pagina) || typeof busca !== 'string' || busca.length > 150 ||
+        typeof status !== 'string' || (status && status !== 'abertos' && !PedidoStatus.valores.includes(status))) {
+        return res.status(400).json({ error: 'Filtros de pedidos inválidos' });
+    }
+    try {
+        const termo = busca.trim();
+        const where = `WHERE ($1 = '' OR ($1 = 'abertos' AND ${statusSql} NOT IN ('finalizado', 'cancelado'))
+            OR ${statusSql} = $1)
+            AND ($2 = '' OR POSITION(LOWER($2) IN LOWER(u.nome_completo)) > 0
+                OR POSITION(LOWER($2) IN LOWER(u.email)) > 0 OR p.id::text = $2)`;
+        const params = [status, termo];
+        const { rows: contagem } = await pool.query(`SELECT COUNT(*)::int AS total FROM pedidos p
+            JOIN usuarios u ON u.id = p.usuario_id ${where}`, params);
+        const { rows } = await pool.query(`SELECT p.id, p.usuario_id, p.total, p.status, p.created_at,
+            u.nome_completo FROM pedidos p JOIN usuarios u ON u.id = p.usuario_id ${where}
+            ORDER BY p.created_at DESC, p.id DESC LIMIT 20 OFFSET $3`, [...params, (Number(pagina) - 1) * 20]);
+        res.json({ pedidos: rows.map(p => ({ ...p, status: PedidoStatus.normalizar(p.status) })),
+            total: contagem[0].total, pagina: Number(pagina), por_pagina: 20 });
+    } catch (error) {
+        console.error('Erro ao listar fila de pedidos:', error);
+        res.status(500).json({ error: 'Erro ao listar pedidos recebidos' });
+    }
+});
+
+router.get('/:id', verificarAdminAuth, semCache, validateId, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`SELECT p.*, u.nome_completo, u.email, u.telefone,
+            COALESCE((SELECT json_agg(i ORDER BY i.id) FROM pedidos_itens i WHERE i.pedido_id = p.id), '[]'::json) AS itens
+            FROM pedidos p JOIN usuarios u ON u.id = p.usuario_id WHERE p.id = $1`, [req.params.id]);
+        if (!rows.length) return res.status(404).json({ error: 'Pedido não encontrado' });
+        res.json({ ...rows[0], status: PedidoStatus.normalizar(rows[0].status) });
+    } catch (error) {
+        console.error('Erro ao detalhar pedido:', error);
+        res.status(500).json({ error: 'Erro ao carregar pedido' });
+    }
+});
+
 // GET - Listar todos os pedidos (admin)
 router.get('/', verificarAdminAuth, async (req, res) => {
     try {

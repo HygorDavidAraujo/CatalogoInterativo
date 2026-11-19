@@ -427,6 +427,22 @@ de reenvio automático após a falha de ambos os provedores. Na recuperação, a
 continua genérica para não revelar contas cadastradas; o cliente pode solicitar
 outro link. Há limite de cinco solicitações por IP a cada 15 minutos.
 
+## Pedidos recebidos no painel
+
+O painel administrativo reúne os pedidos existentes, com busca por cliente, e-mail
+ou número, filtro de status e páginas de 20 registros. Os detalhes exibem os itens,
+valores e observações gravados no pedido. A alteração de status usa a mesma API do
+histórico do cliente. Há links entre o pedido no painel e o cadastro do cliente.
+
+O contador informa pedidos em aberto. Enquanto a página estiver visível, o painel
+consulta um resumo a cada 30 segundos e apresenta um aviso para novos pedidos.
+O primeiro carregamento estabelece a referência, sem anunciar pedidos antigos.
+Os avisos são da sessão aberta no painel; não são notificações push com o navegador
+fechado. A lista mantém os filtros até o administrador atualizar ou ver os novos
+pedidos. Todas as consultas operacionais exigem administrador e desabilitam cache.
+
+Esta funcionalidade reutiliza `pedidos` e `pedidos_itens`, sem nova migração no Neon.
+
 ## 🎯 Melhorias Futuras
 
 - ✅ Sistema completo de backend com Node.js

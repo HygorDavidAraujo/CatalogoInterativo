@@ -1,4 +1,37 @@
 /* ===== ESTILOS ADMIN ===== */
+.pedidos-painel { scroll-margin-top: 1rem; }
+.pedidos-cabecalho, .pedidos-filtros, .pedidos-paginacao, .pedidos-aviso { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.pedidos-cabecalho { justify-content: space-between; }
+.pedidos-cabecalho h2 { margin-bottom: .4rem; }
+.pedidos-painel p { margin: .6rem 0; }
+.pedidos-filtros { align-items: end; margin: 1.2rem 0; }
+.pedidos-filtros > div { flex: 1 1 220px; min-width: 0; }
+.pedidos-filtros label { display: block; font-weight: 600; margin-bottom: .4rem; }
+.pedidos-filtros input, .pedidos-filtros select { width: 100%; min-height: 44px; padding: .7rem; border: 1px solid #c8c8ce; border-radius: 8px; background: white; font: inherit; }
+.pedidos-aviso { background: #fff1cc; padding: 1rem; border-radius: 10px; margin-top: 1rem; color: #513d00; }
+.pedidos-painel [hidden] { display: none !important; }
+#pedidos-contador { display: inline-block; min-width: 1.5em; padding: .1rem .4rem; border-radius: 1rem; background: #6b1c40; color: white; text-align: center; }
+.pedido-fila { display: grid; grid-template-columns: 1fr 1.5fr auto auto; align-items: center; gap: 1rem; border-top: 1px solid #e3e3e8; padding: 1rem 0; }
+.pedido-fila > div { min-width: 0; overflow-wrap: anywhere; }
+.pedido-fila span, .pedido-fila-itens small { display: block; color: #595962; font-size: .88rem; margin-top: .3rem; }
+.pedidos-paginacao { justify-content: center; margin-top: 1rem; }
+.pedido-detalhe { background: #faf8f9; border: 1px solid #d6bdc9; border-radius: 12px; padding: 1.2rem; margin-top: 1.5rem; overflow-wrap: anywhere; }
+.pedido-detalhe h3 { color: #6b1c40; }
+.pedido-cliente-link { display: inline-block; color: #6b1c40; text-decoration: underline; padding: .5rem 0; }
+.pedido-fila-itens { list-style: none; padding: 0; margin: 1rem 0; }
+.pedido-fila-itens li { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem 0; border-bottom: 1px solid #e3e3e8; }
+.pedido-fila-total { text-align: right; font-size: 1.15rem; }
+.pedido-fila-obs { white-space: pre-wrap; }
+.pedidos-painel button:focus-visible, .pedidos-painel a:focus-visible { outline: 3px solid #6b1c40; outline-offset: 3px; }
+.pedidos-painel button:disabled { opacity: .45; cursor: default; }
+@media (max-width: 700px) {
+    .pedido-fila { grid-template-columns: minmax(0, 1fr) auto; gap: .8rem; }
+    .pedido-fila > div:nth-child(2) { grid-column: 1; grid-row: 2; }
+    .pedido-fila > button { grid-column: 2; grid-row: 2; }
+    .pedidos-cabecalho > .btn { width: 100%; }
+    .admin-header .container, .admin-nav { flex-wrap: wrap; gap: .7rem; }
+}
+
 .admin-body {
     background-color: #f0f2f5;
 }
@@ -32,6 +65,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .admin-header h1 {
@@ -50,6 +85,7 @@
     display: flex;
     gap: 1rem;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .btn-voltar {

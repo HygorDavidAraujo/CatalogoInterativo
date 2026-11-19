@@ -97,12 +97,17 @@ function criarSistema(options = {}) {
                 return { rows: [{ total: 2 }] };
             }
             if (sql.startsWith('UPDATE usuarios SET') && sql.includes('is_admin = $11')) {
+                if (options.erroAtualizacao) throw Object.assign(new Error('Detalhe privado do banco'), options.erroAtualizacao);
+                if (options.cpfVazioOcupado && params[2] === '') {
+                    throw Object.assign(new Error('CPF vazio já ocupado por outro cliente'), { code: '23505', constraint: 'usuarios_cpf_key' });
+                }
                 // Simula o trigger: mudar VIP/perfil sem mudar a permissão não revoga.
                 if (usuario.is_admin !== params[10]) sessoes.clear();
                 Object.assign(usuario, {
                     nome_completo: params[0], telefone: params[1], is_admin: params[10],
                     is_vip: params[11], vip_tipo: params[12]
                 });
+                usuario.cpf = params[2];
                 return { rows: [], rowCount: 1 };
             }
             if (sql.includes('FROM usuarios ORDER BY created_at')) return { rows: [{ ...usuario }] };
@@ -756,6 +761,54 @@ test('editar perfil/VIP sem mudar permissão não encerra sessão', async () => 
     assert.equal(me.status, 200);
     assert.equal(me.body.nome, 'Nome Atualizado');
     assert.equal(me.body.is_vip, true);
+});
+
+test('salvar cliente sem CPF usa NULL mesmo quando outro cadastro tem CPF vazio', async () => {
+    const sistema = await sistemaComLogin({ usuario: { is_admin: true }, cpfVazioOcupado: true });
+    for (const cpf of ['', '   ', null, undefined]) {
+        const result = await sistema.put('/usuarios/7', {
+            nome: 'Cliente Atualizado', cpf, is_admin: true, is_vip: true, vip_tipo: 'ouro'
+        }, sistema.token);
+        assert.equal(result.status, 200);
+        assert.equal(result.body.usuario.cpf, null);
+        const update = sistema.queries.findLast(q => q.sql.startsWith('UPDATE usuarios SET'));
+        assert.equal(update.params[2], null);
+        assert.equal(update.params[12], 'ouro');
+    }
+});
+
+test('CPF preenchido é normalizado e continua salvo ao editar o cliente', async () => {
+    const sistema = await sistemaComLogin({ usuario: { is_admin: true } });
+    const result = await sistema.put('/usuarios/7', { nome: 'Cliente Atualizado', cpf: '12345678901', is_admin: true }, sistema.token);
+    assert.equal(result.status, 200);
+    assert.equal(result.body.usuario.cpf, '123.456.789-01');
+});
+
+test('CPF duplicado retorna 409 com mensagem clara sem expor detalhes do banco', async () => {
+    const sistema = await sistemaComLogin({ usuario: { is_admin: true }, erroAtualizacao: { code: '23505', constraint: 'usuarios_cpf_key' } });
+    const result = await sistema.put('/usuarios/7', { nome: 'Cliente Atualizado', cpf: '123.456.789-01', is_admin: true }, sistema.token);
+    assert.equal(result.status, 409);
+    assert.equal(result.body.code, 'CPF_DUPLICADO');
+    assert.match(result.body.error, /CPF já está cadastrado/);
+    assert.doesNotMatch(JSON.stringify(result.body), /Detalhe privado|usuarios_cpf_key/);
+});
+
+test('dados inválidos são recusados antes de gravar o usuário', async () => {
+    const sistema = await sistemaComLogin({ usuario: { is_admin: true } });
+    for (const dados of [{ nome: '' }, { numero: '12345678901' }, { cpf: 'incorreto' }, { estado: 'SPX' },
+        { is_admin: 'false' }, { is_vip: 'true' }, { nome: 'a'.repeat(256) }]) {
+        const result = await sistema.put('/usuarios/7', { nome: 'Cliente Atualizado', is_admin: true, ...dados }, sistema.token);
+        assert.equal(result.status, 400, JSON.stringify(dados));
+        assert.ok(result.body.details.length);
+    }
+    assert.equal(sistema.queries.filter(q => q.sql.startsWith('UPDATE usuarios SET')).length, 0);
+});
+
+test('coluna ausente na atualização do usuário informa estrutura desatualizada', async () => {
+    const sistema = await sistemaComLogin({ usuario: { is_admin: true }, erroAtualizacao: { code: '42703' } });
+    const result = await sistema.put('/usuarios/7', { nome: 'Cliente Atualizado', is_admin: true }, sistema.token);
+    assert.equal(result.status, 503);
+    assert.equal(result.body.code, 'SCHEMA_USUARIOS_DESATUALIZADO');
 });
 
 test('mudança de credenciais durante o login impede emissão de sessão obsoleta', async () => {

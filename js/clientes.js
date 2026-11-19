@@ -19,6 +19,10 @@ async function carregarClientes() {
         todosClientes = usuarios;
         renderizarClientes(usuarios);
         atualizarEstatisticas(usuarios);
+        const clienteSolicitado = window.RenderSeguro.id(new URLSearchParams(window.location.search).get('cliente'));
+        if (clienteSolicitado && usuarios.some(cliente => Number(cliente.id) === clienteSolicitado)) {
+            await abrirModalCliente(clienteSolicitado);
+        }
     } catch (error) {
         console.error('Erro ao carregar clientes:', error);
         document.getElementById('lista-clientes').innerHTML = `
@@ -279,6 +283,7 @@ function renderizarPedido(pedido) {
             <div class="pedido-header">
                 <div class="pedido-info">
                     <span class="pedido-id">#${pedido.id}</span>
+                    <a href="admin.html?pedido=${pedido.id}#pedidos-recebidos">Abrir no painel de pedidos</a>
                     <span class="pedido-data">${new Date(pedido.created_at).toLocaleString('pt-BR')}</span>
                 </div>
                 <div class="pedido-status-container">
@@ -412,10 +417,13 @@ function configurarTabsEditar() {
 // Configurar formulário de edição
 function configurarFormEditar() {
     const form = document.getElementById('form-editar-cliente');
-    if (!form) return;
+    if (!form || form.dataset.configurado === 'true') return;
+    form.dataset.configurado = 'true';
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        if (form.dataset.salvando === 'true') return;
 
         const usuarioId = document.getElementById('edit-usuario-id').value;
         
@@ -429,7 +437,7 @@ function configurarFormEditar() {
             usuario_id: parseInt(usuarioId),
             nome: document.getElementById('edit-nome').value.trim(),
             telefone: document.getElementById('edit-telefone').value.trim(),
-            cpf: document.getElementById('edit-cpf').value.trim(),
+            cpf: document.getElementById('edit-cpf').value.trim() || null,
             logradouro: document.getElementById('edit-logradouro').value.trim(),
             numero: document.getElementById('edit-numero').value.trim(),
             complemento: document.getElementById('edit-complemento').value.trim(),
@@ -445,6 +453,9 @@ function configurarFormEditar() {
             dados.vip_tipo = document.getElementById('edit-vip-tipo').value;
         }
 
+        const botaoSalvar = form.querySelector('button[type="submit"]');
+        form.dataset.salvando = 'true';
+        if (botaoSalvar) botaoSalvar.disabled = true;
         try {
             const response = await fetch(`${API_URL}/auth/usuarios/${usuarioId}`, {
                 method: 'PUT',
@@ -455,8 +466,11 @@ function configurarFormEditar() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Erro ao atualizar cliente');
+                const error = await response.json().catch(() => ({}));
+                const campos = { nome: 'Nome', telefone: 'Telefone', cpf: 'CPF', logradouro: 'Logradouro',
+                    numero: 'Número', complemento: 'Complemento', bairro: 'Bairro', cep: 'CEP', cidade: 'Cidade', estado: 'Estado', vip_tipo: 'Tipo VIP' };
+                const detalhes = Array.isArray(error.details) ? error.details.map(item => `${campos[item.field] || 'Campo'}: ${item.message}`).join('; ') : '';
+                throw new Error(detalhes || error.error || 'Erro ao atualizar cliente. Tente novamente.');
             }
 
             mostrarMensagem('Cliente atualizado com sucesso!', 'sucesso');
@@ -465,6 +479,9 @@ function configurarFormEditar() {
         } catch (error) {
             console.error('Erro ao salvar:', error);
             mostrarMensagem(error.message, 'erro');
+        } finally {
+            form.dataset.salvando = 'false';
+            if (botaoSalvar) botaoSalvar.disabled = false;
         }
     });
 }
