@@ -103,8 +103,22 @@ Na criação do pedido, o navegador envia os IDs dos produtos e suas quantidades
 A API consulta preços, nomes, disponibilidade e benefícios VIP no PostgreSQL e
 calcula os valores em centavos. Campos financeiros enviados por versões anteriores
 do carrinho são ignorados. A resposta mantém `pedidoId` e inclui `total` e `itens`
-confirmados, usados na mensagem do WhatsApp. A regra VIP atual de preços terminados
-em `,90` foi preservada. Não é necessária migração de banco para essa mudança.
+confirmados, usados na mensagem do WhatsApp. Navegador e servidor compartilham a
+regra de `js/precos.js`: desconto percentual ou fixo, preço unitário arredondado ao
+centavo mais próximo (meio centavo sobe) e total calculado pela soma dos subtotais
+em centavos. O desconto nunca aumenta o preço nem gera valor negativo. A regra
+antiga que forçava preços terminados em `,90` foi removida. Pedidos já gravados
+mantêm seus valores históricos; a regra vale para exibição e novos pedidos.
+
+Catálogo, destaque, ficha e carrinho usam o mesmo cálculo. Login, logout e
+atualização dos benefícios atualizam os preços exibidos. Falhas na API de benefícios
+não geram descontos de fallback: a interface volta ao preço base até conseguir
+consultar os benefícios vigentes. O servidor sempre confirma os preços no Neon.
+Ao carregar o catálogo, o carrinho atualiza os preços base dos produtos e sinaliza
+itens que saíram da venda. A recompra consulta os produtos atuais; não reaproveita
+preços do pedido antigo nem adiciona produtos ocultos/removidos.
+
+Não é necessária migração de banco ou nova variável de ambiente para essas regras.
 
 ## 📖 Como Usar
 
@@ -207,6 +221,34 @@ O sistema suporta duas formas de adicionar imagens:
 2. **URL Externa**: Cole uma URL de imagem hospedada externamente
 
 ## 🔒 Segurança
+
+### Consultas e validação de produtos e benefícios
+
+`GET /api/vinhos` é público e lista somente produtos ativos (incluindo o legado
+`ativo IS NULL`). Para listar inativos, utilize `?admin=true` com um Bearer token
+de uma sessão administrativa válida. A autorização acontece antes do cache;
+respostas administrativas usam `Cache-Control: private, no-store` e não são
+armazenadas no cache compartilhado. A listagem pública utiliza um novo namespace
+para não reutilizar respostas de versões anteriores.
+
+`GET /api/vinhos/:id` responde 404 para produtos ocultos na consulta pública.
+Administradores podem consultá-los com `?admin=true` e autenticação. Detalhes são
+consultados no banco, sem reaproveitar entradas em cache. O frontend administrativo
+envia o token ao carregar a lista. IDs, paginação, ordenação e tipos são validados.
+
+Cadastro e edição usam as mesmas restrições: nome de 3 a 200 caracteres, uva de
+2 a 255, safra inteira de 1900 até o próximo ano e preço de R$ 0,01 a R$ 999.999,99,
+com até duas casas decimais. Uva e safra são obrigatórias no cadastro, conforme o
+schema atual do Neon; a edição parcial preserva os campos não informados. Os seis
+tipos aceitos correspondem aos tipos do banco. `suco_integral` é apenas um filtro
+que agrupa os dois tipos de suco, e não um tipo de produto gravável. `estoque` não
+é aceito como campo de gravação, pois ainda não existe controle de estoque no banco.
+
+Benefícios percentuais aceitam valores de 0 a 100; descontos fixos aceitam valores
+não negativos, com até duas casas decimais. Cadastro e edição validam também nome,
+slug, cor hexadecimal e ordem. Essas validações são aplicadas na API; não regravam
+produtos ou benefícios antigos e não substituem a revisão de dados alterados
+diretamente no banco. O formulário calcula dinamicamente o limite de safra.
 
 ### Renderização e política de conteúdo
 

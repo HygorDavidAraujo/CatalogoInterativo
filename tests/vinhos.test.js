@@ -87,7 +87,11 @@ function criarApi(options = {}) {
     const colunas = ['nome', 'tipo', 'uva', 'pais_origem', 'pais_codigo', 'bandeira_url', 'ano', 'guarda', 'harmonizacao', 'descricao', 'preco', 'imagem', 'ativo'];
     let registro = options.vinhoInicial ? { ...options.vinhoInicial } : null;
     const writes = [];
+    const queries = [];
+    const cacheCalls = [];
+    const registros = () => options.vinhos || (registro ? [registro] : []);
     const pool = { async query(sql, params) {
+        queries.push({ sql, params });
         if (sql.includes('FROM sessoes_usuario s')) {
             return { rows: [{ id: 7, email: 'admin@example.com', is_admin: options.admin !== false }] };
         }
@@ -98,8 +102,13 @@ function criarApi(options = {}) {
             return { rows: [{ id: 101 }], rowCount: 1 };
         }
         if (sql.startsWith('SELECT * FROM vinhos WHERE id')) {
-            return { rows: registro && Number(params[0]) === registro.id ? [{ ...registro }] : [] };
+            return { rows: registros().filter(vinho => Number(params[0]) === vinho.id &&
+                (!sql.includes('AND (ativo') || vinho.ativo !== false)).map(vinho => ({ ...vinho })) };
         }
+        const ativos = registros().filter(vinho => !sql.includes('ativo = TRUE') || vinho.ativo !== false);
+        if (sql.startsWith('SELECT COUNT(*)')) return { rows: [{ total: ativos.length }] };
+        if (sql.startsWith('SELECT * FROM vinhos WHERE tipo')) return { rows: ativos.filter(vinho => params[0].includes(vinho.tipo)) };
+        if (sql.startsWith('SELECT * FROM vinhos')) return { rows: ativos.slice(params[1], params[1] + params[0]) };
         throw new Error(`Consulta inesperada no teste: ${sql}`);
     } };
     const auth = carregarModulo('middleware/auth.js', { '../config/database': { pool } }, { process: { env } });
@@ -108,7 +117,11 @@ function criarApi(options = {}) {
         '../config/database': { pool }, '../config/cloudinary': configUpload,
         '../middleware/auth': auth, '../middleware/rateLimiter': { uploadLimiter: passthrough },
         '../middleware/errorHandler': errors, '../config/logger': logger,
-        '../services/cacheService': { cacheMiddleware: () => passthrough, async invalidateVinhosCache() {} }
+        '../services/cacheService': { cacheMiddleware: (ttl, key) => (req, res, next) => {
+            cacheCalls.push(key ? key(req) : req.originalUrl);
+            if (options.cacheHit) return res.json(options.cacheHit);
+            next();
+        }, async invalidateVinhosCache() {} }
     });
     const token = jwt.sign({ id: 7, isAdmin: true }, secret, {
         expiresIn: '7d', jwtid: '11111111-1111-4111-8111-111111111111'
@@ -118,7 +131,8 @@ function criarApi(options = {}) {
         const body = multipart(fields, file);
         const req = Readable.from([body.buffer]);
         Object.assign(req, {
-            method, url, originalUrl: `/api/vinhos${url}`, params: {}, query: {},
+            method, url, originalUrl: `/api/vinhos${url}`, params: {},
+            query: require('node:querystring').parse(new URL(url, 'https://catalogo.example.com').search.slice(1)),
             headers: {
                 'content-type': `multipart/form-data; boundary=${body.boundary}`,
                 'content-length': String(body.buffer.length),
@@ -128,8 +142,10 @@ function criarApi(options = {}) {
         return new Promise((resolve, reject) => {
             const res = {
                 statusCode: 200,
+                headers: {},
+                set(name, value) { this.headers[name] = value; return this; },
                 status(code) { this.statusCode = code; return this; },
-                json(data) { resolve(JSON.parse(JSON.stringify({ status: this.statusCode, body: data }))); }
+                json(data) { resolve(JSON.parse(JSON.stringify({ status: this.statusCode, body: data, headers: this.headers }))); }
             };
             router.handle(req, res, error => {
                 if (!error) return reject(new Error('Rota não encontrada'));
@@ -137,11 +153,119 @@ function criarApi(options = {}) {
             });
         });
     }
-    return { request, uploads, writes, logs, token, errors, env, getRegistro: () => registro };
+    return { request, uploads, writes, queries, cacheCalls, logs, token, errors, env, getRegistro: () => registro };
 }
 
 const imagemPequena = () => ({
     name: 'Espumante moscatel Branco.png', type: 'image/png', buffer: Buffer.alloc(Math.round(1.13 * 1024 * 1024))
+});
+
+const produtosVisibilidade = [
+    { id: 101, ...dadosProduto, ano: 2024, preco: 119, ativo: true },
+    { id: 102, ...dadosProduto, nome: 'Produto oculto', ano: 2024, preco: 99, ativo: false }
+];
+
+test('catálogo público lista somente ativos e usa um novo namespace de cache', async () => {
+    const api = criarApi({ vinhos: produtosVisibilidade });
+    const result = await api.request('GET', '/', {}, null, null);
+    assert.equal(result.status, 200);
+    assert.deepEqual(result.body.data.map(vinho => vinho.id), [101]);
+    assert.equal(result.body.pagination.total, 1);
+    assert.match(api.cacheCalls[0], /^cache:\/api\/vinhos:v3:/);
+});
+
+for (const modo of ['anonimo', 'cliente', 'token-invalido']) {
+    test(`consulta administrativa recusa ${modo} antes de ler cache com produtos ocultos`, async () => {
+        const api = criarApi({ admin: modo !== 'cliente', vinhos: produtosVisibilidade,
+            cacheHit: { data: produtosVisibilidade } });
+        const token = modo === 'anonimo' ? null : modo === 'token-invalido' ? 'invalido' : api.token;
+        for (const url of ['/?admin=true', '/102?admin=true']) {
+            const result = await api.request('GET', url, {}, null, token);
+            assert.equal(result.status, modo === 'cliente' ? 403 : 401);
+            assert.equal(result.body.data, undefined);
+        }
+        assert.equal(api.cacheCalls.length, 0);
+        assert.equal(api.queries.some(query => query.sql.includes('FROM vinhos')), false);
+    });
+}
+
+test('administrador autenticado consulta inativos sem cache compartilhado', async () => {
+    const api = criarApi({ vinhos: produtosVisibilidade, cacheHit: { data: [] } });
+    const lista = await api.request('GET', '/?admin=true');
+    assert.equal(lista.status, 200);
+    assert.equal(lista.body.data.length, 2);
+    assert.equal(lista.headers['Cache-Control'], 'private, no-store');
+    const detalhe = await api.request('GET', '/102?admin=true');
+    assert.equal(detalhe.status, 200);
+    assert.equal(detalhe.body.ativo, false);
+    assert.equal(api.cacheCalls.length, 0);
+});
+
+test('consulta por ID não revela produto oculto nem reaproveita detalhes em cache', async () => {
+    const api = criarApi({ vinhos: produtosVisibilidade, cacheHit: produtosVisibilidade[1] });
+    for (const token of [null, api.token]) {
+        const result = await api.request('GET', '/102', {}, null, token);
+        assert.equal(result.status, 404);
+        assert.equal(result.body.nome, undefined);
+    }
+    assert.equal((await api.request('GET', '/101', {}, null, null)).status, 200);
+    assert.equal(api.cacheCalls.length, 0);
+});
+
+for (const url of ['/?page=-1', '/?page=0', '/?page=1.5', '/?page=1&page=2', '/?limit=0', '/?limit=101',
+    '/?order=DESC&order=ASC', '/?order=DROP', '/?orderBy=senha', '/?admin=1', '/0', '/2147483648', '/abc']) {
+    test(`parâmetros inválidos são recusados antes do banco: ${url}`, async () => {
+        const api = criarApi();
+        const result = await api.request('GET', url, {}, null, null);
+        assert.equal(result.status, 400);
+        assert.equal(api.queries.length, 0);
+        assert.equal(api.cacheCalls.length, 0);
+    });
+}
+
+test('filtro de sucos agrupa os dois tipos válidos no banco e não retorna ocultos', async () => {
+    const api = criarApi({ vinhos: [
+        { ...produtosVisibilidade[0], tipo: 'suco_integral_tinto' },
+        { ...produtosVisibilidade[0], id: 103, tipo: 'suco_integral_branco' },
+        { ...produtosVisibilidade[1], tipo: 'suco_integral_branco' }
+    ] });
+    const result = await api.request('GET', '/tipo/suco_integral', {}, null, null);
+    assert.equal(result.status, 200);
+    assert.equal(result.body.length, 2);
+    const invalido = await api.request('GET', '/tipo/inexistente', {}, null, null);
+    assert.equal(invalido.status, 400);
+});
+
+for (const [campo, valor] of [
+    ['preco', '-1'], ['preco', '0'], ['preco', '1.001'], ['preco', '1000000'], ['preco', ''], ['preco', 'NaN'],
+    ['ano', '1899'], ['ano', String(new Date().getFullYear() + 2)], ['ano', '2024.5'], ['ano', ''], ['ano', null],
+    ['uva', ''], ['uva', ' '], ['nome', '  '], ['tipo', 'suco_integral'], ['estoque', '10']
+]) {
+    test(`cadastro e edição recusam ${campo} inválido (${valor}) sem gravar`, async () => {
+        const api = criarApi({ vinhoInicial: produtosVisibilidade[0] });
+        const criar = await api.request('POST', '/', { ...dadosProduto, [campo]: valor });
+        const editar = await api.request('PUT', '/101', { [campo]: valor });
+        assert.equal(criar.status, 400);
+        assert.equal(editar.status, 400);
+        assert.equal(api.writes.length, 0);
+    });
+}
+
+test('cadastro exige uva e safra; edição parcial mantém ativo e demais campos', async () => {
+    for (const campo of ['uva', 'ano']) {
+        const api = criarApi();
+        const campos = { ...dadosProduto };
+        delete campos[campo];
+        assert.equal((await api.request('POST', '/', campos)).status, 400);
+        assert.equal(api.writes.length, 0);
+    }
+    const api = criarApi({ vinhoInicial: { ...produtosVisibilidade[0], ativo: false } });
+    const result = await api.request('PUT', '/101', { preco: '10.50' });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.preco, 10.5);
+    assert.equal(result.body.ano, 2024);
+    assert.equal(result.body.ativo, false);
+    assert.equal((await api.request('PUT', '/101', {})).status, 400);
 });
 
 test('imagem de 1,13 MB sem Cloudinary configurado retorna diagnóstico e não grava produto', async () => {
@@ -202,7 +326,7 @@ test('edição por URL mantém os campos novos e o restante do cadastro', async 
 });
 
 test('URL inválida ou com javascript é recusada antes da gravação', async () => {
-    for (const imagemUrl of ['javascript:alert(1)', 'url-invalida']) {
+    for (const imagemUrl of ['javascript:alert(1)', 'url-invalida', 'https://usuario:senha@example.com/foto.png']) {
         const api = criarApi();
         const result = await api.request('POST', '/', { ...dadosProduto, imagemUrl });
         assert.equal(result.status, 400);

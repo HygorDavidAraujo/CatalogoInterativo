@@ -373,7 +373,7 @@ async function carregarBeneficiosVipSelect() {
             if (beneficio.tipo_desconto === 'percentual') {
                 descricao += ` - ${beneficio.valor_desconto}% desconto`;
             } else if (beneficio.tipo_desconto === 'valor_fixo') {
-                descricao += ` - R$ ${beneficio.valor_desconto.toFixed(2).replace('.', ',')} desconto`;
+                descricao += ` - R$ ${Number(beneficio.valor_desconto).toFixed(2).replace('.', ',')} desconto`;
             }
             
             option.textContent = descricao;

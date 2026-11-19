@@ -4,26 +4,32 @@ const { pool } = require('../config/database');
 const { upload, cloudinary } = require('../config/cloudinary');
 const { verificarAdminAuth } = require('../middleware/auth');
 const { uploadLimiter } = require('../middleware/rateLimiter');
-const { validateVinho, validateVinhoUpdate, validateId } = require('../middleware/validatorsZod');
+const { validateVinho, validateVinhoUpdate, validateId, validateVinhosQuery, validateVinhoDetalheQuery, validateVinhoTipo } = require('../middleware/validatorsZod');
 const { AppError, catchAsync } = require('../middleware/errorHandler');
 const cacheService = require('../services/cacheService');
 const logger = require('../config/logger');
 
-// GET - Listar todos os vinhos (área pública mostra apenas ativos) - COM CACHE
-router.get('/', cacheService.cacheMiddleware(300), catchAsync(async (req, res) => {
-    const mostrarInativos = req.query.admin === 'true';
-    const page = parseInt(req.query.page) || 1;
-    const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Máximo 100
+// Autorizar antes de consultar/cachear. O parâmetro de URL nunca concede permissão.
+function autorizarConsulta(req, res, next) {
+    if (req.query.admin) {
+        res.set('Cache-Control', 'private, no-store');
+        return verificarAdminAuth(req, res, next);
+    }
+    next();
+}
+
+// Não reutilizar entradas antigas que podiam conter produtos ocultos.
+const cacheListaPublica = cacheService.cacheMiddleware(300, req => `cache:/api/vinhos:v3:${req.originalUrl}`);
+function cacheConsultaPublica(req, res, next) {
+    if (req.query.admin) return next();
+    return cacheListaPublica(req, res, next);
+}
+
+// GET - Listar vinhos; modo administrativo autenticado e sem cache compartilhado.
+router.get('/', validateVinhosQuery, autorizarConsulta, cacheConsultaPublica, catchAsync(async (req, res) => {
+    const mostrarInativos = req.query.admin;
+    const { page, limit, orderBy: safeOrderBy, order: safeOrder } = req.query;
     const offset = (page - 1) * limit;
-    const orderBy = req.query.orderBy || 'created_at';
-    const order = req.query.order || 'DESC';
-    
-    // Validar orderBy para prevenir SQL injection
-    const validOrderBy = ['created_at', 'nome', 'preco', 'ano'];
-    const validOrder = ['ASC', 'DESC'];
-    
-    const safeOrderBy = validOrderBy.includes(orderBy) ? orderBy : 'created_at';
-    const safeOrder = validOrder.includes(order.toUpperCase()) ? order.toUpperCase() : 'DESC';
     
     // Query base
     let whereClause = '';
@@ -53,9 +59,10 @@ router.get('/', cacheService.cacheMiddleware(300), catchAsync(async (req, res) =
     });
 }));
 
-// GET - Buscar vinho por ID - COM CACHE
-router.get('/:id', validateId, cacheService.cacheMiddleware(600), catchAsync(async (req, res) => {
-    const { rows: vinhos } = await pool.query('SELECT * FROM vinhos WHERE id = $1', [req.params.id]);
+// GET - Consultar visibilidade vigente no banco; não servir detalhes ocultos do cache.
+router.get('/:id', validateId, validateVinhoDetalheQuery, autorizarConsulta, catchAsync(async (req, res) => {
+    const whereAtivo = req.query.admin ? '' : ' AND (ativo = TRUE OR ativo IS NULL)';
+    const { rows: vinhos } = await pool.query(`SELECT * FROM vinhos WHERE id = $1${whereAtivo}`, [req.params.id]);
     
     if (vinhos.length === 0) {
         throw new AppError('Vinho não encontrado', 404);
@@ -154,9 +161,9 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
     await pool.query(
         'UPDATE vinhos SET nome = $1, tipo = $2, uva = $3, pais_origem = $4, pais_codigo = $5, bandeira_url = $6, ano = $7, guarda = $8, harmonizacao = $9, descricao = $10, preco = $11, imagem = $12, ativo = $13 WHERE id = $14',
         [
-            nome || vinhoAtual[0].nome,
-            tipo || vinhoAtual[0].tipo,
-            uva || vinhoAtual[0].uva,
+            nome ?? vinhoAtual[0].nome,
+            tipo ?? vinhoAtual[0].tipo,
+            uva ?? vinhoAtual[0].uva,
             pais_origem !== undefined ? pais_origem : vinhoAtual[0].pais_origem,
             pais_codigo !== undefined ? pais_codigo : vinhoAtual[0].pais_codigo,
             bandeira_url !== undefined ? bandeira_url : vinhoAtual[0].bandeira_url,
@@ -213,10 +220,12 @@ router.delete('/:id', verificarAdminAuth, validateId, catchAsync(async (req, res
 }));
 
 // GET - Filtrar vinhos por tipo - COM CACHE
-router.get('/tipo/:tipo', cacheService.cacheMiddleware(300), catchAsync(async (req, res) => {
+router.get('/tipo/:tipo', validateVinhoTipo, validateVinhoDetalheQuery, autorizarConsulta, cacheConsultaPublica, catchAsync(async (req, res) => {
+    const tipos = req.params.tipo === 'suco_integral'
+        ? ['suco_integral_tinto', 'suco_integral_branco'] : [req.params.tipo];
     const { rows: vinhos } = await pool.query(
-        'SELECT * FROM vinhos WHERE tipo = $1 AND (ativo = TRUE OR ativo IS NULL) ORDER BY created_at DESC',
-        [req.params.tipo]
+        'SELECT * FROM vinhos WHERE tipo = ANY($1::text[]) AND (ativo = TRUE OR ativo IS NULL) ORDER BY created_at DESC',
+        [tipos]
     );
     res.json(vinhos);
 }));

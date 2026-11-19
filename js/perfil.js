@@ -617,124 +617,39 @@ class PerfilManager {
     }
 
     async refazerPedido(pedido) {
+        if (this.refazendoPedido) return;
+        this.refazendoPedido = true;
         try {
-            console.log('🔄 Iniciando processo de pedir novamente...');
-            console.log('📦 Pedido a ser repetido:', pedido);
-
-            // Verificar se o carrinhoManager existe
-            if (!window.carrinhoManager) {
-                console.error('❌ carrinhoManager não encontrado');
-                this.mostrarMensagem('Erro: Sistema de carrinho não disponível.', 'erro');
-                return;
-            }
-
-            // Limpar o carrinho atual
-            console.log('🗑️ Limpando carrinho atual...');
-            window.carrinhoManager.carrinho = [];
-            window.carrinhoManager.salvarCarrinho();
-
-            // Adicionar cada item do pedido ao carrinho
-            console.log('➕ Adicionando itens ao carrinho...');
-            let itensAdicionados = 0;
-            
+            const carrinho = window.carrinhoManager;
+            if (!carrinho) throw new Error('Sistema de carrinho não disponível.');
+            const itensAtuais = new Map();
+            let indisponiveis = 0;
             for (const item of pedido.itens) {
-                // Buscar informações completas do vinho
-                try {
-                    const response = await fetch(`${API_URL}/vinhos/${item.vinho_id}`);
-                    if (response.ok) {
-                        const vinho = await response.json();
-                        console.log(`  ✅ Vinho encontrado: ${vinho.nome}`);
-                        
-                        // Adicionar ao carrinho a quantidade especificada
-                        // Adicionar item à lista diretamente com a quantidade
-                        const itemCarrinho = {
-                            id: vinho.id,
-                            nome: vinho.nome,
-                            preco: parseFloat(vinho.preco),
-                            imagem: vinho.imagem,
-                            tipo: vinho.tipo,
-                            quantidade: item.quantidade
-                        };
-                        
-                        // Verificar se já existe no carrinho
-                        const existente = window.carrinhoManager.itens.find(i => i.id === vinho.id);
-                        if (existente) {
-                            existente.quantidade += item.quantidade;
-                        } else {
-                            window.carrinhoManager.itens.push(itemCarrinho);
-                        }
-                        
-                        itensAdicionados++;
-                    } else {
-                        console.warn(`  ⚠️ Vinho ${item.vinho_nome} (ID: ${item.vinho_id}) não encontrado no catálogo`);
-                        // Se o vinho não existir mais, adicionar com dados do pedido antigo
-                        const itemCarrinho = {
-                            id: item.vinho_id,
-                            nome: item.vinho_nome,
-                            preco: parseFloat(item.preco_unitario),
-                            imagem: '/img/vinho-default.jpg',
-                            tipo: 'Não disponível',
-                            quantidade: item.quantidade
-                        };
-                        
-                        const existente = window.carrinhoManager.itens.find(i => i.id === item.vinho_id);
-                        if (existente) {
-                            existente.quantidade += item.quantidade;
-                        } else {
-                            window.carrinhoManager.itens.push(itemCarrinho);
-                        }
-                        
-                        itensAdicionados++;
-                    }
-                } catch (error) {
-                    console.error(`  ❌ Erro ao buscar vinho ${item.vinho_nome}:`, error);
-                    // Em caso de erro, adicionar com dados do pedido antigo
-                    const itemCarrinho = {
-                        id: item.vinho_id,
-                        nome: item.vinho_nome,
-                        preco: parseFloat(item.preco_unitario),
-                        imagem: '/img/vinho-default.jpg',
-                        tipo: 'Não disponível',
-                        quantidade: item.quantidade
-                    };
-                    
-                    const existente = window.carrinhoManager.itens.find(i => i.id === item.vinho_id);
-                    if (existente) {
-                        existente.quantidade += item.quantidade;
-                    } else {
-                        window.carrinhoManager.itens.push(itemCarrinho);
-                    }
-                    
-                    itensAdicionados++;
+                const response = await fetch(API_URL + '/vinhos/' + item.vinho_id);
+                if (response.status === 404) { indisponiveis++; continue; }
+                if (!response.ok) throw new Error('Não foi possível consultar os produtos. Tente novamente.');
+                const vinho = await response.json();
+                if (vinho.ativo === false) { indisponiveis++; continue; }
+                const quantidade = Number(item.quantidade) + (itensAtuais.get(vinho.id)?.quantidade || 0);
+                if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 999) {
+                    throw new Error('Revise a quantidade dos produtos antes de repetir o pedido.');
                 }
+                itensAtuais.set(vinho.id, {
+                    id: vinho.id, nome: vinho.nome, preco: Number(vinho.preco), imagem: vinho.imagem,
+                    tipo: vinho.tipo, quantidade, indisponivel: false
+                });
             }
-            
-            // Salvar o carrinho após adicionar todos os itens
-            window.carrinhoManager.salvarCarrinho();
-
-            console.log(`✅ ${itensAdicionados} itens adicionados ao carrinho`);
-
-            // Salvar e atualizar a interface do carrinho
-            window.carrinhoManager.salvarCarrinho();
-            window.carrinhoManager.renderizarCarrinho();
-            
-            // Atualizar o contador do carrinho
-            if (window.carrinhoManager.atualizarContador) {
-                window.carrinhoManager.atualizarContador();
-            }
-
-            // Mostrar mensagem de sucesso
-            this.mostrarMensagem(`${itensAdicionados} ${itensAdicionados === 1 ? 'produto adicionado' : 'produtos adicionados'} ao carrinho!`, 'sucesso');
-
-            // Abrir o carrinho automaticamente após 500ms
-            setTimeout(() => {
-                console.log('🛒 Abrindo carrinho...');
-                window.carrinhoManager.abrirCarrinho();
-            }, 500);
-
+            if (!itensAtuais.size) throw new Error('Os produtos deste pedido não estão mais disponíveis.');
+            carrinho.itens = [...itensAtuais.values()];
+            carrinho.salvarCarrinho();
+            this.mostrarMensagem(indisponiveis
+                ? 'Carrinho atualizado com os produtos disponíveis. Alguns itens não estão mais à venda.'
+                : 'Carrinho atualizado com os preços atuais. Revise os itens antes de finalizar.', 'sucesso');
+            carrinho.abrirCarrinho();
         } catch (error) {
-            console.error('❌ Erro ao refazer pedido:', error);
-            this.mostrarMensagem('Erro ao adicionar produtos ao carrinho. Tente novamente.', 'erro');
+            this.mostrarMensagem(error.message || 'Erro ao refazer o pedido. Tente novamente.', 'erro');
+        } finally {
+            this.refazendoPedido = false;
         }
     }
 

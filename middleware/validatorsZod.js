@@ -42,37 +42,42 @@ const cadastroSchema = z.object({
 });
 
 // Schema para vinho
-const tiposPermitidos = ['tinto', 'branco', 'rose', 'espumante', 'suco_integral', 'suco_integral_tinto', 'suco_integral_branco'];
+const tiposPermitidos = ['tinto', 'branco', 'rose', 'espumante', 'suco_integral_tinto', 'suco_integral_branco'];
+const decimalSchema = z.union([
+    z.number(),
+    z.string().trim().regex(/^\d+(?:\.\d{1,2})?$/, 'Informe um número com até duas casas decimais')
+]).pipe(z.coerce.number().finite().nonnegative())
+    .refine(value => value === Number(value.toFixed(2)),
+        'Informe um número com até duas casas decimais')
+    .transform(value => Math.round(value * 100) / 100);
+
+const anoSchema = z.union([z.number(), z.string().trim().regex(/^\d{4}$/, 'Informe uma safra válida')])
+    .pipe(z.coerce.number().int('Ano deve ser um número inteiro')
+        .min(1900, 'Ano deve ser maior ou igual a 1900')
+        .max(new Date().getFullYear() + 1, 'Ano inválido'));
 
 const urlImagemSchema = z.string().trim().max(500, 'URL deve ter no máximo 500 caracteres')
     .refine(value => {
         if (value === '') return true;
         try {
-            return ['http:', 'https:'].includes(new URL(value).protocol);
+            const url = new URL(value);
+            return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;
         } catch (_) {
             return false;
         }
     }, 'Informe uma URL de imagem válida com http ou https');
 
 const vinhoSchema = z.object({
-    nome: z.string()
+    nome: z.string().trim()
         .min(3, 'Nome deve ter no mínimo 3 caracteres')
         .max(200, 'Nome deve ter no máximo 200 caracteres'),
     tipo: z.enum(tiposPermitidos, {
         errorMap: () => ({ message: 'Tipo deve ser: tinto, branco, rose, espumante ou suco integral' })
     }),
-    uva: z.string()
-        .max(100, 'Tipo de uva deve ter no máximo 100 caracteres')
-        .optional(),
-    ano: z.coerce.number()
-        .int('Ano deve ser um número inteiro')
-        .min(1900, 'Ano deve ser maior que 1900')
-        .max(new Date().getFullYear() + 1, 'Ano inválido')
-        .optional()
-        .nullable(),
-    preco: z.coerce.number()
-        .positive('Preço deve ser um valor positivo')
-        .max(999999.99, 'Preço muito alto'),
+    uva: z.string().trim().min(2, 'Tipo de uva deve ter no mínimo 2 caracteres')
+        .max(255, 'Tipo de uva deve ter no máximo 255 caracteres'),
+    ano: anoSchema,
+    preco: decimalSchema.refine(value => value > 0 && value <= 999999.99, 'Preço deve estar entre 0,01 e 999999,99'),
     descricao: z.string()
         .max(2000, 'Descrição deve ter no máximo 2000 caracteres')
         .optional(),
@@ -82,11 +87,6 @@ const vinhoSchema = z.object({
     guarda: z.string()
         .max(100, 'Guarda deve ter no máximo 100 caracteres')
         .optional(),
-    estoque: z.coerce.number()
-        .int('Estoque deve ser um número inteiro')
-        .min(0, 'Estoque não pode ser negativo')
-        .optional()
-        .nullable(),
     ativo: booleanFromString
         .optional()
         .default(true),
@@ -98,23 +98,44 @@ const vinhoSchema = z.object({
         .transform(value => value.toUpperCase()).optional(),
     bandeira_url: urlImagemSchema.optional(),
     imagemUrl: urlImagemSchema.optional()
-});
+}).strict();
 
 // Schema para vinho parcial (update)
 const vinhoUpdateSchema = vinhoSchema.extend({
     removerImagem: booleanFromString.optional(),
-    ativo: booleanFromString.optional(),
-    ano: z.coerce.number().optional().nullable(),
-    preco: z.coerce.number().optional(),
-    estoque: z.coerce.number().optional().nullable()
-}).partial();
+    ativo: booleanFromString.optional()
+}).partial().refine(value => Object.keys(value).length > 0, 'Informe ao menos um campo para atualizar');
 
 // Schema para ID
 const idSchema = z.object({
     id: z.string()
         .regex(/^\d+$/, 'ID deve ser um número válido')
         .transform(Number)
+        .pipe(z.number().int().min(1).max(2147483647))
 });
+
+const inteiroQuery = z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(2147483647));
+const vinhosQuerySchema = z.object({
+    page: inteiroQuery.optional().default(1),
+    limit: inteiroQuery.pipe(z.number().max(100)).optional().default(50),
+    admin: z.enum(['true', 'false']).optional().default('false').transform(value => value === 'true'),
+    orderBy: z.enum(['created_at', 'nome', 'preco', 'ano']).optional().default('created_at'),
+    order: z.string().transform(value => value.toUpperCase()).pipe(z.enum(['ASC', 'DESC'])).optional().default('DESC')
+}).strict();
+const vinhoDetalheQuerySchema = z.object({
+    admin: z.enum(['true', 'false']).optional().default('false').transform(value => value === 'true')
+}).strict();
+const vinhoTipoSchema = z.object({ tipo: z.enum([...tiposPermitidos, 'suco_integral']) });
+
+const beneficioSchema = z.object({
+    nome: z.string().trim().min(1).max(255),
+    slug: z.string().trim().regex(/^[a-z0-9_-]+$/).max(255),
+    tipo_desconto: z.enum(['percentual', 'valor_fixo']),
+    valor_desconto: decimalSchema.refine(value => value <= 99999999.99, 'Desconto excede o limite permitido'),
+    cor: z.string().regex(/^#[a-f\d]{6}$/i).optional(),
+    ordem: z.number().int().min(0).max(2147483647).optional().default(0)
+}).strict().refine(value => value.tipo_desconto !== 'percentual' || value.valor_desconto <= 100,
+    { path: ['valor_desconto'], message: 'Desconto percentual deve estar entre 0 e 100' });
 
 // Schema para configurações
 const configuracoesSchema = z.object({
@@ -217,6 +238,8 @@ module.exports = {
     cadastroSchema,
     vinhoSchema,
     vinhoUpdateSchema,
+    vinhosQuerySchema,
+    beneficioSchema,
     idSchema,
     configuracoesSchema,
     pedidoSchema,
@@ -230,6 +253,10 @@ module.exports = {
     validateVinho: validate(vinhoSchema, 'body'),
     validateVinhoUpdate: validate(vinhoUpdateSchema, 'body'),
     validateId: validate(idSchema, 'params'),
+    validateVinhosQuery: validate(vinhosQuerySchema, 'query'),
+    validateVinhoDetalheQuery: validate(vinhoDetalheQuerySchema, 'query'),
+    validateVinhoTipo: validate(vinhoTipoSchema, 'params'),
+    validateBeneficio: validate(beneficioSchema, 'body'),
     validateConfiguracoes: validate(configuracoesSchema, 'body'),
     validatePedido: validate(pedidoSchema, 'body')
 };

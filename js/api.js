@@ -64,7 +64,7 @@ class VinhoManager {
                 url.searchParams.set('limit', 100);
                 if (admin) url.searchParams.set('admin', 'true');
 
-                const fetchOptions = { cache: 'no-store' };
+                const fetchOptions = { cache: 'no-store', ...(admin ? { headers: obterHeadersComAutenticacao() } : {}) };
                 const response = await (window.fetchWithTimeout
                     ? window.fetchWithTimeout(url, fetchOptions)
                     : fetch(url, fetchOptions));
@@ -94,6 +94,7 @@ class VinhoManager {
             });
             
             this.vinhos = vinhosNormalizados;
+            if (!admin) window.carrinhoManager?.atualizarProdutos(this.vinhos);
             return this.vinhos;
         } catch (error) {
             console.error('Erro ao carregar vinhos:', error);
@@ -224,27 +225,6 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
         const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
         const pais = vinho.pais_origem || '';
         
-        // VIP desconto logic - dinâmico via VipManager
-        let usuario = window.authManager?.usuarioLogado;
-        let isVip = usuario?.is_vip;
-        let vipTipo = usuario?.vip_tipo;
-        let badge = '';
-        
-        if (isVip && vipTipo) {
-            // Usar VipManager para buscar badge dinâmico
-            if (window.vipManager && window.vipManager.beneficios.length > 0) {
-                badge = window.vipManager.getBadgeHtml(vipTipo);
-            } else {
-                // Fallback básico se VipManager não carregou
-                const labels = {prata: 'Prata', ouro: 'Ouro', diamante: 'Diamante', atacado: 'Atacado'};
-                const label = labels[vipTipo] || vipTipo.charAt(0).toUpperCase() + vipTipo.slice(1);
-                badge = `<span class="badge-vip" style="background:#6B1C40;color:white;padding:4px 8px;border-radius:4px;font-size:0.8rem;">🎁 ${window.RenderSeguro.texto(label)}</span>`;
-            }
-        }
-        
-        let precoOriginal = parseFloat(vinho.preco);
-        let precoFinal = isVip && vipTipo ? calcularPrecoComDesconto(precoOriginal, vipTipo) : precoOriginal;
-        
         return `
             <div class="vinho-card" data-id="${vinho.id}">
                 <img src="${imagemSrc}" 
@@ -257,7 +237,7 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
                     <p class="vinho-uva"><i class="fas fa-grape-alt"></i> ${vinho.uva}</p>
                     <p class="vinho-ano"><i class="fas fa-calendar"></i> Safra ${vinho.ano}</p>
                     ${pais ? `<p class="vinho-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14" loading="lazy">` : ''}<span>${pais}</span></p>` : ''}
-                    ${precoFinal !== precoOriginal ? `<p class='vinho-preco'><span class='preco-original' style='text-decoration:line-through;color:#888;'>R$ ${formatarPreco(precoOriginal)}</span> ${badge} <span class='preco-final' style='color:#1976d2;font-weight:bold;'>R$ ${formatarPreco(precoFinal)}</span></p>` : `<p class="vinho-preco">R$ ${formatarPreco(precoOriginal)}</p>`}
+                    <p class="vinho-preco" data-preco-vinho="${vinho.id}">${renderizarPrecoVinho(vinhoOriginal)}</p>
                     <button class="btn btn-adicionar-carrinho" data-adicionar-vinho="${vinho.id}">
                         <i class="fas fa-shopping-cart"></i> Adicionar
                     </button>
@@ -322,8 +302,6 @@ async function renderizarDestaqueSemana() {
 
         const usuario = window.authManager?.usuarioLogado;
         const vipTipo = usuario?.is_vip ? usuario?.vip_tipo : null;
-        const precoOriginal = parseFloat(vinho.preco);
-        const precoFinal = calcularPrecoComDesconto(precoOriginal, vipTipo);
         const badgeVip = vipTipo ? window.RenderSeguro.texto(`VIP ${vipTipo.charAt(0).toUpperCase()}${vipTipo.slice(1)}`) : '';
 
         container.innerHTML = `
@@ -341,10 +319,7 @@ async function renderizarDestaqueSemana() {
                     </div>
                     <h3 class="destaque-titulo">${vinho.nome}</h3>
                     <p class="destaque-descricao">Escolhido especialmente para esta semana. Descubra suas caracteristicas unicas e aproveite este destaque.</p>
-                    <div class="destaque-preco">
-                        ${precoFinal !== precoOriginal ? `<span class="preco-original">R$ ${formatarPreco(precoOriginal)}</span>` : ''}
-                        <span class="preco-final">R$ ${formatarPreco(precoFinal)}</span>
-                    </div>
+                    <div class="destaque-preco" data-preco-vinho="${vinho.id}">${renderizarPrecoVinho(vinho)}</div>
                     <div class="destaque-acoes">
                         <button class="btn btn-adicionar-carrinho" data-destaque-adicionar>
                             <i class="fas fa-shopping-cart"></i> Adicionar
@@ -432,7 +407,7 @@ function abrirModal(id) {
                     </div>
                     ` : ''}
                 </div>
-                <div class="modal-preco">R$ ${formatarPreco(vinho.preco)}</div>
+                <div class="modal-preco" data-preco-vinho="${vinho.id}">${renderizarPrecoVinho(original)}</div>
             </div>
         </div>
     `;
@@ -623,28 +598,27 @@ function formatarPreco(preco) {
 }
 
 function calcularPrecoComDesconto(precoOriginal, vipTipo) {
-    if (!vipTipo) return precoOriginal;
-    
-    // Tentar usar VipManager primeiro
-    if (window.vipManager && window.vipManager.beneficios.length > 0) {
-        return window.vipManager.calcularDesconto(precoOriginal, vipTipo);
-    }
-    
-    // Fallback com todos os tipos conhecidos
-    const descontos = {
-        'prata': 0.03,
-        'ouro': 0.07,
-        'diamante': 0.11,
-        'atacado': 0.15
-    };
-    
-    const desconto = descontos[vipTipo] || 0;
-    if (desconto === 0) return precoOriginal;
+    return window.vipManager
+        ? window.vipManager.calcularDesconto(precoOriginal, vipTipo)
+        : window.Precos.paraCentavos(precoOriginal) / 100;
+}
 
-    let precoFinal = precoOriginal * (1 - desconto);
-    precoFinal = Math.ceil(precoFinal * 100) / 100;
-    precoFinal = Math.floor(precoFinal) + 0.90;
-    return precoFinal;
+function renderizarPrecoVinho(vinho) {
+    const usuario = window.authManager?.usuarioLogado;
+    const vipTipo = usuario?.is_vip ? usuario.vip_tipo : null;
+    const original = window.Precos.paraCentavos(vinho.preco) / 100;
+    const final = calcularPrecoComDesconto(vinho.preco, vipTipo);
+    const badge = final < original ? (window.vipManager?.getBadgeHtml(vipTipo) || '') : '';
+    return (final < original ? '<span class="preco-original" style="text-decoration:line-through">R$ ' + formatarPreco(original) + '</span> ' + badge + ' ' : '') +
+        '<span class="preco-final">R$ ' + formatarPreco(final) + '</span>';
+}
+
+function atualizarPrecosExibidos() {
+    document.querySelectorAll('[data-preco-vinho]').forEach(element => {
+        const vinho = vinhoManager.getVinhoPorId(Number(element.dataset.precoVinho));
+        if (vinho) element.innerHTML = renderizarPrecoVinho(vinho);
+    });
+    window.carrinhoManager?.atualizarInterface();
 }
 
 function calcularIndiceAleatorioDoDia(total) {

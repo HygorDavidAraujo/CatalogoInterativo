@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { verificarAdminAuth } = require('../middleware/auth');
+const { validateBeneficio, validateId } = require('../middleware/validatorsZod');
 
 // GET - Listar todos os benefícios VIP
 router.get('/', async (req, res) => {
@@ -36,7 +37,7 @@ router.get('/slug/:slug', async (req, res) => {
 });
 
 // POST - Criar novo benefício (apenas admin)
-router.post('/', verificarAdminAuth, async (req, res) => {
+router.post('/', verificarAdminAuth, validateBeneficio, async (req, res) => {
     try {
         const { nome, slug, tipo_desconto, valor_desconto, cor, ordem } = req.body;
         
@@ -72,7 +73,7 @@ router.post('/', verificarAdminAuth, async (req, res) => {
 });
 
 // PUT - Atualizar benefício (apenas admin)
-router.put('/:id', verificarAdminAuth, async (req, res) => {
+router.put('/:id', verificarAdminAuth, validateId, validateBeneficio, async (req, res) => {
     try {
         const { nome, slug, tipo_desconto, valor_desconto, cor, ordem } = req.body;
         const { id } = req.params;
@@ -106,7 +107,7 @@ router.put('/:id', verificarAdminAuth, async (req, res) => {
 });
 
 // DELETE - Desativar benefício (soft delete)
-router.delete('/:id', verificarAdminAuth, async (req, res) => {
+router.delete('/:id', verificarAdminAuth, validateId, async (req, res) => {
     try {
         const result = await pool.query(
             'UPDATE beneficios_vip SET ativo = FALSE WHERE id = $1',

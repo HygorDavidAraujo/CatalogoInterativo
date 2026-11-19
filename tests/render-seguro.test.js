@@ -32,7 +32,7 @@ function pagina(files) {
         setInterval() {}, setTimeout() {}, API_URL: '/api',
         localStorage: { getItem: () => null }, sessionStorage: { getItem: () => null },
         fetch: async () => ({ ok: false }),
-        window: { RenderSeguro: seguro, location: { origin: 'https://catalogo.example.com', hostname: 'catalogo.example.com' } },
+        window: { Precos: require('../js/precos'), RenderSeguro: seguro, location: { origin: 'https://catalogo.example.com', hostname: 'catalogo.example.com' } },
         document: {
             readyState: 'loading', addEventListener() {}, querySelectorAll: () => [],
             createElement: elemento, body: { appendChild() {} },

@@ -131,8 +131,8 @@ test('aceita apenas IDs e quantidades e soma centavos sem erro de ponto flutuant
     assert.equal(result.body.itens[0].subtotal, 0.3);
 });
 
-for (const [tipo, valor, esperado] of [['percentual', '7.00', 93.9], ['valor_fixo', '12.35', 87.9]]) {
-    test(`VIP ${tipo} usa benefício do banco e preserva arredondamento atual`, async () => {
+for (const [tipo, valor, esperado] of [['percentual', '7.00', 93], ['valor_fixo', '12.35', 87.65]]) {
+    test(`VIP ${tipo} usa benefício do banco e calcula o desconto em centavos`, async () => {
         const result = await enviarPedido({ itens: [{ id: 1, quantidade: 2 }] }, {
             usuario: { id: 7, is_vip: true, vip_tipo: 'personalizado' },
             beneficio: { tipo_desconto: tipo, valor_desconto: valor }
@@ -163,7 +163,9 @@ test('agrupa IDs repetidos sem perder quantidades', async () => {
 for (const [nome, options] of [
     ['produto removido', { vinhos: [] }],
     ['produto oculto', { vinhos: [{ id: 1, nome: 'Oculto', preco: '100.00', ativo: false }] }],
-    ['preço inválido no banco', { vinhos: [{ id: 1, nome: 'Inválido', preco: '-1.00', ativo: true }] }]
+    ['preço inválido no banco', { vinhos: [{ id: 1, nome: 'Inválido', preco: '-1.00', ativo: true }] }],
+    ['benefício percentual acima de 100', { usuario: { id: 7, is_vip: true, vip_tipo: 'ouro' }, beneficio: { tipo_desconto: 'percentual', valor_desconto: '100.01' } }],
+    ['benefício negativo', { usuario: { id: 7, is_vip: true, vip_tipo: 'ouro' }, beneficio: { tipo_desconto: 'valor_fixo', valor_desconto: '-1' } }]
 ]) {
     test(`${nome} cancela a transação sem gravar pedidos`, async () => {
         const result = await enviarPedido({ itens: [{ id: 1, quantidade: 1 }] }, options);

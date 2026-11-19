@@ -516,6 +516,8 @@ function configurarUploadLogo() {
 
 // ===== FORMULÁRIO =====
 function configurarFormulario() {
+    const campoAno = document.getElementById('ano');
+    if (campoAno) campoAno.max = String(new Date().getFullYear() + 1);
     const form = document.getElementById('form-vinho');
     if (!form) {
         console.log('Formulário de vinho não encontrado');
@@ -1013,7 +1015,7 @@ function renderizarBeneficios() {
                 </div>
                 <div class="beneficio-detalhes">
                     <span><i class="fas fa-tag"></i> ${beneficio.slug}</span>
-                    <span><i class="fas fa-percent"></i> ${beneficio.tipo_desconto === 'percentual' ? beneficio.valor_desconto + '%' : 'R$ ' + beneficio.valor_desconto.toFixed(2).replace('.', ',')}</span>
+                    <span><i class="fas fa-percent"></i> ${beneficio.tipo_desconto === 'percentual' ? beneficio.valor_desconto + '%' : 'R$ ' + Number(beneficio.valor_desconto).toFixed(2).replace('.', ',')}</span>
                     <span><i class="fas fa-palette"></i> ${beneficio.cor || '#6B1C40'}</span>
                     <span><i class="fas fa-sort"></i> Ordem: ${beneficio.ordem}</span>
                 </div>
@@ -1065,7 +1067,7 @@ async function adicionarBeneficio() {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || 'Erro ao adicionar benefício');
+            throw new Error(error.errors?.map(item => item.message).join('; ') || error.message || error.error || 'Erro ao adicionar benefício');
         }
 
         mostrarMensagem('Ben efício adicionado com sucesso!', 'sucesso');
@@ -1136,9 +1138,9 @@ function editarBeneficio(id) {
         nome: novoNome.trim(),
         slug: novoSlug.trim().toLowerCase(),
         tipo_desconto: beneficio.tipo_desconto,
-        valor_desconto: parseFloat(novoValor),
+        valor_desconto: Number(novoValor.trim().replace(',', '.')),
         cor: novaCor.trim(),
-        ordem: parseInt(novaOrdem)
+        ordem: Number(novaOrdem)
     });
 }
 
@@ -1156,7 +1158,7 @@ async function atualizarBeneficio(id, dados) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || 'Erro ao atualizar benefício');
+            throw new Error(error.errors?.map(item => item.message).join('; ') || error.message || error.error || 'Erro ao atualizar benefício');
         }
 
         mostrarMensagem('Benefício atualizado com sucesso!', 'sucesso');

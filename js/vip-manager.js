@@ -69,51 +69,36 @@ class VipManager {
             
             // Notificar callbacks
             this.executarCallbacks();
+            this.atualizarPrecos();
         } catch (error) {
             console.error('Erro ao carregar benefícios:', error);
-            // Fallback para benefícios padrão em caso de erro
-            this.beneficios = [
-                { slug: 'prata', nome: 'VIP Prata', tipo_desconto: 'percentual', valor_desconto: 3, cor: '#C0C0C0' },
-                { slug: 'ouro', nome: 'VIP Ouro', tipo_desconto: 'percentual', valor_desconto: 7, cor: '#FFD700' },
-                { slug: 'diamante', nome: 'VIP Diamante', tipo_desconto: 'percentual', valor_desconto: 11, cor: '#B9F2FF' }
-            ];
-            this.carregado = true;
-            console.log('⚠ Usando benefícios padrão (fallback)');
+            // Falhas não autorizam inventar um benefício que pode estar desativado no banco.
+            this.beneficios = [];
+            this.carregado = false;
             
-            // Notificar callbacks mesmo em caso de fallback
+            // Notificar a interface também quando a consulta falhar.
             this.executarCallbacks();
+            this.atualizarPrecos();
         }
     }
 
     getBeneficioPorSlug(slug) {
-        return this.beneficios.find(b => b.slug === slug);
+        return this.beneficios.find(b => b.slug === slug && b.ativo !== false);
+    }
+
+    atualizarPrecos() {
+        window.atualizarPrecosExibidos?.();
+        window.authManager?.atualizarInterface();
     }
 
     calcularDesconto(preco, vipSlug) {
-        if (!vipSlug) return preco;
-        
-        const beneficio = this.getBeneficioPorSlug(vipSlug);
-        if (!beneficio) return preco;
-
-        let precoFinal = preco;
-        
-        if (beneficio.tipo_desconto === 'percentual') {
-            // Desconto percentual
-            const desconto = parseFloat(beneficio.valor_desconto) / 100;
-            precoFinal = preco * (1 - desconto);
-        } else if (beneficio.tipo_desconto === 'valor_fixo') {
-            // Desconto em valor fixo
-            precoFinal = preco - parseFloat(beneficio.valor_desconto);
+        const beneficio = vipSlug ? this.getBeneficioPorSlug(vipSlug) : null;
+        try {
+            return window.Precos.calcularCentavos(preco, beneficio) / 100;
+        } catch (error) {
+            if (error.code !== 'BENEFICIO_INVALIDO') throw error;
+            return window.Precos.paraCentavos(preco) / 100;
         }
-
-        // Garantir que o preço não fique negativo
-        precoFinal = Math.max(0, precoFinal);
-        
-        // Arredondar para cima e adicionar .90
-        precoFinal = Math.ceil(precoFinal * 100) / 100;
-        precoFinal = Math.floor(precoFinal) + 0.90;
-
-        return precoFinal;
     }
 
     getNomeBeneficio(slug) {
@@ -152,7 +137,7 @@ class VipManager {
         if (beneficio.tipo_desconto === 'percentual') {
             return `-${beneficio.valor_desconto}%`;
         } else {
-            return `-R$ ${beneficio.valor_desconto.toFixed(2).replace('.', ',')}`;
+            return `-R$ ${Number(beneficio.valor_desconto).toFixed(2).replace('.', ',')}`;
         }
     }
 

@@ -31,6 +31,17 @@ class CarrinhoManager {
         this.atualizarInterface();
     }
 
+    atualizarProdutos(vinhos) {
+        const atuais = new Map(vinhos.map(vinho => [vinho.id, vinho]));
+        this.itens = this.itens.map(item => {
+            const atual = atuais.get(item.id);
+            if (!atual) return { ...item, indisponivel: true };
+            return { ...item, nome: atual.nome, preco: Number(atual.preco), tipo: atual.tipo,
+                imagem: atual.imagem, indisponivel: false };
+        });
+        this.salvarCarrinho();
+    }
+
     adicionarItem(vinho) {
         const idadeManager = window.idadeManager;
         const alcoolica = this.determinarFlagAlcoolica(vinho);
@@ -87,39 +98,17 @@ class CarrinhoManager {
     }
 
     getDescontoVip(preco) {
-        let usuario = window.authManager?.usuarioLogado;
-        let isVip = usuario?.is_vip;
-        let vipTipo = usuario?.vip_tipo;
-        
-        if (!isVip || !vipTipo) return preco;
-        
-        // Usar VipManager para calcular desconto dinâmico
-        if (window.vipManager && window.vipManager.calcularDesconto) {
-            return window.vipManager.calcularDesconto(preco, vipTipo);
-        }
-        
-        // Fallback se VipManager não estiver pronto
-        console.warn('VipManager não disponível, usando cálculo manual');
-        const beneficios = {
-            'prata': 0.03,
-            'ouro': 0.07,
-            'diamante': 0.11,
-            'atacado': 0.15
-        };
-        const desconto = beneficios[vipTipo] || 0;
-        if (desconto > 0) {
-            let precoFinal = preco * (1 - desconto);
-            precoFinal = Math.ceil(precoFinal * 100) / 100;
-            precoFinal = Math.floor(precoFinal) + 0.90;
-            return precoFinal;
-        }
-        return preco;
+        const usuario = window.authManager?.usuarioLogado;
+        const vipTipo = usuario?.is_vip ? usuario.vip_tipo : null;
+        return window.vipManager
+            ? window.vipManager.calcularDesconto(preco, vipTipo)
+            : window.Precos.paraCentavos(preco) / 100;
     }
 
     getTotal() {
-        return this.itens.reduce((total, item) => {
-            return total + (this.getDescontoVip(item.preco) * item.quantidade);
-        }, 0);
+        const centavos = this.itens.reduce((total, item) =>
+            total + window.Precos.paraCentavos(this.getDescontoVip(item.preco)) * item.quantidade, 0);
+        return centavos / 100;
     }
 
     getTotalItens() {
@@ -160,21 +149,8 @@ class CarrinhoManager {
                 let isVip = usuario?.is_vip;
                 let vipTipo = usuario?.vip_tipo;
                 let badge = '';
-                if (isVip && vipTipo) {
-                const labels = {prata: 'Prata', ouro: 'Ouro', diamante: 'Diamante', atacado: 'Atacado'};
-                    const icons = {prata: '<i class="fas fa-star"></i>', ouro: '<i class="fas fa-star"></i>', diamante: '<i class="fas fa-gem"></i>', atacado: '<i class="fas fa-dolly"></i>'};
-                    
-                    // Tentar usar VipManager se disponível
-                    let badge = '';
-                    if (window.vipManager && window.vipManager.beneficios.length > 0) {
-                        badge = window.vipManager.getBadgeHtml(vipTipo);
-                    } else {
-                        // Fallback com labels hardcoded
-                        const label = labels[vipTipo] || vipTipo;
-                        const icon = icons[vipTipo] || '<i class="fas fa-star"></i>';
-                        const classe = typeof vipTipo === 'string' && /^[a-z0-9_-]+$/i.test(vipTipo) ? ` badge-${vipTipo}` : '';
-                        badge = `<span class="badge-vip${classe}">${icon} VIP ${window.RenderSeguro.texto(label)}</span>`;
-                    }
+                if (isVip && vipTipo && precoFinal < precoOriginal) {
+                    badge = window.vipManager?.getBadgeHtml(vipTipo) || '';
                 }
                 return `
                 <div class="carrinho-item" data-id="${item.id}">
@@ -183,6 +159,7 @@ class CarrinhoManager {
                          class="carrinho-item-img">
                     <div class="carrinho-item-info">
                         <div class="carrinho-item-nome">${item.nome}</div>
+                        ${item.indisponivel ? '<p role="status">Produto indisponível. Remova-o para continuar.</p>' : ''}
                         ${precoFinal !== precoOriginal ? `<div class='carrinho-item-preco'><span class='preco-original' style='text-decoration:line-through;color:#888;'>R$ ${precoOriginal.toFixed(2).replace('.', ',')}</span> ${badge} <span class='preco-final' style='color:#1976d2;font-weight:bold;'>R$ ${precoFinal.toFixed(2).replace('.', ',')}</span></div>` : `<div class="carrinho-item-preco">R$ ${precoOriginal.toFixed(2).replace('.', ',')}</div>`}
                         <div class="carrinho-item-qtd">
                             <button class="btn-qtd" data-carrinho-acao="diminuir" aria-label="Diminuir quantidade">
@@ -236,6 +213,10 @@ class CarrinhoManager {
         if (this.finalizandoPedido) return;
         if (this.itens.length === 0) {
             alert('Seu carrinho está vazio!');
+            return;
+        }
+        if (this.itens.some(item => item.indisponivel)) {
+            this.mostrarMensagem('Remova os produtos indisponíveis antes de finalizar o pedido.', 'erro');
             return;
         }
 

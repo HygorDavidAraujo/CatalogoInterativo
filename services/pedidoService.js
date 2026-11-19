@@ -1,4 +1,5 @@
-const MAX_TOTAL_CENTAVOS = 9999999999; // Limite de NUMERIC(10, 2) no PostgreSQL.
+const Precos = require('../js/precos');
+const MAX_TOTAL_CENTAVOS = Precos.MAX_CENTAVOS;
 
 class ErroPedido extends Error {
     constructor(message, statusCode = 409) {
@@ -8,36 +9,14 @@ class ErroPedido extends Error {
 }
 
 function calcularPrecoCentavos(precoBanco, beneficio) {
-    const preco = Number(precoBanco);
-    if (!Number.isFinite(preco) || preco < 0) {
-        throw new ErroPedido('Um produto está com preço inválido. Entre em contato com o atendimento.');
-    }
-
-    let precoFinal = preco;
-    if (beneficio) {
-        const valor = Number(beneficio.valor_desconto);
-        if (!Number.isFinite(valor) || valor < 0 ||
-            !['percentual', 'valor_fixo'].includes(beneficio.tipo_desconto) ||
-            (beneficio.tipo_desconto === 'percentual' && valor > 100)) {
+    try {
+        return Precos.calcularCentavos(precoBanco, beneficio);
+    } catch (error) {
+        if (error.code === 'BENEFICIO_INVALIDO') {
             throw new ErroPedido('Seu benefício VIP precisa ser revisado. Entre em contato com o atendimento.');
         }
-
-        precoFinal = beneficio.tipo_desconto === 'percentual'
-            ? preco * (1 - valor / 100)
-            : preco - valor;
-
-        // Preserva a regra comercial atual do VipManager (preços terminados em ,90).
-        // Uma mudança nessa regra deve atualizar também a exibição no catálogo.
-        precoFinal = Math.max(0, precoFinal);
-        precoFinal = Math.ceil(precoFinal * 100) / 100;
-        precoFinal = Math.floor(precoFinal) + 0.90;
-    }
-
-    const centavos = Math.round(precoFinal * 100);
-    if (!Number.isSafeInteger(centavos) || centavos > MAX_TOTAL_CENTAVOS) {
         throw new ErroPedido('Um produto está com preço inválido. Entre em contato com o atendimento.');
     }
-    return centavos;
 }
 
 // Executado na mesma transação da gravação. Os locks preservam os dados consultados

@@ -13,6 +13,7 @@ class AuthManager {
             localStorage.setItem('jwt_token', token);
         }
         this.atualizarInterface();
+        window.atualizarPrecosExibidos?.();
     }
 
     carregarUsuarioSessao() {
@@ -45,6 +46,7 @@ class AuthManager {
         });
         this.atualizarInterface();
         window.carrinhoManager?.atualizarInterface();
+        window.atualizarPrecosExibidos?.();
     }
 
     redirecionarSemSessao() {
