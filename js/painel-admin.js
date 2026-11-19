@@ -3,7 +3,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const navegacao = document.querySelector('.painel-navegacao');
         if (!navegacao) return;
-        const secoes = ['pedidos-recebidos', 'catalogo', 'configuracoes'];
+        const secoes = ['pedidos-recebidos', 'catalogo', 'clientes', 'configuracoes'];
         const links = [...navegacao.querySelectorAll('[data-painel-link]')];
         const tabs = [...document.querySelectorAll('[data-catalogo-tab]')];
         let guiaCatalogo = 'lista';
@@ -29,11 +29,13 @@
                 const hash = `#${secao}${secao === 'catalogo' && guiaCatalogo === 'editor' ? '/cadastro' : ''}`;
                 const endereco = new URL(window.location.href);
                 if (secao !== 'pedidos-recebidos') endereco.searchParams.delete('pedido');
+                if (secao !== 'clientes') endereco.searchParams.delete('cliente');
                 endereco.hash = hash;
                 if (window.location.href !== endereco.href) {
                     window.history[substituir ? 'replaceState' : 'pushState'](null, '', endereco);
                 }
             }
+            window.dispatchEvent(new CustomEvent('painel:secao', { detail: { secao } }));
             if (foco) {
                 const titulo = document.getElementById(secao).querySelector('h2');
                 titulo?.focus({ preventScroll: true });
@@ -58,6 +60,10 @@
                 abrir('pedidos-recebidos', { atualizarUrl: false });
                 return;
             }
+            if (new URLSearchParams(window.location.search).has('cliente') && !secao) {
+                abrir('clientes', { atualizarUrl: false });
+                return;
+            }
             if (secao === 'catalogo') selecionarGuia(guia === 'cadastro' ? 'editor' : 'lista');
             abrir(secao, { atualizarUrl: false });
         }
@@ -80,6 +86,10 @@
         document.getElementById('atalho-pedidos')?.addEventListener('click', event => {
             event.preventDefault();
             abrir('pedidos-recebidos', { foco: true });
+        });
+        document.getElementById('atalho-clientes')?.addEventListener('click', event => {
+            event.preventDefault();
+            abrir('clientes', { foco: true });
         });
         window.addEventListener('hashchange', lerEndereco);
         window.painelAdmin = { abrir, abrirCatalogo };

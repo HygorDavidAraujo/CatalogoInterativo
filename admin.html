@@ -39,7 +39,7 @@
                 <a href="#pedidos-recebidos" class="btn btn-secondary" id="atalho-pedidos">
                     <i class="fa-solid fa-bell" aria-hidden="true"></i> Pedidos <span id="pedidos-contador" aria-label="Pedidos em aberto">0</span>
                 </a>
-                <a href="clientes.html" class="btn btn-secondary">
+                <a href="#clientes" class="btn btn-secondary" id="atalho-clientes">
                     <i class="fa-solid fa-users"></i> Gerenciar Clientes
                 </a>
                 <a href="index.html" class="btn-voltar">
@@ -58,7 +58,7 @@
             <nav class="painel-navegacao" aria-label="Seções do painel">
                 <a href="#pedidos-recebidos" data-painel-link="pedidos-recebidos" aria-current="page"><i class="fa-solid fa-receipt" aria-hidden="true"></i> Pedidos</a>
                 <a href="#catalogo" data-painel-link="catalogo"><i class="fa-solid fa-wine-bottle" aria-hidden="true"></i> Catálogo</a>
-                <a href="clientes.html"><i class="fa-solid fa-users" aria-hidden="true"></i> Clientes</a>
+                <a href="#clientes" data-painel-link="clientes"><i class="fa-solid fa-users" aria-hidden="true"></i> Clientes</a>
                 <a href="#configuracoes" data-painel-link="configuracoes"><i class="fa-solid fa-gear" aria-hidden="true"></i> Configurações</a>
             </nav>
             <div id="pedidos-novos" class="pedidos-aviso" hidden>
@@ -85,10 +85,62 @@
                 </nav>
                 <section id="pedido-detalhe" class="pedido-detalhe" aria-label="Detalhes do pedido" hidden></section>
             </section>
+            <!-- Lista de Clientes -->
+            <section class="admin-card admin-card-full" id="clientes" aria-labelledby="titulo-clientes" hidden>
+                <div class="clientes-header">
+                    <h2 id="titulo-clientes" tabindex="-1"><i class="fas fa-address-book"></i> Clientes Cadastrados</h2>
+                    <div class="clientes-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-users"></i>
+                            <span id="total-clientes">0</span>
+                            <small>Total</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="filtros-clientes">
+                    <div class="filtro-grupo">
+                        <i class="fas fa-search"></i>
+                        <input type="text"
+                               id="filtro-busca"
+                               aria-label="Buscar cliente por nome, e-mail ou telefone"
+                               placeholder="Buscar por nome, email ou telefone..."
+                               class="input-filtro">
+                    </div>
+                    <button class="btn btn-secondary" data-clientes-limpar>
+                        <i class="fas fa-times"></i> Limpar
+                    </button>
+                </div>
+
+                <div class="tabela-wrapper">
+                    <table class="tabela-clientes">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>E-mail</th>
+                                <th>Telefone</th>
+                                <th>Data Cadastro</th>
+                                <th>Pedidos</th>
+                                <th>Admin</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-clientes">
+                            <tr>
+                                <td colspan="8" style="text-align: center;">
+                                    <i class="fas fa-spinner fa-spin"></i> Carregando clientes...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
             <!-- Configurações de Contato -->
             <section class="admin-card admin-card-full" id="configuracoes" aria-labelledby="titulo-configuracoes" hidden>
                 <h2 id="titulo-configuracoes" tabindex="-1"><i class="fa-solid fa-gear"></i> Configurações do Site</h2>
-                
+
                 <!-- Tabs de Navegação -->
                 <div class="config-tabs">
                     <button class="config-tab active" data-tab="info-site">
@@ -104,7 +156,7 @@
                         <i class="fa-solid fa-gift"></i> Benefícios VIP
                     </button>
                 </div>
-                
+
                 <form id="form-configuracoes" class="form-config">
                     <!-- Tab 1: Informações do Site -->
                     <div class="tab-content active" id="tab-info-site">
@@ -201,7 +253,7 @@
                     <div class="tab-content" id="tab-beneficios">
                         <h3>Benefícios VIP</h3>
                         <p style="color: #666; margin-bottom: 1.5rem;">Gerencie os tipos de benefícios VIP disponíveis no sistema. Cada benefício pode ter desconto percentual ou valor fixo em R$.</p>
-                        
+
                         <!-- Formulário de Novo Benefício -->
                         <div class="beneficio-form-container" style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
                             <h4><i class="fa-solid fa-plus-circle"></i> Adicionar Novo Benefício</h4>
@@ -499,7 +551,7 @@
                 <!-- Lista de Vinhos Cadastrados -->
                 <div class="admin-card" id="catalogo-lista" role="tabpanel" aria-labelledby="catalogo-tab-lista">
                     <h2 id="titulo-lista-vinhos" tabindex="-1"><i class="fa-solid fa-list"></i> Vinhos Cadastrados</h2>
-                    
+
                     <!-- Filtros de Busca -->
                     <div class="filtros-admin">
                         <div class="busca-admin">
@@ -517,7 +569,7 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div id="lista-vinhos-admin" class="lista-vinhos-admin">
                         <!-- Lista será carregada via JavaScript -->
                     </div>
@@ -525,6 +577,174 @@
             </section>
         </div>
     </main>
+
+    <!-- Modal Detalhes Cliente -->
+    <div id="modal-cliente" class="modal">
+        <div class="modal-content modal-cliente-detalhes">
+            <span class="close" data-fechar-cliente>&times;</span>
+            <div class="modal-cliente-header">
+                <h2><i class="fas fa-user-circle"></i> Detalhes do Cliente</h2>
+            </div>
+            <div class="modal-cliente-body" id="modal-cliente-body">
+                <!-- Conteúdo será preenchido via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Cliente -->
+    <div id="modal-editar-cliente" class="modal">
+        <div class="modal-content modal-editar-cliente">
+            <span class="close" data-fechar-editar>&times;</span>
+            <div class="modal-header">
+                <h2><i class="fas fa-user-edit"></i> Editar Cliente</h2>
+            </div>
+            <div class="modal-body">
+                <form id="form-editar-cliente">
+                    <input type="hidden" id="edit-usuario-id">
+
+                    <!-- Tabs -->
+                    <div class="tabs-editar">
+                        <button type="button" class="tab-btn-edit active" data-tab="dados-edit">
+                            <i class="fas fa-user"></i> Dados Pessoais
+                        </button>
+                        <button type="button" class="tab-btn-edit" data-tab="endereco-edit">
+                            <i class="fas fa-map-marker-alt"></i> Endereço
+                        </button>
+                        <button type="button" class="tab-btn-edit" data-tab="config-edit">
+                            <i class="fas fa-cog"></i> Configurações
+                        </button>
+                    </div>
+
+                    <!-- Tab: Dados Pessoais -->
+                    <div class="tab-content-edit active" id="dados-edit">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="edit-nome">Nome Completo *</label>
+                                <input type="text" id="edit-nome" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-email">E-mail *</label>
+                                <input type="email" id="edit-email" readonly>
+                                <small>O e-mail não pode ser alterado</small>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="edit-telefone">Telefone</label>
+                                <input type="tel" id="edit-telefone" placeholder="(00) 00000-0000">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-cpf">CPF</label>
+                                <input type="text" id="edit-cpf" placeholder="000.000.000-00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Endereço -->
+                    <div class="tab-content-edit" id="endereco-edit">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 3;">
+                                <label for="edit-logradouro">Logradouro</label>
+                                <input type="text" id="edit-logradouro" placeholder="Rua, Avenida, etc.">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="edit-numero">Número</label>
+                                <input type="text" id="edit-numero" placeholder="123">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="edit-complemento">Complemento</label>
+                                <input type="text" id="edit-complemento" placeholder="Apto, Bloco, etc.">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-bairro">Bairro</label>
+                                <input type="text" id="edit-bairro">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="edit-cep">CEP</label>
+                                <input type="text" id="edit-cep" placeholder="00000-000">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-cidade">Cidade</label>
+                                <input type="text" id="edit-cidade">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-estado">Estado</label>
+                                <select id="edit-estado">
+                                    <option value="">Selecione...</option>
+                                    <option value="AC">Acre</option>
+                                    <option value="AL">Alagoas</option>
+                                    <option value="AP">Amapá</option>
+                                    <option value="AM">Amazonas</option>
+                                    <option value="BA">Bahia</option>
+                                    <option value="CE">Ceará</option>
+                                    <option value="DF">Distrito Federal</option>
+                                    <option value="ES">Espírito Santo</option>
+                                    <option value="GO">Goiás</option>
+                                    <option value="MA">Maranhão</option>
+                                    <option value="MT">Mato Grosso</option>
+                                    <option value="MS">Mato Grosso do Sul</option>
+                                    <option value="MG">Minas Gerais</option>
+                                    <option value="PA">Pará</option>
+                                    <option value="PB">Paraíba</option>
+                                    <option value="PR">Paraná</option>
+                                    <option value="PE">Pernambuco</option>
+                                    <option value="PI">Piauí</option>
+                                    <option value="RJ">Rio de Janeiro</option>
+                                    <option value="RN">Rio Grande do Norte</option>
+                                    <option value="RS">Rio Grande do Sul</option>
+                                    <option value="RO">Rondônia</option>
+                                    <option value="RR">Roraima</option>
+                                    <option value="SC">Santa Catarina</option>
+                                    <option value="SP">São Paulo</option>
+                                    <option value="SE">Sergipe</option>
+                                    <option value="TO">Tocantins</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Configurações -->
+                    <div class="tab-content-edit" id="config-edit">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edit-is-admin">
+                                <span><i class="fas fa-shield-alt"></i> Administrador</span>
+                            </label>
+                            <small class="warning-text">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Administradores têm acesso total ao sistema
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edit-is-vip">
+                                <span><i class="fas fa-star"></i> Cliente VIP</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-vip-tipo">Tipo de VIP</label>
+                            <select id="edit-vip-tipo">
+                                <option value="">Carregando benefícios...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" data-fechar-editar>
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal de Confirmação -->
     <div id="modal-confirmar" class="modal">
@@ -545,9 +765,12 @@
     <script src="js/auth.js"></script>
     <script src="js/vip-manager.js"></script>
     <script src="js/painel-admin.js"></script>
+    <script src="js/mensagens.js"></script>
     <script src="js/api-admin.js"></script>
     <script src="js/admin-acesso.js"></script>
     <script src="js/pedido-status.js"></script>
     <script src="js/pedidos-admin.js"></script>
+    <script src="js/clientes.js"></script>
+    <script src="js/clientes-vip.js"></script>
 </body>
 </html>

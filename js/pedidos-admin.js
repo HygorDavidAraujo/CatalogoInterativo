@@ -127,7 +127,7 @@
                     <div class="pedidos-cabecalho"><h3 id="pedido-detalhe-titulo" tabindex="-1">Pedido #${p.id}</h3><button type="button" class="btn btn-secondary" data-fechar-pedido>Fechar detalhes</button></div>
                     <p>${data(p.created_at)}</p>
                     <p><strong>${p.nome_completo}</strong> • ${p.email} • ${p.telefone || 'Telefone não informado'}</p>
-                    <a class="pedido-cliente-link" href="clientes.html?cliente=${p.usuario_id}">Abrir cadastro e histórico do cliente</a>
+                    <a class="pedido-cliente-link" href="admin.html?cliente=${p.usuario_id}#clientes">Abrir cadastro e histórico do cliente</a>
                     <ul class="pedido-fila-itens">${p.itens.map(item => `<li><span>${Number(item.quantidade)} × ${item.vinho_nome}<small>${moeda(item.preco_unitario)} por unidade</small></span><strong>${moeda(item.subtotal)}</strong></li>`).join('')}</ul>
                     <p class="pedido-fila-total">Total do pedido: <strong>${moeda(p.total)}</strong></p>
                     ${p.observacoes ? `<p class="pedido-fila-obs"><strong>Observações:</strong> ${p.observacoes}</p>` : ''}
@@ -136,6 +136,12 @@
                         <button type="submit" class="btn btn-primary">Salvar status</button>
                     </form><p id="pedido-status-feedback" role="status"></p>`;
                 painel.querySelector('[data-fechar-pedido]').addEventListener('click', () => this.fechar());
+                painel.querySelector('.pedido-cliente-link').addEventListener('click', event => {
+                    if (!window.clientesPainel) return;
+                    event.preventDefault();
+                    this.fechar();
+                    window.clientesPainel.abrir(pedido.usuario_id);
+                });
                 $('pedido-status-form').addEventListener('submit', event => {
                     event.preventDefault();
                     this.salvarStatus(id);

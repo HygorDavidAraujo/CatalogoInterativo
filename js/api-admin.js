@@ -936,25 +936,6 @@ function fecharModalConfirmacao() {
     vinhoParaExcluir = null;
 }
 
-// ===== MENSAGENS =====
-function mostrarMensagem(texto, tipo) {
-    const mensagensAnteriores = document.querySelectorAll('.mensagem-sucesso, .mensagem-erro');
-    mensagensAnteriores.forEach(msg => msg.remove());
-
-    const mensagem = document.createElement('div');
-    mensagem.className = tipo === 'sucesso' ? 'mensagem-sucesso' : 'mensagem-erro';
-    mensagem.textContent = texto;
-
-    const form = document.getElementById('form-configuracoes');
-    if (form) {
-        form.parentElement.insertBefore(mensagem, form);
-
-        setTimeout(() => {
-            mensagem.remove();
-        }, 5000);
-    }
-}
-
 // ===== CONFIGURAÇÃO DOS MODAIS =====
 function configurarModais() {
     const modalConfirmar = document.getElementById('modal-confirmar');

@@ -429,8 +429,11 @@ outro link. Há limite de cinco solicitações por IP a cada 15 minutos.
 
 ## Navegação do painel
 
-O painel é dividido em Pedidos, Catálogo e Configurações, com acesso à página de
-Clientes pela mesma navegação. O Catálogo possui as guias Vinhos cadastrados e
+O painel é dividido nas guias Pedidos, Catálogo, Clientes e Configurações, todas na
+mesma página. Clientes reúne lista, edição e histórico, mantendo os filtros ao
+alternar seções. Os vínculos entre cliente e pedido também abrem sem recarregar o
+painel. O endereço antigo `clientes.html` redireciona para `admin.html#clientes`,
+preservando o cliente solicitado. O Catálogo possui as guias Vinhos cadastrados e
 Cadastro e edição. Editar um rótulo abre o formulário; salvar ou cancelar retorna à
 lista, preservando a busca e o filtro de tipo. Alternar entre seções mantém o
 rascunho durante a página aberta; recarregar a página descarta dados não salvos.

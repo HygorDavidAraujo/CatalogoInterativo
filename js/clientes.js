@@ -1,5 +1,14 @@
 // ===== CARREGAR CLIENTES =====
-async function carregarClientes() {
+let clientesCarregados = false;
+let consultaClientes = null;
+function carregarClientes() {
+    if (!consultaClientes) {
+        consultaClientes = buscarClientes().finally(() => { consultaClientes = null; });
+    }
+    return consultaClientes;
+}
+
+async function buscarClientes() {
     try {
         console.log('Carregando clientes...');
         
@@ -17,12 +26,14 @@ async function carregarClientes() {
         console.log('Usuários recebidos:', usuarios.length);
         
         todosClientes = usuarios;
-        renderizarClientes(usuarios);
+        clientesCarregados = true;
+        filtrarClientes(document.getElementById('filtro-busca')?.value?.toLowerCase() || '');
         atualizarEstatisticas(usuarios);
         const clienteSolicitado = window.RenderSeguro.id(new URLSearchParams(window.location.search).get('cliente'));
         if (clienteSolicitado && usuarios.some(cliente => Number(cliente.id) === clienteSolicitado)) {
             await abrirModalCliente(clienteSolicitado);
         }
+        return true;
     } catch (error) {
         console.error('Erro ao carregar clientes:', error);
         document.getElementById('lista-clientes').innerHTML = `
@@ -32,6 +43,7 @@ async function carregarClientes() {
                 </td>
             </tr>
         `;
+        return false;
     }
 }
 
@@ -252,6 +264,15 @@ async function abrirModalCliente(clienteId) {
                 if (id) alterarStatusPedido(id, select.value);
             });
         });
+        modalBody.querySelectorAll('[data-pedido-no-painel]').forEach(link => {
+            link.addEventListener('click', event => {
+                const id = window.RenderSeguro.id(link.dataset.pedidoNoPainel);
+                if (!id || !window.pedidosAdmin) return;
+                event.preventDefault();
+                fecharModalCliente();
+                window.pedidosAdmin.abrir(id);
+            });
+        });
     } catch (error) {
         console.error('Erro ao carregar detalhes:', error);
         modalBody.innerHTML = `
@@ -283,7 +304,7 @@ function renderizarPedido(pedido) {
             <div class="pedido-header">
                 <div class="pedido-info">
                     <span class="pedido-id">#${pedido.id}</span>
-                    <a href="admin.html?pedido=${pedido.id}#pedidos-recebidos">Abrir no painel de pedidos</a>
+                    <a href="admin.html?pedido=${pedido.id}#pedidos-recebidos" data-pedido-no-painel="${pedido.id}">Abrir no painel de pedidos</a>
                     <span class="pedido-data">${new Date(pedido.created_at).toLocaleString('pt-BR')}</span>
                 </div>
                 <div class="pedido-status-container">
@@ -486,29 +507,6 @@ function configurarFormEditar() {
     });
 }
 
-function mostrarMensagem(texto, tipo) {
-    // Remover mensagens anteriores
-    const mensagensAnteriores = document.querySelectorAll('.toast-message');
-    mensagensAnteriores.forEach(msg => msg.remove());
-
-    // Criar nova mensagem
-    const mensagem = document.createElement('div');
-    mensagem.className = `toast-message toast-${tipo}`;
-    mensagem.innerHTML = `
-        <i class="fas fa-${tipo === 'sucesso' ? 'check-circle' : 'exclamation-circle'}"></i>
-        <span></span>
-    `;
-    mensagem.querySelector('span').textContent = texto;
-
-    document.body.appendChild(mensagem);
-
-    // Remover após 4 segundos
-    setTimeout(() => {
-        mensagem.classList.add('fade-out');
-        setTimeout(() => mensagem.remove(), 300);
-    }, 4000);
-}
-
 // ===== ALTERAR STATUS DO PEDIDO =====
 async function alterarStatusPedido(pedidoId, novoStatus) {
     const select = document.querySelector(`.pedido-status-select[data-pedido-id="${pedidoId}"]`);
@@ -553,17 +551,35 @@ async function alterarStatusPedido(pedidoId, novoStatus) {
 }
 
 // ===== INICIALIZAÇÃO =====
+window.clientesPainel = {
+    async abrir(id) {
+        id = window.RenderSeguro.id(id);
+        if (!id) return;
+        window.painelAdmin?.abrir('clientes');
+        const carregou = clientesCarregados || await carregarClientes();
+        if (!carregou) return;
+        if (!todosClientes.some(cliente => Number(cliente.id) === id)) {
+            mostrarMensagem('Cliente não encontrado.', 'erro');
+            return;
+        }
+        await abrirModalCliente(id);
+    }
+};
 document.addEventListener('DOMContentLoaded', () => {
+    if (!document.getElementById('lista-clientes')) return;
     document.querySelectorAll('[data-clientes-limpar]').forEach(button => button.addEventListener('click', limparFiltros));
     document.querySelectorAll('[data-fechar-cliente]').forEach(button => button.addEventListener('click', fecharModalCliente));
     document.querySelectorAll('[data-fechar-editar]').forEach(button => button.addEventListener('click', fecharModalEditar));
-    carregarClientes();
+    if (!window.painelAdmin || !document.getElementById('clientes')?.hidden) carregarClientes();
+    window.addEventListener('painel:secao', event => {
+        if (event.detail.secao === 'clientes' && !clientesCarregados) carregarClientes();
+    });
     configurarFiltros();
     configurarTabsEditar();
     configurarFormEditar();
     
     // Fechar modal ao clicar fora
-    window.onclick = (e) => {
+    window.addEventListener('click', (e) => {
         const modal = document.getElementById('modal-cliente');
         const modalEditar = document.getElementById('modal-editar-cliente');
         
@@ -573,5 +589,5 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === modalEditar) {
             fecharModalEditar();
         }
-    };
+    });
 });

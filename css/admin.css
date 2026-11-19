@@ -1,5 +1,12 @@
 /* ===== ESTILOS ADMIN ===== */
 .admin-main [hidden] { display: none !important; }
+#clientes .clientes-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+#clientes .filtros-clientes { display: flex; gap: .7rem; flex-wrap: wrap; }
+#clientes .filtro-grupo { position: relative; flex: 1 1 240px; min-width: 0; }
+#clientes .filtro-grupo > i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #595962; }
+#clientes .input-filtro { width: 100%; min-height: 46px; padding: .75rem 1rem .75rem 2.8rem; border: 1px solid #c8c8ce; border-radius: 8px; font: inherit; }
+#clientes .input-filtro:focus-visible { outline: 2px solid #6b1c40; outline-offset: 2px; }
+#clientes .tabela-clientes td { overflow-wrap: anywhere; }
 .painel-navegacao { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; margin-bottom: 1.5rem; scroll-margin-top: 1rem; }
 .painel-navegacao a { display: flex; justify-content: center; align-items: center; gap: .6rem; min-height: 48px; padding: .85rem .65rem; border: 1px solid #d6cbd1; border-radius: 10px; background: white; color: #6b1c40; font-weight: 600; text-decoration: none; }
 .painel-navegacao a[aria-current="page"] { background: #6b1c40; color: white; border-color: #6b1c40; }
