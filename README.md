@@ -158,6 +158,35 @@ CatalogoInterativo/
 
 ## 💾 Banco de Dados
 
+### Atualização da ficha técnica e do catálogo
+
+Antes do push que dispara o deploy desta versão, execute no SQL Editor do Neon
+[`database/migrations/20261119_ficha_tecnica_vinhos.sql`](./database/migrations/20261119_ficha_tecnica_vinhos.sql).
+A migração adiciona `vinhos.ficha_tecnica` como JSONB com padrão `{}` e permite
+`ano = NULL` para representar um produto sem safra. Ela é repetível e não regrava
+vinhos, preços, usuários ou pedidos. A versão anterior pode continuar atendendo
+enquanto a migração é aplicada. Para banco novo, use o schema completo atualizado.
+Não há novas dependências nem variáveis de ambiente.
+
+O painel possui uma seção opcional de perfil e ficha técnica: produtor, região,
+volume, teor alcoólico, estilo/doçura, corpo, acidez, taninos, aromas, intervalo de
+serviço, resumo, vinificação, amadurecimento, premiações e link da fonte. Informe
+somente dados conferidos; os campos vazios não recebem características presumidas.
+Cadastros antigos continuam funcionando com a ficha vazia. O formulário oferece
+a opção explícita **Produto sem safra**; na API, informe `ano: null`.
+
+`ficha_tecnica` aceita um objeto no JSON ou um objeto serializado no multipart.
+Omissão de um campo na edição preserva o valor salvo; `null` limpa o campo.
+A API valida limites, opções, URLs e coerência do intervalo de temperaturas,
+inclusive em edições parciais. O banco valida o objeto JSON e a ordem das temperaturas.
+
+O catálogo mostra 2 colunas abaixo de 600 px, 3 de 600 a 1023 px, 4 de 1024 a
+1439 px e 5 a partir de 1440 px. Os nomes não são cortados. Busca por nome,
+uva, produtor e origem ignora acentos; os filtros reutilizam os dados recentes
+por até um minuto e mantêm a contagem e a opção de limpar filtros. A ficha possui
+rolagem independente, preço e compra fixos, quantidade, atendimento pelo WhatsApp,
+fechamento por Escape, contenção de foco e retorno ao controle de origem.
+
 ### Estrutura
 O sistema utiliza **PostgreSQL no Neon**. O schema completo das tabelas de catálogo, usuários, pedidos, configurações, benefícios VIP e recuperação de senha está em `database/schema.postgresql.sql`.
 
@@ -238,8 +267,8 @@ envia o token ao carregar a lista. IDs, paginação, ordenação e tipos são va
 
 Cadastro e edição usam as mesmas restrições: nome de 3 a 200 caracteres, uva de
 2 a 255, safra inteira de 1900 até o próximo ano e preço de R$ 0,01 a R$ 999.999,99,
-com até duas casas decimais. Uva e safra são obrigatórias no cadastro, conforme o
-schema atual do Neon; a edição parcial preserva os campos não informados. Os seis
+com até duas casas decimais. Uva é obrigatória no cadastro; informe o ano ou
+`null` para produto sem safra. A edição parcial preserva os campos não informados. Os seis
 tipos aceitos correspondem aos tipos do banco. `suco_integral` é apenas um filtro
 que agrupa os dois tipos de suco, e não um tipo de produto gravável. `estoque` não
 é aceito como campo de gravação, pois ainda não existe controle de estoque no banco.

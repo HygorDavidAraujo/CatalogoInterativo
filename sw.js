@@ -1,5 +1,5 @@
 // ===== SERVICE WORKER BÁSICO =====
-const CACHE_NAME = 'davini-vinhos-v3';
+const CACHE_NAME = 'davini-vinhos-v4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -11,6 +11,7 @@ const urlsToCache = [
   '/js/config.js',
   '/js/render-seguro.js',
   '/js/precos.js',
+  '/js/ficha-vinho.js',
   '/js/pwa.js',
   '/js/mobile.js',
   '/images/favicon.svg'

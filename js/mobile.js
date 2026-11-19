@@ -19,7 +19,7 @@ class MobileMenu {
         
         // Fechar menu ao redimensionar para desktop
         window.addEventListener('resize', () => {
-            if (window.innerWidth >= 768) {
+            if (window.innerWidth >= 900) {
                 this.closeMenu();
             }
         });
@@ -36,7 +36,8 @@ class MobileMenu {
         // Criar botão
         this.menuToggle = document.createElement('button');
         this.menuToggle.className = 'menu-toggle';
-        this.menuToggle.setAttribute('aria-label', 'Toggle menu');
+        this.menuToggle.type = 'button';
+        this.menuToggle.setAttribute('aria-label', 'Abrir ou fechar menu');
         this.menuToggle.setAttribute('aria-expanded', 'false');
         this.menuToggle.innerHTML = `
             <span></span>
@@ -47,6 +48,8 @@ class MobileMenu {
         // Inserir antes do nav
         this.nav = document.querySelector('.nav');
         if (this.nav) {
+            this.nav.id = this.nav.id || 'navegacao-principal';
+            this.menuToggle.setAttribute('aria-controls', this.nav.id);
             header.insertBefore(this.menuToggle, this.nav);
         }
     }
@@ -76,7 +79,7 @@ class MobileMenu {
             const navLinks = this.nav.querySelectorAll('.nav-link');
             navLinks.forEach(link => {
                 link.addEventListener('click', () => {
-                    if (window.innerWidth < 768) {
+                    if (window.innerWidth < 900) {
                         this.closeMenu();
                     }
                 });

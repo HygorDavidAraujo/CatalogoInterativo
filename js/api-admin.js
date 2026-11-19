@@ -6,6 +6,54 @@ let logoUpload = null;
 let removerLogo = false;
 let salvandoVinho = false;
 
+function atualizarCampoSafra() {
+    const semSafra = document.getElementById('sem-safra');
+    const ano = document.getElementById('ano');
+    if (!semSafra || !ano) return;
+    ano.disabled = semSafra.checked;
+    ano.required = !semSafra.checked;
+}
+
+function configurarFichaTecnica() {
+    for (const [campo, opcoes] of Object.entries(window.FichaVinho.opcoes)) {
+        const select = document.getElementById(`ficha-${campo}`);
+        if (!select || select.options.length > 1) continue;
+        for (const [value, label] of Object.entries(opcoes)) {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            select.appendChild(option);
+        }
+    }
+    const semSafra = document.getElementById('sem-safra');
+    if (semSafra && !semSafra.dataset.configurado) {
+        semSafra.addEventListener('change', atualizarCampoSafra);
+        semSafra.dataset.configurado = 'true';
+    }
+    atualizarCampoSafra();
+}
+
+function lerFichaTecnica() {
+    const ficha = {};
+    for (const campo of window.FichaVinho.campos) {
+        const input = document.getElementById(`ficha-${campo}`);
+        if (!input) continue;
+        const value = input.value.trim();
+        ficha[campo] = value === '' ? null : campo in window.FichaVinho.numeros ? Number(value) : value;
+    }
+    return ficha;
+}
+
+function preencherFichaTecnica(vinho) {
+    for (const campo of window.FichaVinho.campos) {
+        const input = document.getElementById(`ficha-${campo}`);
+        if (input) input.value = vinho.ficha_tecnica?.[campo] ?? '';
+    }
+    const semSafra = document.getElementById('sem-safra');
+    if (semSafra) semSafra.checked = vinho.ano === null;
+    atualizarCampoSafra();
+}
+
 // Recupera cabeçalhos com JWT do authManager
 function getAuthHeaders() {
     const token = window.authManager?.obterToken?.() || localStorage.getItem('jwt_token');
@@ -242,7 +290,12 @@ async function renderizarListaAdmin(filtros = {}) {
     const container = document.getElementById('lista-vinhos-admin');
     if (!container) return;
 
-    await vinhoManager.carregarVinhos(true); // true = admin, mostra todos os vinhos
+    try {
+        await vinhoManager.carregarVinhos(true); // true = admin, mostra todos os vinhos
+    } catch (error) {
+        container.innerHTML = '<p role="alert">Não foi possível carregar os produtos. Recarregue a página para tentar novamente.</p>';
+        return;
+    }
     let vinhos = vinhoManager.vinhos;
 
     // Aplicar filtros
@@ -287,7 +340,7 @@ async function renderizarListaAdmin(filtros = {}) {
                 <div class="vinho-item-info">
                     <div class="vinho-item-nome">${vinho.nome}</div>
                     <div class="vinho-item-detalhes">
-                        ${capitalizar(vinho.tipo)} | ${vinho.uva} | ${vinho.ano}${paisHtml}
+                        ${capitalizar(vinho.tipo)} | ${vinho.uva} | ${vinho.ano == null ? 'Sem safra' : vinho.ano}${paisHtml}
                     </div>
                     <div class="vinho-item-preco">R$ ${formatarPreco(vinho.preco)}</div>
                 </div>
@@ -518,6 +571,7 @@ function configurarUploadLogo() {
 function configurarFormulario() {
     const campoAno = document.getElementById('ano');
     if (campoAno) campoAno.max = String(new Date().getFullYear() + 1);
+    configurarFichaTecnica();
     const form = document.getElementById('form-vinho');
     if (!form) {
         console.log('Formulário de vinho não encontrado');
@@ -551,7 +605,7 @@ function configurarFormulario() {
                 pais_origem: document.getElementById('pais-origem').value,
                 pais_codigo: document.getElementById('pais-codigo').value.trim().toUpperCase(),
                 bandeira_url: document.getElementById('bandeira-url').value.trim(),
-                ano: document.getElementById('ano').value,
+                ano: document.getElementById('sem-safra')?.checked ? '' : document.getElementById('ano').value,
                 guarda: document.getElementById('guarda').value.trim(),
                 harmonizacao: document.getElementById('harmonizacao').value.trim(),
                 descricao: document.getElementById('descricao').value.trim(),
@@ -560,6 +614,7 @@ function configurarFormulario() {
             console.log('Dados coletados do vinho:', dadosVinho);
 
             Object.entries(dadosVinho).forEach(([campo, valor]) => formData.append(campo, valor));
+            formData.append('ficha_tecnica', JSON.stringify(lerFichaTecnica()));
             const ativo = document.getElementById('ativo').checked;
             formData.append('ativo', ativo);
             console.log('Campo ativo:', ativo);
@@ -641,6 +696,7 @@ function configurarFormulario() {
 }
 
 function limparFormulario() {
+    preencherFichaTecnica({});
     const form = document.getElementById('form-vinho');
     form.reset();
     
@@ -674,7 +730,7 @@ function limparFormulario() {
         imagemUrlInput.value = '';
     }
     
-    const titulo = document.querySelector('.admin-card h2');
+    const titulo = document.querySelector('#form-vinho')?.closest('.admin-card')?.querySelector('h2');
     if (titulo) {
         titulo.innerHTML = '<i class="fas fa-plus-circle"></i> Cadastrar Novo Vinho';
     }
@@ -710,7 +766,8 @@ async function editarVinho(id) {
     document.getElementById('uva').value = vinho.uva;
     document.getElementById('pais-origem').value = vinho.pais_origem || '';
     atualizarPreviewBandeira(vinho.pais_origem || '', vinho.pais_codigo || '', vinho.bandeira_url || '');
-    document.getElementById('ano').value = vinho.ano;
+    document.getElementById('ano').value = vinho.ano ?? '';
+    preencherFichaTecnica(vinho);
     document.getElementById('guarda').value = vinho.guarda || '';
     document.getElementById('harmonizacao').value = vinho.harmonizacao || '';
     document.getElementById('descricao').value = vinho.descricao || '';
@@ -737,7 +794,7 @@ async function editarVinho(id) {
     }
 
     // Alterar título do formulário
-    const titulo = document.querySelector('.admin-card h2');
+    const titulo = document.querySelector('#form-vinho')?.closest('.admin-card')?.querySelector('h2');
     if (titulo) {
         titulo.innerHTML = '<i class="fas fa-edit"></i> Editar Vinho';
     }
@@ -789,7 +846,7 @@ async function toggleVisibilidade(checkbox, id) {
         formData.append('pais_origem', vinho.pais_origem || '');
         formData.append('pais_codigo', vinho.pais_codigo || '');
         formData.append('bandeira_url', vinho.bandeira_url || '');
-        formData.append('ano', vinho.ano);
+        formData.append('ano', vinho.ano ?? '');
         formData.append('guarda', vinho.guarda || '');
         formData.append('harmonizacao', vinho.harmonizacao || '');
         formData.append('descricao', vinho.descricao || '');

@@ -22,6 +22,7 @@
     <!-- Registro do Service Worker -->
     <script src="js/render-seguro.js"></script>
     <script src="js/precos.js"></script>
+    <script src="js/ficha-vinho.js"></script>
     <script src="js/pwa.js"></script>
 </head>
 <body class="admin-body">
@@ -290,17 +291,110 @@
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="ano">Ano de Safra *</label>
+                                <label for="ano">Ano de safra</label>
                                 <input type="number" id="ano" name="ano" required min="1900" step="1" placeholder="Ex: 2024">
+                                <label class="opcao-sem-safra"><input type="checkbox" id="sem-safra"> Produto sem safra</label>
                             </div>
 
                             <div class="form-group">
-                                <label for="guarda">Tempo de Guarda</label>
-                                <input type="text" id="guarda" name="guarda" placeholder="Ex: 5 a 10 anos">
+                                <label for="guarda">Potencial de guarda</label>
+                                <input type="text" id="guarda" name="guarda" placeholder="Ex: até 3 anos a partir da safra">
                             </div>
                         </div>
 
-                        <div class="form-group">
+                        <details class="editor-ficha">
+                            <summary>Perfil e ficha técnica do vinho <span>Campos opcionais</span>
+                            </summary>
+                            <p>Preencha com informações conferidas na ficha do produtor. Deixe em branco o que não foi informado.</p>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ficha-produtor">Produtor / vinícola</label>
+                                    <input type="text" id="ficha-produtor" maxlength="150">
+                                </div>
+                                <div class="form-group">
+                                    <label for="ficha-regiao">Região de origem</label>
+                                    <input type="text" id="ficha-regiao" maxlength="150">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ficha-volume_ml">Volume (ml)</label>
+                                    <input type="number" id="ficha-volume_ml" min="1" max="30000" step="1">
+                                </div>
+                                <div class="form-group">
+                                    <label for="ficha-teor_alcoolico">Teor alcoólico (% vol.)</label>
+                                    <input type="number" id="ficha-teor_alcoolico" min="0" max="30" step="0.01">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ficha-docura">Estilo / doçura</label>
+                                    <select id="ficha-docura">
+                                        <option value="">Não informado</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ficha-corpo">Corpo</label>
+                                    <select id="ficha-corpo">
+                                        <option value="">Não informado</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ficha-acidez">Acidez</label>
+                                    <select id="ficha-acidez">
+                                        <option value="">Não informado</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ficha-taninos">Taninos</label>
+                                    <select id="ficha-taninos">
+                                        <option value="">Não informado</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ficha-temperatura_min">Serviço: temperatura mínima (°C)</label>
+                                    <input type="number" id="ficha-temperatura_min" min="0" max="30" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label for="ficha-temperatura_max">Serviço: temperatura máxima (°C)</label>
+                                    <input type="number" id="ficha-temperatura_max" min="0" max="30" step="0.01">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="ficha-resumo">Apresentação curta para o destaque</label>
+                                <textarea id="ficha-resumo" maxlength="280" rows="3">
+                                </textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="ficha-aromas">Aromas e sabores</label>
+                                <textarea id="ficha-aromas" maxlength="500" rows="3">
+                                </textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="ficha-vinificacao">Vinificação</label>
+                                <textarea id="ficha-vinificacao" maxlength="1500" rows="3">
+                                </textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="ficha-amadurecimento">Amadurecimento / passagem por madeira</label>
+                                <textarea id="ficha-amadurecimento" maxlength="1000" rows="3">
+                                </textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="ficha-premiacoes">Premiações verificadas (nome e ano)</label>
+                                <textarea id="ficha-premiacoes" maxlength="1000" rows="3">
+                                </textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="ficha-fonte_url">Link da ficha técnica / fonte</label>
+                                <input type="url" id="ficha-fonte_url" maxlength="500">
+                            </div>
+                        </details>
+<div class="form-group">
                             <label for="harmonizacao">Harmonização</label>
                             <textarea id="harmonizacao" name="harmonizacao" rows="3" placeholder="Ex: Carnes vermelhas, massas, queijos..."></textarea>
                         </div>

@@ -4,7 +4,7 @@ const { pool } = require('../config/database');
 const { upload, cloudinary } = require('../config/cloudinary');
 const { verificarAdminAuth } = require('../middleware/auth');
 const { uploadLimiter } = require('../middleware/rateLimiter');
-const { validateVinho, validateVinhoUpdate, validateId, validateVinhosQuery, validateVinhoDetalheQuery, validateVinhoTipo } = require('../middleware/validatorsZod');
+const { validateVinho, validateVinhoUpdate, validateId, validateVinhosQuery, validateVinhoDetalheQuery, validateVinhoTipo, fichaTecnicaSchema } = require('../middleware/validatorsZod');
 const { AppError, catchAsync } = require('../middleware/errorHandler');
 const cacheService = require('../services/cacheService');
 const logger = require('../config/logger');
@@ -86,8 +86,8 @@ router.post('/', verificarAdminAuth, uploadLimiter, upload.single('imagem'), val
     const ativoBoolean = ativo === 'true' || ativo === true || ativo === '1';
 
     const result = await pool.query(
-        'INSERT INTO vinhos (nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagem, ativo) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id',
-        [nome, tipo, uva, pais_origem || null, pais_codigo || null, bandeira_url || null, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean]
+        'INSERT INTO vinhos (nome, tipo, uva, pais_origem, pais_codigo, bandeira_url, ano, guarda, harmonizacao, descricao, preco, imagem, ativo, ficha_tecnica) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb) RETURNING id',
+        [nome, tipo, uva, pais_origem || null, pais_codigo || null, bandeira_url || null, ano, guarda || '', harmonizacao || '', descricao || '', preco, imagemPath, ativoBoolean, JSON.stringify(req.body.ficha_tecnica || {})]
     );
 
     const id = result.rows[0].id;
@@ -111,6 +111,12 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
     
     if (vinhoAtual.length === 0) {
         throw new AppError('Vinho não encontrado', 404);
+    }
+    const fichaCombinada = fichaTecnicaSchema.safeParse({ ...vinhoAtual[0].ficha_tecnica, ...req.body.ficha_tecnica });
+    if (!fichaCombinada.success) {
+        return res.status(400).json({ message: 'Revise a ficha técnica', errors: fichaCombinada.error.issues.map(issue => ({
+            field: `ficha_tecnica.${issue.path.join('.')}`, message: issue.message
+        })) });
     }
 
     const deveRemoverImagem = removerImagem === true || removerImagem === 'true' || removerImagem === '1';
@@ -159,7 +165,7 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
     }
 
     await pool.query(
-        'UPDATE vinhos SET nome = $1, tipo = $2, uva = $3, pais_origem = $4, pais_codigo = $5, bandeira_url = $6, ano = $7, guarda = $8, harmonizacao = $9, descricao = $10, preco = $11, imagem = $12, ativo = $13 WHERE id = $14',
+        'UPDATE vinhos SET nome = $1, tipo = $2, uva = $3, pais_origem = $4, pais_codigo = $5, bandeira_url = $6, ano = $7, guarda = $8, harmonizacao = $9, descricao = $10, preco = $11, imagem = $12, ativo = $13, ficha_tecnica = COALESCE(ficha_tecnica, \'{}\'::jsonb) || $14::jsonb WHERE id = $15',
         [
             nome ?? vinhoAtual[0].nome,
             tipo ?? vinhoAtual[0].tipo,
@@ -174,6 +180,7 @@ router.put('/:id', verificarAdminAuth, uploadLimiter, validateId, upload.single(
             preco !== undefined ? preco : vinhoAtual[0].preco,
             imagemPath !== undefined ? imagemPath : vinhoAtual[0].imagem,
             ativoBoolean,
+            JSON.stringify(req.body.ficha_tecnica || {}),
             id
         ]
     );

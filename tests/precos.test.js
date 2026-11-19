@@ -54,17 +54,17 @@ for (const beneficio of [
 
 function pagina() {
     const elements = new Map();
-    const element = () => ({ innerHTML: '', style: {}, dataset: {}, addEventListener() {},
+    const element = () => ({ innerHTML: '', style: {}, dataset: {}, addEventListener() {}, setAttribute() {}, focus() {},
         querySelectorAll: () => [], querySelector: () => element() });
     const prices = ['card', 'destaque', 'modal'].map(() => ({ innerHTML: '', dataset: { precoVinho: '1' } }));
     const context = {
         URL, console: { log() {}, error() {}, warn() {}, debug() {} }, setInterval() {}, setTimeout() {},
-        fetch: async () => ({ ok: false }), localStorage: { getItem: () => null },
-        document: { readyState: 'loading', addEventListener() {},
+        fetch: async () => ({ ok: false }), localStorage: { getItem: () => null, setItem() {} },
+        document: { readyState: 'loading', addEventListener() {}, body: { classList: { add() {}, remove() {} } },
             querySelectorAll: selector => selector === '[data-preco-vinho]' ? prices : [],
             getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); } },
         window: { location: { origin: 'https://catalogo.example.com', hostname: 'catalogo.example.com' },
-            Precos, RenderSeguro: require('../js/render-seguro'),
+            FichaVinho: require('../js/ficha-vinho'), Precos, RenderSeguro: require('../js/render-seguro'),
             authManager: { usuarioLogado: { is_vip: true, vip_tipo: 'personalizado' }, atualizarInterface() {} } }
     };
     vm.createContext(context);
@@ -89,11 +89,49 @@ test('card, destaque, modal e carrinho exibem o mesmo preço VIP e total em cent
     await context.renderizarDestaqueSemana();
     context.abrirModal(1);
     carrinho.atualizarInterface();
-    for (const id of ['vinhos-container', 'destaque-semana', 'modal-body', 'carrinho-body']) {
+    for (const id of ['vinhos-container', 'destaque-semana', 'ficha-compra', 'carrinho-body']) {
         assert.match(elements.get(id).innerHTML, /110,67/, id);
         assert.match(elements.get(id).innerHTML, /119,00/, id);
     }
     assert.equal(carrinho.getTotal(), 332.01);
+});
+
+test('quantidade escolhida na ficha é adicionada uma vez e respeita o limite por produto', () => {
+    const { carrinho, context } = pagina();
+    carrinho.itens = [];
+    carrinho.salvarCarrinho = () => {};
+    carrinho.mostrarMensagem = () => {};
+    context.window.idadeManager = { podeComprarBebidaAlcoolica: () => true };
+    assert.equal(carrinho.adicionarItem(context.produtos[0], 3), true);
+    assert.equal(carrinho.itens[0].quantidade, 3);
+    assert.equal(carrinho.getTotal(), 332.01);
+    assert.equal(carrinho.adicionarItem(context.produtos[0], 999), false);
+    assert.equal(carrinho.adicionarItem(context.produtos[0], 1.5), false);
+    assert.equal(carrinho.itens[0].quantidade, 3);
+});
+
+test('busca encontra região sem acentos e falha de rede não aparece como catálogo vazio', async () => {
+    const { context, elements } = pagina();
+    context.produtos[0].ficha_tecnica = { regiao: 'Serra Gaúcha' };
+    await context.renderizarVinhos('todos', 'serra gaucha');
+    assert.match(elements.get('vinhos-container').innerHTML, /Moscatel/);
+    vm.runInContext('vinhoManager.catalogoCarregado = false; vinhoManager.carregarVinhos = VinhoManager.prototype.carregarVinhos;', context);
+    await context.renderizarVinhos();
+    assert.match(elements.get('vinhos-container').innerHTML, /Erro ao carregar vinhos/);
+    assert.doesNotMatch(elements.get('vinhos-container').innerHTML, /Nenhum vinho encontrado/);
+});
+
+test('filtros reutilizam dados recentes e consultam novamente após um minuto', async () => {
+    const { context } = pagina();
+    let requests = 0;
+    context.fetch = async () => { requests++; return { ok: true, json: async () => ({ data: context.produtos, pagination: { totalPages: 1 } }) }; };
+    vm.runInContext('vinhoManager.carregarVinhos = VinhoManager.prototype.carregarVinhos;', context);
+    await context.renderizarVinhos();
+    await context.renderizarVinhos('espumante');
+    assert.equal(requests, 1);
+    vm.runInContext('vinhoManager.catalogoCarregadoEm -= 61000;', context);
+    await context.renderizarVinhos();
+    assert.equal(requests, 2);
 });
 
 test('falha da API VIP remove descontos antigos em todas as superfícies e permite tentar novamente', async () => {

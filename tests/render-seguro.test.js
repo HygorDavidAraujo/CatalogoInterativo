@@ -10,14 +10,15 @@ const ataque = `"'><img data-invasor src=x onerror="globalThis.invadido=true"><s
 const vinho = {
     id: 1, nome: ataque, uva: ataque, tipo: 'espumante', preco: '119.00', ano: 2024,
     pais_origem: ataque, pais_codigo: 'BR', ativo: true, descricao: ataque,
-    harmonizacao: ataque, guarda: ataque, imagem: 'javascript:alert(1)', bandeira_url: 'data:text/html,ataque'
+    harmonizacao: ataque, guarda: ataque, imagem: 'javascript:alert(1)', bandeira_url: 'data:text/html,ataque',
+    ficha_tecnica: { produtor: ataque, resumo: ataque, aromas: ataque, vinificacao: ataque, fonte_url: 'javascript:alert(1)', docura: 'doce', volume_ml: 750 }
 };
 
 function elemento() {
     const children = new Map();
     return {
         innerHTML: '', textContent: '', style: {}, dataset: {},
-        addEventListener() {}, querySelectorAll: () => [],
+        addEventListener() {}, setAttribute() {}, focus() {}, querySelectorAll: () => [],
         querySelector(selector) {
             if (!children.has(selector)) children.set(selector, elemento());
             return children.get(selector);
@@ -32,10 +33,10 @@ function pagina(files) {
         setInterval() {}, setTimeout() {}, API_URL: '/api',
         localStorage: { getItem: () => null }, sessionStorage: { getItem: () => null },
         fetch: async () => ({ ok: false }),
-        window: { Precos: require('../js/precos'), RenderSeguro: seguro, location: { origin: 'https://catalogo.example.com', hostname: 'catalogo.example.com' } },
+        window: { FichaVinho: require('../js/ficha-vinho'), Precos: require('../js/precos'), RenderSeguro: seguro, location: { origin: 'https://catalogo.example.com', hostname: 'catalogo.example.com' } },
         document: {
             readyState: 'loading', addEventListener() {}, querySelectorAll: () => [],
-            createElement: elemento, body: { appendChild() {} },
+            createElement: elemento, body: { appendChild() {}, classList: { add() {}, remove() {} } },
             getElementById(id) {
                 if (!elements.has(id)) elements.set(id, elemento());
                 return elements.get(id);

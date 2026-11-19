@@ -22,6 +22,19 @@ Credenciais funcionais e dados de clientes foram encontrados em arquivos rastrea
 
 ### Atualização de um catálogo que já está no Neon
 
+Para a atualização visual e a ficha técnica, execute primeiro
+[`database/migrations/20261119_ficha_tecnica_vinhos.sql`](./database/migrations/20261119_ficha_tecnica_vinhos.sql)
+no SQL Editor do Neon, **antes do push que dispara o deploy na Vercel**.
+A migração adiciona uma coluna JSONB com padrão vazio e permite safra nula.
+Ela não regrava produtos, preços ou pedidos e pode ser aplicada com o site atual
+em funcionamento. Não há novas variáveis de ambiente. Para bancos novos, o schema
+completo já contém essas alterações; não é necessário aplicar essa migração à parte.
+
+Depois do deploy, edite um produto de teste, preencha perfil, volume, teor
+alcoólico e temperatura, salve e recarregue. Confira a ficha no catálogo e a
+opção sem safra. Verifique também um produto antigo sem ficha preenchida,
+os preços VIP e a adição de quantidades ao carrinho em celular e desktop.
+
 Para a versão que permite revogar sessões, execute
 [`database/migrations/20261110_sessoes_usuario.sql`](./database/migrations/20261110_sessoes_usuario.sql)
 no SQL Editor do banco usado pela Vercel **antes do push que publicará o novo código**.

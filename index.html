@@ -21,9 +21,10 @@
     <!-- Registro do Service Worker -->
     <script src="js/render-seguro.js"></script>
     <script src="js/precos.js"></script>
+    <script src="js/ficha-vinho.js"></script>
     <script src="js/pwa.js"></script>
 </head>
-<body>
+<body class="pagina-catalogo">
     <!-- Skip to content para acessibilidade -->
     <a href="#catalogo" class="skip-to-content">Pular para o conteúdo</a>
     <!-- Header -->
@@ -33,7 +34,7 @@
                 <img id="logo-img" alt="Logo" style="display: none;">
                 <h1>Davini Vinhos Finos</h1>
             </div>
-            <nav class="nav">
+            <nav class="nav" aria-label="Navegação principal">
                 <ul>
                     <li><a href="#catalogo" class="nav-link active">Catálogo</a></li>
                     <li><a href="#contato" class="nav-link">Contato</a></li>
@@ -50,11 +51,13 @@
         </div>
     </header>
 
+    <main id="conteudo">
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-content">
             <h2>Descubra Vinhos Excepcionais</h2>
-            <p>Uma seleção especial dos melhores vinhos para você</p>
+            <p>Conheça cada rótulo e encontre o vinho para a sua ocasião.</p>
+            <a class="hero-explorar" href="#ferramentas-catalogo">Explorar catálogo <i class="fas fa-arrow-down" aria-hidden="true"></i></a>
 
         </div>
     </section>
@@ -65,26 +68,27 @@
         <div class="container">
             <h2 class="section-title">Nosso Catálogo</h2>
             
-            <!-- Campo de Busca -->
-            <div class="busca-catalogo">
-                <i class="fas fa-search"></i>
-                <input type="text" id="busca-catalogo" placeholder="Buscar por nome ou tipo de uva..." class="input-busca-catalogo">
-            </div>
-
-            <div id="destaque-semana" class="destaque-semana" aria-live="polite"></div>
-            
-            <div class="filtros">
-                <button class="filtro-btn active" data-filtro="todos">Todos</button>
-                <button class="filtro-btn" data-filtro="tinto">Tintos</button>
-                <button class="filtro-btn" data-filtro="branco">Brancos</button>
-                <button class="filtro-btn" data-filtro="rose">Rosés</button>
-                <button class="filtro-btn" data-filtro="espumante">Espumantes</button>
-                <button class="filtro-btn" data-filtro="suco_integral">Suco Integral</button>
-            </div>
-            <div class="filtros filtros-ordenacao">
-                <button class="filtro-btn ordenacao-btn active" data-ordenacao="padrao">Padrão</button>
-                <button class="filtro-btn ordenacao-btn" data-ordenacao="preco_asc">Menor preço</button>
-                <button class="filtro-btn ordenacao-btn" data-ordenacao="preco_desc">Maior preço</button>
+            <div id="destaque-semana" class="destaque-semana"></div>
+            <div id="ferramentas-catalogo" class="ferramentas-catalogo">
+                <div class="catalogo-toolbar">
+                    <div class="busca-catalogo">
+                        <label class="sr-only" for="busca-catalogo">Buscar vinho, uva, produtor ou origem</label>
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <input type="search" id="busca-catalogo" placeholder="Buscar vinho, uva ou origem…" class="input-busca-catalogo">
+                    </div>
+                    <label class="ordenacao-catalogo" for="ordenacao-catalogo">Ordenar por
+                        <select id="ordenacao-catalogo"><option value="padrao">Seleção do catálogo</option><option value="preco_asc">Menor preço</option><option value="preco_desc">Maior preço</option></select>
+                    </label>
+                </div>
+                <div class="filtros" role="group" aria-label="Categorias de produtos">
+                    <button class="filtro-btn active" data-filtro="todos" aria-pressed="true">Todos</button>
+                    <button class="filtro-btn" data-filtro="tinto" aria-pressed="false">Tintos</button>
+                    <button class="filtro-btn" data-filtro="branco" aria-pressed="false">Brancos</button>
+                    <button class="filtro-btn" data-filtro="rose" aria-pressed="false">Rosés</button>
+                    <button class="filtro-btn" data-filtro="espumante" aria-pressed="false">Espumantes</button>
+                    <button class="filtro-btn" data-filtro="suco_integral" aria-pressed="false">Sucos integrais</button>
+                </div>
+                <div class="catalogo-resultados"><p id="resultado-catalogo" role="status" aria-live="polite"></p><button id="limpar-filtros" type="button" hidden>Limpar filtros</button></div>
             </div>
             <div id="vinhos-container" class="vinhos-grid">
                 <!-- Os vinhos serão carregados aqui via JavaScript -->
@@ -102,14 +106,14 @@
                         <i class="fas fa-phone"></i>
                         <div>
                             <h3>Telefone</h3>
-                            <p id="contato-telefone">(62) 98183-1483</p>
+                            <a id="contato-telefone" href="tel:+5562981831483">(62) 98183-1483</a>
                         </div>
                     </div>
                     <div class="info-item">
                         <i class="fas fa-envelope"></i>
                         <div>
                             <h3>E-mail</h3>
-                            <p id="contato-email">davinivinhosfinos@gmail.com</p>
+                            <a id="contato-email" href="mailto:davinivinhosfinos@gmail.com">davinivinhosfinos@gmail.com</a>
                         </div>
                     </div>
                     <div class="info-item">
@@ -141,6 +145,7 @@
         </div>
     </section>
 
+    </main>
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
@@ -149,12 +154,13 @@
     </footer>
 
     <!-- Modal Detalhes do Vinho -->
-    <div id="modal-vinho" class="modal">
+    <div id="modal-vinho" class="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="titulo-ficha-vinho">
         <div class="modal-content">
-            <span class="close">&times;</span>
+            <button type="button" class="close" aria-label="Fechar ficha do vinho">&times;</button>
             <div id="modal-body">
                 <!-- Conteúdo será carregado via JavaScript -->
             </div>
+            <div id="ficha-compra" class="ficha-compra" hidden></div>
         </div>
     </div>
 

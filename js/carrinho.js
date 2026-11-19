@@ -42,20 +42,28 @@ class CarrinhoManager {
         this.salvarCarrinho();
     }
 
-    adicionarItem(vinho) {
+    adicionarItem(vinho, quantidade = 1) {
+        if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 999) {
+            this.mostrarMensagem('Informe uma quantidade entre 1 e 999.', 'erro');
+            return false;
+        }
         const idadeManager = window.idadeManager;
         const alcoolica = this.determinarFlagAlcoolica(vinho);
 
         if (alcoolica && !(idadeManager?.podeComprarBebidaAlcoolica?.())) {
             idadeManager?.abrirModal?.();
             this.mostrarMensagem('Confirme que tem 18 anos ou mais para adicionar bebidas alcoólicas.', 'erro');
-            return;
+            return false;
         }
 
         const itemExistente = this.itens.find(item => item.id === vinho.id);
         
         if (itemExistente) {
-            itemExistente.quantidade++;
+            if (Number(itemExistente.quantidade) + quantidade > 999) {
+                this.mostrarMensagem('A quantidade máxima por produto é 999.', 'erro');
+                return false;
+            }
+            itemExistente.quantidade = Number(itemExistente.quantidade) + quantidade;
             if (typeof itemExistente.alcoolica !== 'boolean') {
                 itemExistente.alcoolica = alcoolica;
             }
@@ -66,13 +74,14 @@ class CarrinhoManager {
                 tipo: vinho.tipo,
                 preco: parseFloat(vinho.preco),
                 imagem: vinho.imagem,
-                quantidade: 1,
+                quantidade,
                 alcoolica
             });
         }
         
         this.salvarCarrinho();
         this.mostrarMensagem('Vinho adicionado ao carrinho!', 'sucesso');
+        return true;
     }
 
     removerItem(id) {

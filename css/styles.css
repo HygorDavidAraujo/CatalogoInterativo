@@ -163,373 +163,6 @@ body {
     opacity: 0.95;
 }
 
-/* ===== CATÁLOGO SECTION ===== */
-.catalogo {
-    padding: 4rem 0;
-}
-
-.section-title {
-    text-align: center;
-    font-size: 2.5rem;
-    color: var(--cor-primaria);
-    margin-bottom: 2rem;
-    position: relative;
-}
-
-.section-title::after {
-    content: '';
-    display: block;
-    width: 80px;
-    height: 4px;
-    background-color: var(--cor-destaque);
-    margin: 1rem auto;
-    border-radius: 2px;
-}
-
-.filtros {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-bottom: 3rem;
-    flex-wrap: wrap;
-}
-
-.filtros-ordenacao {
-    margin-top: -1.5rem;
-    margin-bottom: 2.5rem;
-}
-
-.filtro-btn {
-    padding: 0.7rem 1.5rem;
-    border: 2px solid var(--cor-primaria);
-    background-color: var(--cor-branca);
-    color: var(--cor-primaria);
-    font-weight: 600;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: var(--transicao);
-}
-
-.filtro-btn:hover,
-.filtro-btn.active {
-    background-color: var(--cor-primaria);
-    color: var(--cor-branca);
-    transform: translateY(-2px);
-    box-shadow: var(--sombra);
-}
-
-/* ===== DESTAQUE DA SEMANA ===== */
-.destaque-semana {
-    margin: 2.5rem 0 3rem;
-}
-
-.destaque-card {
-    position: relative;
-    display: grid;
-    grid-template-columns: 1.1fr 1.4fr;
-    gap: 2.5rem;
-    padding: 2.5rem;
-    border-radius: 24px;
-    background: radial-gradient(circle at top left, rgba(193, 154, 107, 0.25), transparent 55%),
-                linear-gradient(135deg, #2C1810, #5B1C3C 60%, #8B2E5A);
-    color: var(--cor-branca);
-    box-shadow: 0 20px 40px rgba(44, 24, 16, 0.35);
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    animation: destaqueReveal 0.6s ease both;
-}
-
-.destaque-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 60%);
-    pointer-events: none;
-}
-
-.destaque-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 28px 55px rgba(44, 24, 16, 0.45);
-}
-
-.destaque-selo {
-    position: absolute;
-    top: 1.5rem;
-    left: 1.5rem;
-    background: linear-gradient(135deg, #F1C27D, #C19A6B);
-    color: #2C1810;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0.5rem 1rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
-
-.destaque-media {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 18px;
-    padding: 1.5rem;
-}
-
-.destaque-media img {
-    max-width: 100%;
-    max-height: 360px;
-    object-fit: contain;
-    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35));
-}
-
-.destaque-conteudo {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 1rem;
-}
-
-.destaque-topo {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    flex-wrap: wrap;
-}
-
-.destaque-tipo {
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.35rem 0.9rem;
-    border-radius: 999px;
-    text-transform: uppercase;
-}
-
-.destaque-vip {
-    background: rgba(255, 255, 255, 0.18);
-    padding: 0.35rem 0.9rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.destaque-titulo {
-    font-family: 'Georgia', 'Times New Roman', serif;
-    font-size: 2.2rem;
-    font-weight: 700;
-    line-height: 1.1;
-}
-
-.destaque-descricao {
-    font-size: 1rem;
-    color: rgba(255, 255, 255, 0.85);
-    max-width: 520px;
-}
-
-.destaque-preco {
-    display: flex;
-    align-items: baseline;
-    gap: 1rem;
-}
-
-.destaque-preco .preco-original {
-    text-decoration: line-through;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 1.05rem;
-}
-
-.destaque-preco .preco-final {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #F1C27D;
-}
-
-.destaque-acoes {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.destaque-acoes .btn {
-    flex: 1 1 180px;
-}
-
-.btn-outline {
-    background: transparent;
-    border: 2px solid rgba(255, 255, 255, 0.6);
-    color: var(--cor-branca);
-    padding: 0.8rem 1.2rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transicao);
-}
-
-.btn-outline:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--cor-branca);
-}
-
-@keyframes destaqueReveal {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.vinhos-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 2rem;
-    margin-top: 2rem;
-    width: 100%;
-}
-
-/* ===== CARD DO VINHO ===== */
-.vinho-card {
-    background-color: var(--cor-branca);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: var(--sombra);
-    transition: var(--transicao);
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    min-width: 0;
-    height: 100%;
-}
-
-.vinho-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--sombra-hover);
-}
-
-.vinho-imagem {
-    width: 100%;
-    height: 300px;
-    object-fit: contain;
-    object-position: center;
-    background-color: var(--cor-clara);
-    padding: 1rem;
-}
-
-.vinho-info {
-    padding: 1.5rem;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.vinho-tipo {
-    display: inline-block;
-    padding: 0.3rem 0.8rem;
-    border-radius: 15px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 0.8rem;
-    text-transform: uppercase;
-}
-
-.tipo-tinto {
-    background-color: #8B1538;
-    color: var(--cor-branca);
-}
-
-.tipo-branco {
-    background-color: #F4E4C1;
-    color: var(--cor-escura);
-}
-
-.tipo-rose {
-    background-color: #F8B4D9;
-    color: var(--cor-escura);
-}
-
-.tipo-espumante {
-    background-color: #FFD700;
-    color: var(--cor-escura);
-}
-
-.tipo-suco_integral_tinto {
-    background-color: #6B3B2C;
-    color: var(--cor-branca);
-}
-
-.tipo-suco_integral_branco {
-    background-color: #D4AF85;
-    color: var(--cor-escura);
-}
-
-.vinho-nome {
-    font-size: 1.4rem;
-    color: var(--cor-primaria);
-    margin-bottom: 0.5rem;
-    font-weight: 700;
-}
-
-.vinho-uva {
-    color: var(--cor-texto-claro);
-    font-size: 0.95rem;
-    margin-bottom: 0.5rem;
-}
-
-.vinho-ano {
-    color: var(--cor-texto-claro);
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-}
-
-.vinho-pais {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--cor-texto-claro);
-    font-size: 0.9rem;
-    margin-bottom: 0.6rem;
-}
-
-.vinho-pais img {
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-}
-
-.vinho-preco {
-    font-size: 1.8rem;
-    color: var(--cor-destaque);
-    font-weight: 700;
-    margin-top: auto;
-    margin-bottom: 1rem;
-}
-
-.btn-adicionar-carrinho {
-    width: 100%;
-    padding: 0.8rem;
-    background: var(--cor-primaria);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transicao);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.btn-adicionar-carrinho:hover {
-    background: var(--cor-secundaria);
-    transform: translateY(-2px);
-    box-shadow: var(--sombra-hover);
-}
-
 /* ===== CONTATO SECTION ===== */
 .contato {
     background-color: var(--cor-escura);
@@ -674,80 +307,6 @@ body {
 
 .close:hover {
     color: var(--cor-primaria);
-}
-
-.modal-vinho-detalhes {
-    display: flex;
-    gap: 2rem;
-    flex-wrap: wrap;
-}
-
-.modal-imagem {
-    flex: 1;
-    min-width: 250px;
-}
-
-.modal-imagem img {
-    width: 100%;
-    border-radius: 8px;
-}
-
-.modal-info {
-    flex: 1;
-    min-width: 300px;
-}
-
-.modal-info h2 {
-    color: var(--cor-primaria);
-    font-size: 2rem;
-    margin-bottom: 1rem;
-}
-
-.modal-info .vinho-tipo {
-    margin-bottom: 1rem;
-}
-
-.modal-detalhes {
-    margin: 1.5rem 0;
-}
-
-.detalhe-item {
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #eee;
-}
-
-.detalhe-pais {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.detalhe-pais img {
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-}
-
-.detalhe-item:last-child {
-    border-bottom: none;
-}
-
-.detalhe-label {
-    font-weight: 600;
-    color: var(--cor-primaria);
-    margin-bottom: 0.3rem;
-    display: block;
-}
-
-.detalhe-valor {
-    color: var(--cor-texto-claro);
-}
-
-.modal-preco {
-    font-size: 2.5rem;
-    color: var(--cor-destaque);
-    font-weight: 700;
-    margin-top: 1.5rem;
 }
 
 /* ===== MODAL IDADE ===== */
@@ -1047,43 +606,17 @@ body {
 }
 
 /* ===== RESPONSIVIDADE ===== */
-/* Telas muito grandes (1920px+) - mantém 4 colunas com espaço controlado */
+
 @media (min-width: 1920px) {
     .container {
         max-width: 1600px;
     }
     
-    .vinhos-grid {
-        gap: 2.5rem;
-    }
+
 }
 
-/* Telas médias/grandes (1200px - 1919px) - 4 colunas padrão */
-@media (min-width: 1200px) and (max-width: 1919px) {
-    .vinhos-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
-/* Tablets landscape e desktops pequenos (900px - 1199px) - 3 colunas */
-@media (min-width: 900px) and (max-width: 1199px) {
-    .vinhos-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1.5rem;
-    }
-}
-
-/* Tablets portrait (600px - 899px) - 2 colunas */
 @media (min-width: 600px) and (max-width: 899px) {
-    .vinhos-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
-    }
-    
-    .vinho-imagem {
-        height: 250px;
-    }
-    
+
     .container {
         padding: 0 15px;
     }
@@ -1109,84 +642,24 @@ body {
         font-size: 1rem;
     }
 
-    .vinhos-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1.5rem;
-    }
-
     .modal-content {
         width: 95%;
         margin: 10% auto;
         padding: 1.5rem;
     }
 
-    .modal-vinho-detalhes {
-        flex-direction: column;
-    }
+
 }
 
 @media (max-width: 480px) {
     .container {
         padding: 0 10px;
     }
-    
-    .catalogo {
-        padding: 3rem 0;
-    }
-    
+
     .logo h1 {
         font-size: 1.4rem;
     }
 
-    .section-title {
-        font-size: 2rem;
-    }
-
-    .filtros {
-        gap: 0.5rem;
-    }
-
-    .filtro-btn {
-        padding: 0.5rem 1rem;
-        font-size: 0.9rem;
-    }
-
-    .vinhos-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-    }
-    
-    .vinho-imagem {
-        height: 200px;
-        padding: 0.5rem;
-    }
-    
-    .vinho-info {
-        padding: 1rem;
-    }
-    
-    .vinho-nome {
-        font-size: 1rem;
-        line-height: 1.3;
-        margin-bottom: 0.4rem;
-    }
-    
-    .vinho-uva,
-    .vinho-ano,
-    .vinho-pais {
-        font-size: 0.8rem;
-        margin-bottom: 0.3rem;
-    }
-    
-    .vinho-preco {
-        font-size: 1.4rem;
-        margin-bottom: 0.6rem;
-    }
-    
-    .btn-adicionar-carrinho {
-        padding: 0.6rem;
-        font-size: 0.85rem;
-    }
 }
 
 /* ===== CARRINHO DE COMPRAS ===== */
@@ -2019,43 +1492,8 @@ body {
     background: #f8f9fa;
 }
 
-/* Busca no Catálogo */
-.busca-catalogo {
-    position: relative;
-    max-width: 500px;
-    margin: 0 auto 2rem;
-}
-
-.busca-catalogo i {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #666;
-}
-
-.input-busca-catalogo {
-    width: 100%;
-    padding: 0.8rem 1rem 0.8rem 3rem;
-    border: 2px solid #ddd;
-    border-radius: 50px;
-    font-size: 1rem;
-    transition: var(--transicao);
-}
-
-.input-busca-catalogo:focus {
-    outline: none;
-    border-color: var(--cor-primaria);
-    box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
-}
-
 /* Filtros Admin */
-.filtros-admin {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-}
+
 
 .busca-admin {
     position: relative;

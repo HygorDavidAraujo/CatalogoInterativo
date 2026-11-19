@@ -34,7 +34,7 @@
         if (Array.isArray(value)) return value.map(dados);
         if (value && typeof value === 'object') {
             return Object.fromEntries(Object.entries(value).map(([key, item]) => {
-                if (['imagem', 'imagemOriginal', 'imagemUrl', 'bandeira_url', 'logo_url'].includes(key)) {
+                if (['imagem', 'imagemOriginal', 'imagemUrl', 'bandeira_url', 'logo_url', 'fonte_url'].includes(key)) {
                     return [key, texto(url(item))];
                 }
                 if (key === 'cor') return [key, cor(item)];

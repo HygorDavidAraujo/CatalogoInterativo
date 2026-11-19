@@ -50,6 +50,8 @@ class VinhoManager {
     constructor() {
         this.vinhos = [];
         this.configuracoes = {};
+        this.catalogoCarregado = false;
+        this.catalogoCarregadoEm = 0;
     }
 
     async carregarVinhos(admin = false) {
@@ -94,12 +96,17 @@ class VinhoManager {
             });
             
             this.vinhos = vinhosNormalizados;
+            if (!admin) {
+                this.catalogoCarregado = true;
+                this.catalogoCarregadoEm = Date.now();
+            }
             if (!admin) window.carrinhoManager?.atualizarProdutos(this.vinhos);
             return this.vinhos;
         } catch (error) {
             console.error('Erro ao carregar vinhos:', error);
             this.vinhos = [];
-            return [];
+            this.catalogoCarregado = false;
+            throw error;
         }
     }
 
@@ -154,14 +161,45 @@ class VinhoManager {
 
 // Instância global do gerenciador
 const vinhoManager = new VinhoManager();
+let versaoRenderCatalogo = 0;
+let focoAnteriorFicha = null;
+let elementosInertes = [];
+
+function rotuloPerfil(ficha, campo) {
+    const opcoes = window.FichaVinho.opcoes[campo];
+    return opcoes && Object.hasOwn(opcoes, ficha?.[campo]) ? opcoes[ficha[campo]] : '';
+}
+
+function etiquetasPerfil(ficha = {}) {
+    const etiquetas = ['docura', 'corpo'].map(campo => rotuloPerfil(ficha, campo)).filter(Boolean);
+    return etiquetas.length ? `<ul class="perfil-etiquetas" aria-label="Perfil do vinho">${etiquetas.map(label => `<li>${label}</li>`).join('')}</ul>` : '';
+}
+
+function volumeVinho(ficha = {}) {
+    return ficha.volume_ml ? `${Number(ficha.volume_ml).toLocaleString('pt-BR')} ml` : '';
+}
+
+function normalizarBusca(value) {
+    return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function temperaturaVinho(ficha = {}) {
+    const min = ficha.temperatura_min;
+    const max = ficha.temperatura_max;
+    const numero = value => String(Number(value)).replace('.', ',');
+    if (min != null && max != null) return min === max ? `${numero(min)} °C` : `${numero(min)}–${numero(max)} °C`;
+    if (min != null) return `A partir de ${numero(min)} °C`;
+    if (max != null) return `Até ${numero(max)} °C`;
+    return '';
+}
 
 // ===== RENDERIZAÇÃO DOS VINHOS =====
 async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padrao') {
     const container = document.getElementById('vinhos-container');
     if (!container) return;
 
-    // Loading state
-    container.innerHTML = `
+    const versao = ++versaoRenderCatalogo;
+    if (!vinhoManager.catalogoCarregado) container.innerHTML = `
         <div class="loading-container" role="status" aria-live="polite">
             <div class="loading-spinner"></div>
             <p>Carregando vinhos...</p>
@@ -170,17 +208,17 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
 
     let vinhos = [];
     try {
-        await vinhoManager.carregarVinhos();
+        if (!vinhoManager.catalogoCarregado || Date.now() - vinhoManager.catalogoCarregadoEm > 60000) {
+            await vinhoManager.carregarVinhos();
+        }
+        if (versao !== versaoRenderCatalogo) return;
         vinhos = vinhoManager.getVinhos(filtro).filter(v => isVinhoAtivo(v.ativo));
 
         // Aplicar busca se fornecida
         if (busca) {
-            const buscaLower = busca.toLowerCase();
-            vinhos = vinhos.filter(v => 
-                v.nome.toLowerCase().includes(buscaLower) || 
-                v.uva.toLowerCase().includes(buscaLower) ||
-                (v.pais_origem && v.pais_origem.toLowerCase().includes(buscaLower))
-            );
+            const buscaNormalizada = normalizarBusca(busca);
+            vinhos = vinhos.filter(v => [v.nome, v.uva, v.pais_origem, v.ficha_tecnica?.produtor,
+                v.ficha_tecnica?.regiao].some(value => normalizarBusca(value).includes(buscaNormalizada)));
         }
 
         const usuario = window.authManager?.usuarioLogado;
@@ -194,6 +232,10 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
             });
         }
 
+        const resultado = document.getElementById('resultado-catalogo');
+        if (resultado) resultado.textContent = `${vinhos.length} ${vinhos.length === 1 ? 'rótulo encontrado' : 'rótulos encontrados'}`;
+        const limpar = document.getElementById('limpar-filtros');
+        if (limpar) limpar.hidden = filtro === 'todos' && !busca && ordenacao === 'padrao';
         if (vinhos.length === 0) {
             container.innerHTML = `
                 <div class="mensagem-vazio" role="status">
@@ -204,6 +246,7 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
             return;
         }
     } catch (error) {
+        if (versao !== versaoRenderCatalogo) return;
         container.innerHTML = `
             <div class="mensagem-erro" role="alert">
                 <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
@@ -224,6 +267,8 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
         const imagemSrc = vinho.imagem || '/images/placeholder-80x80.svg';
         const bandeira = vinho.bandeira_url || (vinho.pais_codigo ? `https://flagcdn.com/w40/${vinho.pais_codigo.toLowerCase()}.png` : '');
         const pais = vinho.pais_origem || '';
+        const ficha = vinho.ficha_tecnica || {};
+        const complemento = [ficha.produtor, volumeVinho(ficha)].filter(Boolean).join(' · ');
         
         return `
             <div class="vinho-card" data-id="${vinho.id}">
@@ -234,10 +279,13 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
                 <div class="vinho-info">
                     <span class="vinho-tipo tipo-${vinho.tipo}">${capitalizar(vinho.tipo)}</span>
                     <h3 class="vinho-nome">${vinho.nome}</h3>
-                    <p class="vinho-uva"><i class="fas fa-grape-alt"></i> ${vinho.uva}</p>
-                    <p class="vinho-ano"><i class="fas fa-calendar"></i> Safra ${vinho.ano}</p>
+                    ${complemento ? `<p class="vinho-complemento">${complemento}</p>` : ''}
+                    ${etiquetasPerfil(ficha)}
+                    <p class="vinho-uva">${vinho.uva}</p>
+                    <p class="vinho-ano">${vinho.ano == null ? 'Sem safra' : `Safra ${vinho.ano}`}</p>
                     ${pais ? `<p class="vinho-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14" loading="lazy">` : ''}<span>${pais}</span></p>` : ''}
                     <p class="vinho-preco" data-preco-vinho="${vinho.id}">${renderizarPrecoVinho(vinhoOriginal)}</p>
+                    <button type="button" class="btn-detalhes" data-detalhes-vinho="${vinho.id}">Ver detalhes<span class="sr-only"> de ${vinho.nome}</span></button>
                     <button class="btn btn-adicionar-carrinho" data-adicionar-vinho="${vinho.id}">
                         <i class="fas fa-shopping-cart"></i> Adicionar
                     </button>
@@ -246,6 +294,12 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
         `;
     }).join('');
     window.RenderSeguro.imagens(container);
+    container.querySelectorAll('[data-detalhes-vinho]').forEach(button => {
+        button.addEventListener('click', event => {
+            event.stopPropagation();
+            abrirModal(window.RenderSeguro.id(button.dataset.detalhesVinho));
+        });
+    });
     container.querySelectorAll('[data-adicionar-vinho]').forEach(button => {
         button.addEventListener('click', event => {
             event.stopPropagation();
@@ -257,7 +311,8 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
 
     // Adicionar event listeners aos cards
     document.querySelectorAll('.vinho-card').forEach(card => {
-        card.addEventListener('click', () => {
+        card.addEventListener('click', event => {
+            if (event.target.closest('button, a')) return;
             const id = parseInt(card.dataset.id);
             abrirModal(id);
         });
@@ -299,10 +354,8 @@ async function renderizarDestaqueSemana() {
         vinho = window.RenderSeguro.dados(vinho);
 
         const imagemSrc = vinho.imagem || '/images/placeholder-80x80.svg';
+        const ficha = vinho.ficha_tecnica || {};
 
-        const usuario = window.authManager?.usuarioLogado;
-        const vipTipo = usuario?.is_vip ? usuario?.vip_tipo : null;
-        const badgeVip = vipTipo ? window.RenderSeguro.texto(`VIP ${vipTipo.charAt(0).toUpperCase()}${vipTipo.slice(1)}`) : '';
 
         container.innerHTML = `
             <div class="destaque-card" data-id="${vinho.id}">
@@ -315,10 +368,11 @@ async function renderizarDestaqueSemana() {
                 <div class="destaque-conteudo">
                     <div class="destaque-topo">
                         <span class="destaque-tipo tipo-${vinho.tipo}">${capitalizar(vinho.tipo)}</span>
-                        ${badgeVip ? `<span class="destaque-vip">${badgeVip}</span>` : ''}
                     </div>
                     <h3 class="destaque-titulo">${vinho.nome}</h3>
-                    <p class="destaque-descricao">Escolhido especialmente para esta semana. Descubra suas caracteristicas unicas e aproveite este destaque.</p>
+                    ${ficha.produtor || volumeVinho(ficha) ? `<p class="destaque-origem">${[ficha.produtor, volumeVinho(ficha)].filter(Boolean).join(' · ')}</p>` : ''}
+                    ${etiquetasPerfil(ficha)}
+                    <p class="destaque-descricao">${ficha.resumo || 'Conheça as uvas, a origem e as sugestões de harmonização deste rótulo.'}</p>
                     <div class="destaque-preco" data-preco-vinho="${vinho.id}">${renderizarPrecoVinho(vinho)}</div>
                     <div class="destaque-acoes">
                         <button class="btn btn-adicionar-carrinho" data-destaque-adicionar>
@@ -356,72 +410,82 @@ function abrirModal(id) {
     const original = vinhoManager.getVinhoPorId(id);
     if (!original) return;
     const vinho = window.RenderSeguro.dados(original);
-
+    const ficha = vinho.ficha_tecnica || {};
     const modal = document.getElementById('modal-vinho');
     const modalBody = document.getElementById('modal-body');
-
-    const imagemSrc = vinho.imagem || '/images/placeholder-80x80.svg';
-
+    const compra = document.getElementById('ficha-compra');
+    const imagem = window.optimizeCloudinaryUrl
+        ? window.optimizeCloudinaryUrl(original.imagemOriginal || original.imagem, 'detail')
+        : original.imagemOriginal || original.imagem;
+    const imagemSrc = window.RenderSeguro.texto(window.RenderSeguro.url(imagem, '/images/placeholder-80x80.svg'));
+    const temperatura = temperaturaVinho(ficha);
+    const dados = [
+        ['Uvas', vinho.uva], ['Produtor', ficha.produtor], ['Origem', [ficha.regiao, vinho.pais_origem].filter(Boolean).join(' · ')],
+        ['Safra', vinho.ano == null ? 'Sem safra' : vinho.ano], ['Volume', volumeVinho(ficha)],
+        ['Teor alcoólico', ficha.teor_alcoolico != null ? `${String(ficha.teor_alcoolico).replace('.', ',')}% vol.` : ''],
+        ['Estilo / doçura', rotuloPerfil(ficha, 'docura')], ['Corpo', rotuloPerfil(ficha, 'corpo')],
+        ['Acidez', rotuloPerfil(ficha, 'acidez')], ['Taninos', rotuloPerfil(ficha, 'taninos')],
+        ['Serviço', temperatura], ['Potencial de guarda', vinho.guarda]
+    ].filter(([, value]) => value !== '' && value != null);
     modalBody.innerHTML = `
         <div class="modal-vinho-detalhes">
-            <div class="modal-imagem">
-                <img src="${imagemSrc}" alt="${vinho.nome}">
-            </div>
+            <div class="modal-imagem"><img src="${imagemSrc}" alt="${vinho.nome}"></div>
             <div class="modal-info">
                 <span class="vinho-tipo tipo-${vinho.tipo}">${capitalizar(vinho.tipo)}</span>
-                <h2>${vinho.nome}</h2>
-                <div class="modal-detalhes">
-                    <div class="detalhe-item">
-                        <span class="detalhe-label"><i class="fas fa-grape-alt"></i> Tipo de Uva:</span>
-                        <span class="detalhe-valor">${vinho.uva}</span>
-                    </div>
-                    ${vinho.pais_origem ? `
-                    <div class="detalhe-item">
-                        <span class="detalhe-label"><i class="fas fa-flag"></i> País de Origem:</span>
-                        <span class="detalhe-valor detalhe-pais">
-                            ${vinho.bandeira_url || vinho.pais_codigo ? `<img src="${vinho.bandeira_url || `https://flagcdn.com/w40/${vinho.pais_codigo?.toLowerCase()}.png`}" alt="Bandeira" width="24" height="16">` : ''}
-                            ${vinho.pais_origem}
-                        </span>
-                    </div>
-                    ` : ''}
-                    <div class="detalhe-item">
-                        <span class="detalhe-label"><i class="fas fa-calendar"></i> Ano de Safra:</span>
-                        <span class="detalhe-valor">${vinho.ano}</span>
-                    </div>
-                    ${vinho.guarda ? `
-                    <div class="detalhe-item">
-                        <span class="detalhe-label"><i class="fas fa-clock"></i> Tempo de Guarda:</span>
-                        <span class="detalhe-valor">${vinho.guarda}</span>
-                    </div>
-                    ` : ''}
-                    ${vinho.harmonizacao ? `
-                    <div class="detalhe-item">
-                        <span class="detalhe-label"><i class="fas fa-utensils"></i> Harmonização:</span>
-                        <span class="detalhe-valor">${vinho.harmonizacao}</span>
-                    </div>
-                    ` : ''}
-                    ${vinho.descricao ? `
-                    <div class="detalhe-item">
-                        <span class="detalhe-label"><i class="fas fa-info-circle"></i> Sobre o Vinho:</span>
-                        <span class="detalhe-valor">${vinho.descricao}</span>
-                    </div>
-                    ` : ''}
-                </div>
-                <div class="modal-preco" data-preco-vinho="${vinho.id}">${renderizarPrecoVinho(original)}</div>
+                <h2 id="titulo-ficha-vinho">${vinho.nome}</h2>
+                ${ficha.produtor || volumeVinho(ficha) ? `<p class="vinho-complemento">${[ficha.produtor, volumeVinho(ficha)].filter(Boolean).join(' · ')}</p>` : ''}
+                ${etiquetasPerfil(ficha)}
+                ${ficha.resumo ? `<p class="ficha-resumo">${ficha.resumo}</p>` : ''}
+                ${ficha.aromas ? `<section class="ficha-bloco"><h3>Aromas e sabores</h3><p>${ficha.aromas}</p></section>` : ''}
+                ${temperatura ? `<p class="ficha-servico"><i class="fas fa-thermometer-half" aria-hidden="true"></i> Serviço: ${temperatura}</p>` : ''}
+                <a class="ficha-atendimento" data-consultar-vinho target="_blank" rel="noopener noreferrer">Tirar uma dúvida sobre este vinho <i class="fab fa-whatsapp" aria-hidden="true"></i></a>
             </div>
         </div>
+        ${vinho.harmonizacao ? `<section class="ficha-bloco"><h3>Com o que harmonizar</h3><p>${vinho.harmonizacao}</p></section>` : ''}
+        <details class="ficha-detalhe" open><summary>Ficha técnica</summary><dl class="ficha-dados">${dados.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>
+            ${ficha.vinificacao ? `<section class="ficha-bloco"><h3>Vinificação</h3><p>${ficha.vinificacao}</p></section>` : ''}
+            ${ficha.amadurecimento ? `<section class="ficha-bloco"><h3>Amadurecimento</h3><p>${ficha.amadurecimento}</p></section>` : ''}
+            ${ficha.premiacoes ? `<section class="ficha-bloco"><h3>Premiações</h3><p>${ficha.premiacoes}</p></section>` : ''}
+            ${ficha.fonte_url ? `<a class="ficha-fonte" href="${ficha.fonte_url}" target="_blank" rel="noopener noreferrer">Consultar a fonte da ficha técnica <i class="fas fa-external-link-alt" aria-hidden="true"></i></a>` : ''}
+        </details>
+        ${vinho.descricao ? `<details class="ficha-detalhe"><summary>Sobre este vinho</summary><p class="ficha-descricao">${vinho.descricao}</p></details>` : ''}
     `;
+    compra.innerHTML = `
+        <div class="modal-preco" data-preco-vinho="${vinho.id}" aria-live="polite">${renderizarPrecoVinho(original)}</div>
+        <label class="ficha-quantidade" for="quantidade-ficha">Quantidade<input type="number" id="quantidade-ficha" min="1" max="999" step="1" value="1" inputmode="numeric" required></label>
+        <button type="button" class="btn-adicionar-carrinho" data-ficha-adicionar><i class="fas fa-shopping-cart" aria-hidden="true"></i> Adicionar ao carrinho</button>
+    `;
+    compra.hidden = false;
+    compra.querySelector('[data-ficha-adicionar]').addEventListener('click', () => {
+        const input = document.getElementById('quantidade-ficha');
+        if (!input.reportValidity()) return;
+        const adicionado = window.carrinhoManager.adicionarItem(original, Number(input.value));
+        if (adicionado) { fecharModal(); window.carrinhoManager.abrirCarrinho(); }
+    });
+    const whatsapp = String(vinhoManager.configuracoes.whatsapp || '5562981831483').replace(/\D/g, '');
+    const atendimento = modalBody.querySelector('[data-consultar-vinho]');
+    atendimento.href = `https://wa.me/${whatsapp}?text=${encodeURIComponent(`Olá! Gostaria de saber mais sobre ${original.nome}.`)}`;
     window.RenderSeguro.imagens(modalBody);
-
+    if (modal.style.display !== 'block') {
+        focoAnteriorFicha = document.activeElement;
+        elementosInertes = [...document.querySelectorAll('body > header, body > main, body > footer, #btn-abrir-carrinho')].map(element => [element, element.inert]);
+        elementosInertes.forEach(([element]) => { element.inert = true; });
+    }
     modal.style.display = 'block';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-vinho-aberto');
+    modal.querySelector('.close')?.focus();
 }
-
 
 function fecharModal() {
     const modal = document.getElementById('modal-vinho');
-    if (modal) {
-        modal.style.display = 'none';
-    }
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-vinho-aberto');
+    elementosInertes.forEach(([element, inert]) => { element.inert = inert; });
+    elementosInertes = [];
+    focoAnteriorFicha?.focus?.();
 }
 
 // ===== FILTROS =====
@@ -436,11 +500,29 @@ function configurarFiltros() {
 
     filtros.forEach(btn => {
         btn.addEventListener('click', () => {
-            filtros.forEach(b => b.classList.remove('active'));
+            filtros.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
             btn.classList.add('active');
+            btn.setAttribute('aria-pressed', 'true');
             filtroAtual = btn.dataset.filtro;
             renderizarVinhos(filtroAtual, buscaAtual, ordenacaoAtual);
         });
+    });
+
+    const ordenacaoSelect = document.getElementById('ordenacao-catalogo');
+    ordenacaoSelect?.addEventListener('change', () => {
+        ordenacaoAtual = ordenacaoSelect.value;
+        renderizarVinhos(filtroAtual, buscaAtual, ordenacaoAtual);
+    });
+    document.getElementById('limpar-filtros')?.addEventListener('click', () => {
+        filtroAtual = 'todos'; buscaAtual = ''; ordenacaoAtual = 'padrao';
+        if (buscaInput) buscaInput.value = '';
+        if (ordenacaoSelect) ordenacaoSelect.value = 'padrao';
+        filtros.forEach(button => {
+            const active = button.dataset.filtro === 'todos';
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', String(active));
+        });
+        renderizarVinhos();
     });
 
     ordenacoes.forEach(btn => {
@@ -525,11 +607,14 @@ async function atualizarInformacoesContato() {
     if (telefoneElement) {
         console.log('Atualizando telefone de:', telefoneElement.textContent, 'para:', config.telefone);
         telefoneElement.textContent = config.telefone || '(54) 99999-9999';
+        const numero = telefoneElement.textContent.replace(/\D/g, '');
+        telefoneElement.href = `tel:+${numero.length >= 12 && numero.startsWith('55') ? numero : `55${numero}`}`;
     }
 
     if (emailElement) {
         console.log('Atualizando email de:', emailElement.textContent, 'para:', config.email);
         emailElement.textContent = config.email || 'davinivinhosfinos@gmail.com';
+        emailElement.href = `mailto:${encodeURIComponent(emailElement.textContent)}`;
     }
 
     if (enderecoElement) {
@@ -661,6 +746,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (modal) {
+        modal.addEventListener('keydown', event => {
+            if (document.getElementById('modal-idade')?.style.display === 'block') return;
+            if (event.key === 'Escape') { event.preventDefault(); fecharModal(); }
+            if (event.key !== 'Tab') return;
+            const focusables = [...modal.querySelectorAll('button, a[href], input, summary')].filter(element => !element.disabled && element.getClientRects().length);
+            const first = focusables[0]; const last = focusables[focusables.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        });
         window.addEventListener('click', (e) => {
             if (e.target === modal) {
                 fecharModal();

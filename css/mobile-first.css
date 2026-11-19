@@ -1,839 +1,191 @@
-/* ===== MOBILE-FIRST CSS =====
-   Abordagem: Mobile (320px) → Tablet (768px) → Desktop (1024px+)
-   Sempre use min-width para escalar para cima!
-===== */
-
-/* ===== RESET E VARIÁVEIS ===== */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* Layout responsivo e componentes do catálogo. Cores e reset ficam em styles.css. */
+html { scroll-behavior: smooth; scroll-padding-top: 84px; scrollbar-gutter: stable; -webkit-text-size-adjust: 100%; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.container { width: min(100%, 1320px); padding-inline: 16px; margin-inline: auto; }
+.header { padding: 0; }
+.header .container { display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; min-height: 64px; }
+.logo { min-width: 0; }
+.logo h1 { font-size: clamp(1rem, 2.5vw, 1.4rem); line-height: 1.2; letter-spacing: .025em; overflow-wrap: anywhere; }
+.logo img { max-width: 110px; max-height: 38px; }
+.menu-toggle { display: flex; flex-direction: column; justify-content: space-around; width: 44px; height: 44px; flex: 0 0 44px; background: transparent; border: 0; padding: 10px; cursor: pointer; z-index: 1001; }
+.menu-toggle span { width: 100%; height: 2px; background: white; border-radius: 2px; transition: transform .2s, opacity .2s; }
+.menu-toggle.active span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+.menu-toggle.active span:nth-child(2) { opacity: 0; }
+.menu-toggle.active span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+.nav { position: fixed; top: 0; right: -100%; width: min(85vw, 320px); height: 100dvh; padding: 80px 20px 24px; background: var(--cor-primaria); overflow-y: auto; visibility: hidden; pointer-events: none; z-index: 999; transition: right .2s, visibility .2s; }
+.nav.active { right: 0; visibility: visible; pointer-events: auto; }
+.nav ul { display: flex; flex-direction: column; gap: 8px; flex-wrap: nowrap; }
+.nav-link { display: flex; align-items: center; min-height: 44px; font-size: .95rem; padding: 10px 12px; }
+.nav-overlay { display: none; position: fixed; inset: 0; background: #20101988; z-index: 998; }
+.nav-overlay.active { display: block; }
+#menu-usuario { flex-wrap: wrap; align-items: center; }
+#usuario-nome { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#badge-vip-header { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.pagina-catalogo .hero { padding: 20px; background: linear-gradient(115deg, #49102b, #7c3357); }
+.pagina-catalogo .hero-content { max-width: 850px; margin: auto; }
+.pagina-catalogo .hero-content h2 { font: 600 clamp(1.65rem, 4vw, 2.6rem)/1.15 Georgia, serif; text-shadow: none; margin-bottom: 12px; }
+.pagina-catalogo .hero-content p { font-size: .95rem; max-width: 640px; margin: 0 auto 20px; line-height: 1.5; }
+.hero-explorar { display: inline-flex; align-items: center; gap: 12px; color: white; text-decoration: none; min-height: 44px; padding: 10px 18px; border: 1px solid #ffffff80; border-radius: 7px; font-weight: 600; font-size: .9rem; }
+.hero-explorar:hover { background: #ffffff15; }
+.catalogo { padding: 28px 0 44px; }
+.section-title { font-size: clamp(1.45rem, 3vw, 1.9rem); text-align: center; color: var(--cor-primaria); margin-bottom: 24px; }
+.section-title::after { content: ''; display: block; width: 48px; height: 3px; margin: 12px auto 0; border-radius: 3px; background: var(--cor-destaque); }
+/* Destaque: uma coluna em telas pequenas, duas apenas quando há espaço. */
+.destaque-semana { margin: 0 0 28px; }
+.destaque-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid #e3d8ce; border-radius: 16px; overflow: hidden; background: #faf6ef; box-shadow: 0 5px 18px #2c18100c; cursor: pointer; }
+.destaque-selo { position: absolute; top: 12px; left: 12px; z-index: 1; background: #ead7b5; color: #48321b; padding: 6px 10px; border-radius: 5px; font-size: .62rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.destaque-media { display: flex; justify-content: center; align-items: center; background: white; padding: 38px 20px 14px; min-width: 0; }
+.destaque-media img { width: 100%; height: 165px; object-fit: contain; }
+.destaque-conteudo { min-width: 0; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.destaque-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.destaque-tipo, .destaque-vip { color: #623525; background: #eee1cc; font-size: .68rem; padding: 4px 8px; border-radius: 4px; }
+.destaque-titulo { color: var(--cor-escura); font: 600 clamp(1.35rem, 3vw, 1.9rem)/1.2 Georgia, serif; overflow-wrap: anywhere; }
+.destaque-origem, .destaque-descricao { color: #62574e; font-size: .9rem; line-height: 1.55; }
+.destaque-preco { margin-top: 4px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.destaque-preco .preco-final { font-size: 1.6rem; font-weight: 750; color: var(--cor-primaria); }
+.destaque-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.destaque-acoes button { flex: 1 1 130px; }
+.btn-outline { min-height: 44px; border: 1px solid var(--cor-primaria); border-radius: 7px; padding: 10px 14px; background: transparent; color: var(--cor-primaria); cursor: pointer; font-weight: 600; }
+.btn-outline:hover { background: #61083109; }
+/* Busca, categorias e ordenação ficam juntas, imediatamente antes dos resultados. */
+.ferramentas-catalogo { scroll-margin-top: 82px; }
+.catalogo-toolbar { display: grid; gap: 12px; }
+.busca-catalogo { display: flex; align-items: center; gap: 10px; border: 1px solid #d5cfc9; border-radius: 8px; padding: 0 12px; background: white; min-width: 0; }
+.busca-catalogo:focus-within { outline: 2px solid var(--cor-primaria); outline-offset: 2px; }
+.busca-catalogo i { color: #837266; }
+.input-busca-catalogo { min-width: 0; width: 100%; border: 0; outline: 0; padding: 13px 0; font-size: 16px; background: transparent; }
+.ordenacao-catalogo { display: flex; gap: 8px; align-items: center; font-size: .8rem; color: #65574d; }
+.ordenacao-catalogo select { min-height: 44px; padding: 8px 10px; min-width: 0; flex: 1; border: 1px solid #d5cfc9; border-radius: 7px; background: white; font-size: .85rem; color: #35281f; }
+.filtros { display: flex; gap: 8px; overflow-x: auto; padding: 12px 2px 8px; margin: 0; scrollbar-width: thin; flex-wrap: nowrap; }
+.filtro-btn { flex: 0 0 auto; white-space: nowrap; min-height: 44px; border: 1px solid #d5cfc9; border-radius: 24px; padding: 8px 15px; background: transparent; color: #5b4638; cursor: pointer; font-weight: 600; font-size: .85rem; }
+.filtro-btn.active { background: var(--cor-primaria); border-color: var(--cor-primaria); color: white; }
+.filtro-btn:hover:not(.active) { background: #eee6db; }
+.catalogo-resultados { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 44px; margin-bottom: 12px; color: #6b6056; font-size: .8rem; }
+#limpar-filtros { min-height: 44px; border: 0; color: var(--cor-primaria); background: transparent; text-decoration: underline; cursor: pointer; padding: 4px; }
+/* Grade: 2 colunas no celular, 3 em telas móveis largas, 4–5 no desktop. */
+.vinhos-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+.vinho-card { min-width: 0; display: flex; flex-direction: column; border: 1px solid #e4ded7; border-radius: 12px; overflow: hidden; background: white; box-shadow: 0 2px 6px #2c181008; cursor: pointer; transition: box-shadow .2s, transform .2s; }
+.vinho-imagem { display: block; width: 100%; height: 165px; padding: 12px; object-fit: contain; background: white; }
+.vinho-info { padding: 12px; display: flex; flex-direction: column; align-items: stretch; gap: 6px; flex: 1; min-width: 0; }
+.vinho-tipo { display: inline-flex; align-self: flex-start; width: fit-content; background: #eee7dc; color: #634729; padding: 3px 7px; border-radius: 4px; font-size: .7rem; text-transform: uppercase; font-weight: 700; letter-spacing: .025em; }
+.tipo-tinto { background: #f2e4ea; color: #742546; }
+.tipo-branco, .tipo-espumante { background: #f3eddc; color: #715d2b; }
+.tipo-rose { background: #f9e8e4; color: #8c4c43; }
+.tipo-suco_integral_tinto, .tipo-suco_integral_branco { background: #eaf0e5; color: #486039; }
+.vinho-nome { font-size: .93rem; line-height: 1.4; font-weight: 650; color: #33271f; overflow-wrap: anywhere; margin: 2px 0; }
+.vinho-complemento, .vinho-uva, .vinho-ano, .vinho-pais { color: #74685f; font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; margin: 0; }
+.vinho-pais { display: flex; align-items: center; gap: 5px; }
+.vinho-pais img { flex: 0 0 auto; object-fit: cover; border-radius: 2px; }
+.perfil-etiquetas { display: flex; gap: 5px; flex-wrap: wrap; list-style: none; margin: 3px 0; }
+.perfil-etiquetas li { color: #66523c; background: #f7f3ed; font-size: .68rem; padding: 3px 6px; border-radius: 4px; }
+.vinho-preco { display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap; margin-top: auto; padding-top: 12px; color: var(--cor-primaria); }
+.preco-original { color: #7c7168; font-size: .8rem; font-weight: 400; }
+.vinho-preco .preco-final { font-size: 1.12rem; font-weight: 750; }
+.vinho-preco .badge-vip { font-size: .6rem; padding: 2px 5px; }
+.btn-detalhes { background: transparent; border: 0; min-height: 44px; padding: 6px; color: var(--cor-primaria); font-size: .8rem; text-decoration: underline; cursor: pointer; }
+.btn-adicionar-carrinho { display: inline-flex; justify-content: center; align-items: center; gap: 6px; width: 100%; min-height: 44px; padding: 10px 8px; border: 0; border-radius: 7px; background: var(--cor-primaria); color: white; font-size: .85rem; line-height: 1.3; font-weight: 650; cursor: pointer; }
+.btn-adicionar-carrinho:hover { background: #4b0625; }
+.vinhos-grid > .mensagem-vazio, .vinhos-grid > .mensagem-erro, .vinhos-grid > .loading-container { grid-column: 1 / -1; }
+/* Ficha: conteúdo rolável e compra fora da rolagem. */
+body.modal-vinho-aberto { overflow: hidden; }
+.modal-content { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.close { min-width: 44px; min-height: 44px; display: grid; place-items: center; border: 0; background: white; border-radius: 50%; line-height: 1; }
+#modal-vinho .modal-content { display: flex; flex-direction: column; width: calc(100% - 20px); max-width: 960px; max-height: calc(100dvh - 20px); padding: 0; margin: 10px auto; border-radius: 14px; overflow: hidden; animation: fichaAparecer .18s ease; }
+@keyframes fichaAparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#modal-vinho .close { top: 8px; right: 8px; z-index: 2; box-shadow: 0 1px 5px #2c18101a; }
+#modal-body { overflow-y: auto; overscroll-behavior: contain; padding: 20px; min-height: 0; }
+.modal-vinho-detalhes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.modal-imagem { min-width: 0; }
+.modal-imagem img { display: block; width: 100%; height: 180px; object-fit: contain; }
+.modal-info { min-width: 0; }
+.modal-info h2 { font: 600 1.45rem/1.25 Georgia, serif; color: var(--cor-escura); margin: 12px 0 8px; overflow-wrap: anywhere; }
+.modal-info .vinho-complemento { font-size: .85rem; }
+.ficha-resumo { font-size: .95rem; line-height: 1.6; margin-top: 12px; color: #65574b; }
+.ficha-servico { color: #5e503f; background: #f7f3ed; border-radius: 7px; padding: 10px; margin-top: 12px; font-size: .9rem; }
+.ficha-atendimento, .ficha-fonte { display: inline-block; color: var(--cor-primaria); font-size: .85rem; padding: 12px 0; overflow-wrap: anywhere; }
+.ficha-bloco { margin: 18px 0; }
+.ficha-bloco h3 { font-size: 1rem; margin-bottom: 6px; color: #46342b; }
+.ficha-bloco p, .ficha-descricao { white-space: pre-line; color: #6b5f55; font-size: .9rem; line-height: 1.75; overflow-wrap: anywhere; }
+.ficha-detalhe { border-top: 1px solid #e5dfd8; margin-top: 16px; padding: 14px 0; }
+.ficha-detalhe summary { cursor: pointer; min-height: 44px; padding-block: 10px; color: var(--cor-primaria); font-weight: 650; }
+.ficha-dados { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 12px; }
+.ficha-dados div { min-width: 0; }
+.ficha-dados dt { color: #786a5e; font-size: .75rem; margin-bottom: 3px; }
+.ficha-dados dd { color: #372a22; font-size: .88rem; overflow-wrap: anywhere; }
+.ficha-compra { flex: 0 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 84px; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid #e4dbd2; background: #fffdf9; box-shadow: 0 -4px 12px #2c181008; align-items: center; }
+.ficha-compra .btn-adicionar-carrinho { grid-column: 1 / -1; }
+.modal-preco { margin: 0; font-size: 1.3rem; font-weight: 750; color: var(--cor-primaria); display: flex; gap: 5px; align-items: baseline; flex-wrap: wrap; }
+.modal-preco .badge-vip { font-size: .65rem; }
+.ficha-quantidade { font-size: .68rem; color: #6b5d51; }
+.ficha-quantidade input { width: 100%; min-height: 44px; border: 1px solid #cfc3b7; border-radius: 6px; padding: 6px 10px; font-size: 16px; background: white; }
+.modal-auth { max-width: 460px; }
+.modal-idade-content { max-width: 520px; padding: 24px; }
+.modal-idade-header { flex-direction: column; align-items: center; }
+.modal-idade-header h2 { font-size: 1.25rem; }
+.modal-idade-subtitulo { font-size: .85rem; }
+.modal-idade-acoes { gap: 10px; flex-wrap: wrap; }
+.form-group input, .form-group select, .form-group textarea { min-height: 44px; font-size: 16px; }
+.editor-ficha { border: 1px solid #e4dbd2; border-radius: 10px; padding: 16px; margin: 18px 0; }
+.editor-ficha summary { cursor: pointer; color: var(--cor-primaria); font-weight: 650; min-height: 44px; }
+.editor-ficha summary span { display: block; font-size: .8rem; font-weight: 400; color: #776a60; }
+.editor-ficha > p { color: #776a60; font-size: .85rem; margin-bottom: 18px; }
+.opcao-sem-safra { display: flex !important; align-items: center; min-height: 44px; gap: 8px; font-size: .85rem; font-weight: 400 !important; margin-top: 8px; }
+.opcao-sem-safra input { width: 20px !important; min-height: 20px !important; }
+.contato-content { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+.contato-info, .redes-sociais, .social-links { min-width: 0; }
+.contato-info a { color: inherit; text-underline-offset: 4px; overflow-wrap: anywhere; }
+.info-item > div { min-width: 0; overflow-wrap: anywhere; }
+.redes-sociais { display: block; }
+.social-links { display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; }
+.social-link { min-height: 44px; padding: 10px 14px; font-size: .9rem; gap: 8px; }
+.social-link i { font-size: 1.15rem; }
+.footer { padding-bottom: calc(86px + env(safe-area-inset-bottom)); font-size: .8rem; }
+.btn-carrinho { width: 52px; height: 52px; font-size: 1.3rem; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); }
+*:focus-visible { outline: 3px solid #a87124; outline-offset: 3px; }
+@media (min-width: 600px) {
+    .container { padding-inline: 24px; }
+    .vinhos-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .vinho-imagem { height: 205px; }
+    .catalogo-toolbar { grid-template-columns: minmax(0, 1fr) 240px; align-items: center; }
+    .ordenacao-catalogo { flex-direction: column; align-items: stretch; gap: 2px; }
+    .destaque-card { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+    .destaque-media { padding: 36px 20px 20px; }
+    .destaque-media img { height: 260px; }
+    .destaque-conteudo { padding: 28px; }
+    .ficha-compra { grid-template-columns: minmax(120px, 1fr) 84px minmax(180px, 1fr); padding: 16px 24px; }
+    .ficha-compra .btn-adicionar-carrinho { grid-column: auto; }
+    .modal-vinho-detalhes { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 28px; }
+    .modal-imagem img { height: 280px; }
+    .modal-info h2 { font-size: 1.8rem; padding-right: 24px; }
+    #modal-body { padding: 28px; }
+    .ficha-dados { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 900px) {
+    .menu-toggle { display: none; }
+    .header .container { min-height: 72px; }
+    .nav { position: static; width: auto; max-width: none; height: auto; background: transparent; padding: 0; visibility: visible; pointer-events: auto; overflow: visible; }
+    .nav ul { flex-direction: row; gap: 4px; align-items: center; }
+    .nav-link { font-size: .85rem; padding: 10px; }
+    .nav-overlay, .nav-overlay.active { display: none; }
+    .contato-content { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
-
-:root {
-    --cor-primaria: #6B1C40;
-    --cor-secundaria: #8B2E5A;
-    --cor-destaque: #C19A6B;
-    --cor-escura: #2C1810;
-    --cor-clara: #F5F5F0;
-    --cor-texto: #333;
-    --cor-texto-claro: #666;
-    --cor-branca: #FFF;
-    --sombra: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --sombra-hover: 0 8px 12px rgba(0, 0, 0, 0.15);
-    --transicao: all 0.3s ease;
-    
-    /* Touch targets */
-    --min-touch-size: 44px;
-    
-    /* Espaçamentos responsivos */
-    --space-xs: 0.5rem;
-    --space-sm: 1rem;
-    --space-md: 1.5rem;
-    --space-lg: 2rem;
-    --space-xl: 3rem;
-}
-
-html {
-    /* Prevenir zoom em inputs iOS */
-    -webkit-text-size-adjust: 100%;
-    /* Scroll suave */
-    scroll-behavior: smooth;
-}
-
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.6;
-    color: var(--cor-texto);
-    background-color: var(--cor-clara);
-    /* Prevenir bounce scroll no iOS */
-    overscroll-behavior-y: contain;
-    /* Font-size base mobile */
-    font-size: 16px; /* Evita auto-zoom iOS */
-}
-
-/* Container Mobile-First */
-.container {
-    width: 100%;
-    padding: 0 var(--space-sm);
-    margin: 0 auto;
-}
-
-/* ===== HEADER MOBILE FIRST ===== */
-.header {
-    background: linear-gradient(135deg, var(--cor-primaria), var(--cor-secundaria));
-    color: var(--cor-branca);
-    padding: var(--space-sm) 0;
-    box-shadow: var(--sombra);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-.header .container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    min-height: var(--min-touch-size);
-}
-
-.logo h1 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.logo img {
-    max-height: 40px;
-    max-width: 150px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-}
-
-/* ===== MENU HAMBURGUER (Mobile) ===== */
-.menu-toggle {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    width: var(--min-touch-size);
-    height: var(--min-touch-size);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 10px;
-    z-index: 1001;
-}
-
-.menu-toggle span {
-    width: 100%;
-    height: 3px;
-    background: var(--cor-branca);
-    border-radius: 3px;
-    transition: all 0.3s ease;
-}
-
-.menu-toggle.active span:nth-child(1) {
-    transform: rotate(45deg) translate(8px, 8px);
-}
-
-.menu-toggle.active span:nth-child(2) {
-    opacity: 0;
-}
-
-.menu-toggle.active span:nth-child(3) {
-    transform: rotate(-45deg) translate(7px, -7px);
-}
-
-/* Mobile Navigation */
-.nav {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    width: 80%;
-    max-width: 300px;
-    height: 100vh;
-    background: var(--cor-primaria);
-    padding: 80px var(--space-lg) var(--space-lg);
-    transition: right 0.3s ease;
-    z-index: 999;
-    overflow-y: auto;
-}
-
-.nav.active {
-    right: 0;
-}
-
-/* Overlay quando menu aberto */
-.nav-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 998;
-}
-
-.nav-overlay.active {
-    display: block;
-}
-
-.nav ul {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-}
-
-.nav-link {
-    color: var(--cor-branca);
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 1.1rem;
-    transition: var(--transicao);
-    padding: var(--space-sm);
-    border-radius: 5px;
-    display: block;
-    min-height: var(--min-touch-size);
-    display: flex;
-    align-items: center;
-}
-
-.nav-link:hover,
-.nav-link.active,
-.nav-link:active {
-    background-color: rgba(255, 255, 255, 0.2);
-    /* Feedback tátil */
-    transform: scale(0.98);
-}
-
-/* Badge VIP */
-.badge-vip-header {
-    display: inline-block;
-    padding: 0.25rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-right: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-.badge-vip-prata {
-    background: linear-gradient(135deg, #C0C0C0, #E8E8E8);
-    color: #333;
-}
-
-.badge-vip-ouro {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    color: #333;
-}
-
-/* ===== HERO MOBILE ===== */
-.hero {
-    background: linear-gradient(135deg, rgba(107, 28, 64, 0.9), rgba(139, 46, 90, 0.9));
-    color: var(--cor-branca);
-    padding: var(--space-xl) 0;
-    text-align: center;
-}
-
-.hero-content h2 {
-    font-size: 1.75rem;
-    margin-bottom: var(--space-sm);
-    line-height: 1.2;
-}
-
-.hero-content p {
-    font-size: 1rem;
-    margin-bottom: var(--space-md);
-}
-
-/* ===== CATÁLOGO MOBILE ===== */
-.catalogo {
-    padding: var(--space-lg) 0;
-}
-
-.section-title {
-    font-size: 1.75rem;
-    text-align: center;
-    margin-bottom: var(--space-lg);
-    color: var(--cor-primaria);
-}
-
-/* Filtros Mobile */
-.filtros {
-    display: flex;
-    gap: var(--space-xs);
-    margin-bottom: var(--space-md);
-    overflow-x: auto;
-    padding-bottom: var(--space-xs);
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-}
-
-.filtros::-webkit-scrollbar {
-    display: none; /* Chrome, Safari */
-}
-
-.filtro-btn {
-    padding: 0.75rem 1.25rem;
-    min-height: var(--min-touch-size);
-    border: 2px solid var(--cor-primaria);
-    background: var(--cor-branca);
-    color: var(--cor-primaria);
-    border-radius: 25px;
-    cursor: pointer;
-    transition: var(--transicao);
-    font-size: 0.9rem;
-    font-weight: 600;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.filtro-btn:active {
-    transform: scale(0.95);
-}
-
-.filtro-btn.active {
-    background: var(--cor-primaria);
-    color: var(--cor-branca);
-}
-
-.filtros-ordenacao {
-    margin-top: calc(var(--space-xs) * -1);
-    margin-bottom: var(--space-lg);
-}
-
-/* ===== DESTAQUE DA SEMANA (Mobile) ===== */
-.destaque-semana {
-    margin: var(--space-lg) 0 var(--space-xl);
-}
-
-.destaque-card {
-    position: relative;
-    display: grid;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    border-radius: 20px;
-    background: linear-gradient(160deg, #2C1810, #6B1C40 55%, #8B2E5A);
-    color: var(--cor-branca);
-    box-shadow: 0 16px 30px rgba(44, 24, 16, 0.35);
-    animation: destaqueReveal 0.6s ease both;
-}
-
-.destaque-selo {
-    position: absolute;
-    top: var(--space-sm);
-    left: var(--space-sm);
-    background: linear-gradient(135deg, #F1C27D, #C19A6B);
-    color: #2C1810;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.65rem;
-    padding: 0.4rem 0.8rem;
-    border-radius: 999px;
-}
-
-.destaque-media {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    padding: 0.5rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 200px;
-}
-
-.destaque-media img {
-    max-width: 100%;
-    max-height: 280px;
-    object-fit: contain;
-    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
-}
-
-.destaque-conteudo {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-}
-
-.destaque-topo {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    align-items: center;
-    margin-top: 1.5rem;
-}
-
-.destaque-tipo,
-.destaque-vip {
-    padding: 0.25rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.65rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.destaque-vip {
-    background: rgba(255, 255, 255, 0.18);
-}
-
-.destaque-titulo {
-    font-family: 'Georgia', 'Times New Roman', serif;
-    font-size: 1.35rem;
-    line-height: 1.2;
-    margin: 0.3rem 0 0.4rem;
-}
-
-.destaque-descricao {
-    font-size: 0.85rem;
-    line-height: 1.35;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.destaque-preco {
-    display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
-    margin-top: 0.3rem;
-}
-
-.destaque-preco .preco-original {
-    text-decoration: line-through;
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.destaque-preco .preco-final {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #F1C27D;
-}
-
-.destaque-acoes {
-    display: grid;
-    gap: 0.5rem;
-    margin-top: 0.4rem;
-}
-
-.btn-outline {
-    background: transparent;
-    border: 2px solid rgba(255, 255, 255, 0.6);
-    color: var(--cor-branca);
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transicao);
-}
-
-.btn-outline:active {
-    transform: scale(0.98);
-}
-
-@keyframes destaqueReveal {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Grid de Vinhos Mobile (2 colunas) */
-.vinhos-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-sm);
-}
-
-.vinho-card {
-    background: var(--cor-branca);
-    border-radius: 10px;
-    box-shadow: var(--sombra);
-    overflow: hidden;
-    transition: var(--transicao);
-    cursor: pointer;
-}
-
-.vinho-card:active {
-    transform: scale(0.98);
-}
-
-.vinho-imagem {
-    width: 100%;
-    height: 180px;
-    object-fit: contain;
-    background: #f9f9f9;
-    padding: var(--space-xs);
-}
-
-.vinho-info {
-    padding: var(--space-sm);
-}
-
-.vinho-nome {
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin-bottom: 0.4rem;
-    color: var(--cor-texto);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    line-height: 1.3;
-}
-
-.vinho-uva,
-.vinho-ano,
-.vinho-pais {
-    font-size: 0.8rem;
-    color: var(--cor-texto-claro);
-    margin-bottom: 0.3rem;
-}
-
-.vinho-preco {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--cor-primaria);
-    margin: var(--space-xs) 0;
-}
-
-/* Botões Mobile */
-.btn-adicionar-carrinho,
-.btn-adicionar {
-    width: 100%;
-    min-height: var(--min-touch-size);
-    padding: var(--space-sm);
-    background: var(--cor-primaria);
-    color: var(--cor-branca);
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transicao);
-    font-size: 0.95rem;
-}
-
-.btn-adicionar-carrinho:active,
-.btn-adicionar:active {
-    transform: scale(0.95);
-    background: var(--cor-secundaria);
-}
-
-/* ===== MODAL MOBILE ===== */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 2000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.6);
-    -webkit-overflow-scrolling: touch;
-}
-
-.modal-content {
-    background-color: var(--cor-branca);
-    margin: 5% auto;
-    padding: var(--space-md);
-    border-radius: 12px;
-    width: 95%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-
-.close {
-    color: #aaa;
-    float: right;
-    font-size: 2rem;
-    font-weight: bold;
-    line-height: 1;
-    min-width: var(--min-touch-size);
-    min-height: var(--min-touch-size);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.close:hover,
-.close:focus,
-.close:active {
-    color: #000;
-}
-
-/* ===== MODAL IDADE - MOBILE ===== */
-@media (max-width: 640px) {
-    .modal-idade-content {
-        width: 92%;
-        max-width: 460px;
-        margin: 8% auto;
-        padding: 1.25rem;
-        gap: 0.5rem;
-    }
-
-    .modal-idade-header {
-        flex-direction: column;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .modal-idade-icone {
-        width: 64px;
-        height: 64px;
-        font-size: 1.35rem;
-    }
-
-    .modal-idade-header h2 {
-        font-size: 1.2rem;
-    }
-
-    .modal-idade-subtitulo {
-        font-size: 0.9rem;
-        line-height: 1.4;
-    }
-
-    .modal-idade-pergunta {
-        margin-top: 0.5rem;
-        font-size: 1rem;
-    }
-
-    .modal-idade-acoes {
-        flex-direction: column;
-        gap: 0.6rem;
-    }
-
-    .btn-idade-sim,
-    .btn-idade-nao {
-        width: 100%;
-        min-height: var(--min-touch-size);
-        font-size: 1rem;
-    }
-
-    .modal-idade-toggle {
-        padding: 0.85rem;
-    }
-
-    .idade-toggle-label {
-        flex-direction: row;
-        justify-content: center;
-        gap: 0.4rem;
-    }
-
-    .idade-toggle-legenda {
-        font-size: 0.8rem;
-        line-height: 1.3;
-    }
-}
-
-/* ===== FORMS MOBILE-OPTIMIZED ===== */
-.form-group {
-    margin-bottom: var(--space-md);
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: var(--cor-texto);
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: var(--space-sm);
-    min-height: var(--min-touch-size);
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    font-size: 16px; /* Previne zoom iOS */
-    transition: var(--transicao);
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: var(--cor-primaria);
-    box-shadow: 0 0 0 3px rgba(107, 28, 64, 0.1);
-}
-
-/* ===== FOOTER MOBILE ===== */
-.footer {
-    background: var(--cor-escura);
-    color: var(--cor-branca);
-    padding: var(--space-lg) 0;
-    text-align: center;
-}
-
-.footer-content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-}
-
-.redes-sociais {
-    display: flex;
-    justify-content: center;
-    gap: var(--space-md);
-}
-
-.social-link {
-    color: var(--cor-branca);
-    font-size: 1.5rem;
-    min-width: var(--min-touch-size);
-    min-height: var(--min-touch-size);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transicao);
-}
-
-.social-link:active {
-    transform: scale(1.1);
-    color: var(--cor-destaque);
-}
-
-/* ===== TABLET (768px+) ===== */
-@media (min-width: 768px) {
-    :root {
-        --space-sm: 1.5rem;
-        --space-md: 2rem;
-        --space-lg: 3rem;
-        --space-xl: 4rem;
-    }
-    
-    .container {
-        padding: 0 var(--space-md);
-    }
-    
-    .logo h1 {
-        font-size: 1.6rem;
-    }
-    
-    .menu-toggle {
-        display: none;
-    }
-    
-    .nav {
-        position: static;
-        width: auto;
-        max-width: none;
-        height: auto;
-        background: transparent;
-        padding: 0;
-    }
-    
-    .nav ul {
-        flex-direction: row;
-        gap: var(--space-md);
-    }
-    
-    .nav-link {
-        padding: 0.5rem 1rem;
-    }
-    
-    .hero-content h2 {
-        font-size: 2.5rem;
-    }
-    
-    .hero-content p {
-        font-size: 1.2rem;
-    }
-    
-    .vinhos-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: var(--space-md);
-    }
-    
-    .vinho-imagem {
-        height: 220px;
-    }
-    
-    .vinho-nome {
-        font-size: 1.1rem;
-    }
-    
-    .modal-content {
-        width: 90%;
-        padding: var(--space-lg);
-    }
-    
-    .footer-content {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-    }
-}
-
-/* ===== DESKTOP (1024px+) ===== */
 @media (min-width: 1024px) {
-    .container {
-        max-width: 1400px;
-    }
-    
-    .logo h1 {
-        font-size: 1.8rem;
-    }
-    
-    .hero-content h2 {
-        font-size: 3rem;
-    }
-    
-    .vinhos-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: var(--space-lg);
-    }
-    
-    .vinho-card:hover {
-        transform: translateY(-8px);
-        box-shadow: var(--sombra-hover);
-    }
-    
-    .vinho-imagem {
-        height: 250px;
-    }
-    
-    .modal-content {
-        width: 70%;
-        max-width: 900px;
-    }
+    .vinhos-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+    .vinho-info { padding: 16px; }
+    .vinho-nome { font-size: 1rem; }
+    .vinho-imagem { height: 230px; }
+    .pagina-catalogo .hero { padding-block: 38px; }
+    .catalogo { padding-block: 36px 56px; }
+    .destaque-card { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); }
+    .destaque-acoes { max-width: 440px; }
 }
-
-/* ===== LARGE DESKTOP (1440px+) ===== */
 @media (min-width: 1440px) {
-    .vinhos-grid {
-        grid-template-columns: repeat(5, 1fr);
-    }
+    .vinhos-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
-
-/* ===== ACESSIBILIDADE ===== */
-/* Foco visível */
-*:focus-visible {
-    outline: 3px solid var(--cor-primaria);
-    outline-offset: 2px;
+@media (hover: hover) {
+    .vinho-card:hover { box-shadow: 0 6px 18px #2c181012; transform: translateY(-3px); }
 }
-
-/* Prefers Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-    }
+    *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
 }
-
-/* Dark Mode */
-/* @media (prefers-color-scheme: dark) {
-    :root {
-        --cor-clara: #1a1a1a;
-        --cor-texto: #e0e0e0;
-        --cor-texto-claro: #b0b0b0;
-    }
-    
-    .vinho-card {
-        background: #2a2a2a;
-    }
-    
-    .vinho-imagem {
-        background: #333;
-    }
-} */

@@ -1,5 +1,6 @@
 // ===== ZOD VALIDATORS =====
 const { z } = require('zod');
+const FichaVinho = require('../js/ficha-vinho');
 
 // ===== SCHEMAS =====
 
@@ -67,6 +68,29 @@ const urlImagemSchema = z.string().trim().max(500, 'URL deve ter no máximo 500 
         }
     }, 'Informe uma URL de imagem válida com http ou https');
 
+const camposFicha = {};
+for (const [campo, max] of Object.entries(FichaVinho.textos)) {
+    camposFicha[campo] = (campo === 'fonte_url' ? urlImagemSchema : z.string().trim().max(max)).nullable().optional();
+}
+for (const [campo, limites] of Object.entries(FichaVinho.numeros)) {
+    let numero = decimalSchema.refine(value => value >= limites.min && value <= limites.max,
+        `Informe um valor entre ${limites.min} e ${limites.max}`);
+    if (limites.inteiro) numero = numero.refine(Number.isInteger, 'Informe um número inteiro');
+    camposFicha[campo] = numero.nullable().optional();
+}
+for (const [campo, opcoes] of Object.entries(FichaVinho.opcoes)) {
+    camposFicha[campo] = z.enum(Object.keys(opcoes)).nullable().optional();
+}
+const fichaTecnicaSchema = z.object(camposFicha).strict().superRefine((ficha, ctx) => {
+    if (ficha.temperatura_min != null && ficha.temperatura_max != null && ficha.temperatura_min > ficha.temperatura_max) {
+        ctx.addIssue({ code: 'custom', path: ['temperatura_max'], message: 'A temperatura máxima deve ser maior ou igual à mínima' });
+    }
+});
+const fichaFormularioSchema = z.preprocess(value => {
+    if (typeof value !== 'string') return value;
+    try { return JSON.parse(value); } catch (_) { return value; }
+}, fichaTecnicaSchema);
+
 const vinhoSchema = z.object({
     nome: z.string().trim()
         .min(3, 'Nome deve ter no mínimo 3 caracteres')
@@ -76,7 +100,8 @@ const vinhoSchema = z.object({
     }),
     uva: z.string().trim().min(2, 'Tipo de uva deve ter no mínimo 2 caracteres')
         .max(255, 'Tipo de uva deve ter no máximo 255 caracteres'),
-    ano: anoSchema,
+    ano: z.preprocess(value => value === '' ? null : value, anoSchema.nullable()),
+    ficha_tecnica: fichaFormularioSchema.optional(),
     preco: decimalSchema.refine(value => value > 0 && value <= 999999.99, 'Preço deve estar entre 0,01 e 999999,99'),
     descricao: z.string()
         .max(2000, 'Descrição deve ter no máximo 2000 caracteres')
@@ -238,6 +263,7 @@ module.exports = {
     cadastroSchema,
     vinhoSchema,
     vinhoUpdateSchema,
+    fichaTecnicaSchema,
     vinhosQuerySchema,
     beneficioSchema,
     idSchema,

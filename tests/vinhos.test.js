@@ -98,7 +98,9 @@ function criarApi(options = {}) {
         if (sql.startsWith('INSERT INTO vinhos') || sql.startsWith('UPDATE vinhos SET')) {
             if (options.erroBanco) throw options.erroBanco;
             writes.push({ sql, params: Array.from(params) });
+            const fichaAnterior = sql.startsWith('UPDATE') ? registro?.ficha_tecnica || {} : {};
             registro = { id: 101, ...Object.fromEntries(colunas.map((coluna, index) => [coluna, params[index]])) };
+            registro.ficha_tecnica = { ...fichaAnterior, ...JSON.parse(params[13] || '{}') };
             return { rows: [{ id: 101 }], rowCount: 1 };
         }
         if (sql.startsWith('SELECT * FROM vinhos WHERE id')) {
@@ -238,7 +240,7 @@ test('filtro de sucos agrupa os dois tipos válidos no banco e não retorna ocul
 
 for (const [campo, valor] of [
     ['preco', '-1'], ['preco', '0'], ['preco', '1.001'], ['preco', '1000000'], ['preco', ''], ['preco', 'NaN'],
-    ['ano', '1899'], ['ano', String(new Date().getFullYear() + 2)], ['ano', '2024.5'], ['ano', ''], ['ano', null],
+    ['ano', '1899'], ['ano', String(new Date().getFullYear() + 2)], ['ano', '2024.5'],
     ['uva', ''], ['uva', ' '], ['nome', '  '], ['tipo', 'suco_integral'], ['estoque', '10']
 ]) {
     test(`cadastro e edição recusam ${campo} inválido (${valor}) sem gravar`, async () => {
@@ -266,6 +268,49 @@ test('cadastro exige uva e safra; edição parcial mantém ativo e demais campos
     assert.equal(result.body.ano, 2024);
     assert.equal(result.body.ativo, false);
     assert.equal((await api.request('PUT', '/101', {})).status, 400);
+});
+
+test('cadastro multipart persiste ficha técnica opcional e produto sem safra', async () => {
+    const api = criarApi();
+    const ficha = { produtor: 'Jolimont', regiao: 'Serra Gaúcha', volume_ml: 750, teor_alcoolico: 7.5,
+        corpo: 'leve', docura: 'doce', temperatura_min: 6, temperatura_max: 8, fonte_url: 'https://example.com/ficha' };
+    const result = await api.request('POST', '/', { ...dadosProduto, ano: '', ficha_tecnica: JSON.stringify(ficha) });
+    assert.equal(result.status, 201);
+    assert.equal(result.body.ano, null);
+    assert.deepEqual(result.body.ficha_tecnica, ficha);
+});
+
+test('editar parcialmente a ficha preserva campos anteriores e permite limpar valores', async () => {
+    const api = criarApi({ vinhoInicial: { ...produtosVisibilidade[0], ficha_tecnica: { produtor: 'Produtor', volume_ml: 750, corpo: 'leve' } } });
+    const updated = await api.request('PUT', '/101', { ficha_tecnica: JSON.stringify({ corpo: 'medio' }) });
+    assert.equal(updated.status, 200);
+    assert.deepEqual(updated.body.ficha_tecnica, { produtor: 'Produtor', volume_ml: 750, corpo: 'medio' });
+    const cleared = await api.request('PUT', '/101', { ficha_tecnica: JSON.stringify({ corpo: null }) });
+    assert.equal(cleared.body.ficha_tecnica.corpo, null);
+    assert.equal(cleared.body.ficha_tecnica.produtor, 'Produtor');
+    assert.equal(cleared.body.ficha_tecnica.volume_ml, 750);
+});
+
+for (const ficha of [[], null, 'texto', { campo_inexistente: 'teste' }, { volume_ml: 0 }, { volume_ml: 750.5 },
+    { teor_alcoolico: 31 }, { teor_alcoolico: -1 }, { corpo: 'inventado' }, { docura: 'inventado' },
+    { temperatura_min: 10, temperatura_max: 6 }, { temperatura_min: -1 }, { resumo: 'x'.repeat(281) },
+    { fonte_url: 'javascript:alert(1)' }, { fonte_url: 'https://usuario:senha@example.com/' }]) {
+    test(`ficha técnica inválida é recusada antes de gravar: ${JSON.stringify(ficha).slice(0, 80)}`, async () => {
+        const api = criarApi({ vinhoInicial: produtosVisibilidade[0] });
+        for (const [method, url] of [['POST', '/'], ['PUT', '/101']]) {
+            const result = await api.request(method, url, { ...dadosProduto, ficha_tecnica: JSON.stringify(ficha) });
+            assert.equal(result.status, 400);
+        }
+        assert.equal(api.writes.length, 0);
+    });
+}
+
+test('intervalo de temperatura é validado também ao combinar edição parcial com dados salvos', async () => {
+    const api = criarApi({ vinhoInicial: { ...produtosVisibilidade[0], ficha_tecnica: { temperatura_min: 6, temperatura_max: 8 } } });
+    const result = await api.request('PUT', '/101', { ficha_tecnica: JSON.stringify({ temperatura_min: 12 }) });
+    assert.equal(result.status, 400);
+    assert.equal(api.writes.length, 0);
+    assert.equal(result.body.errors[0].field, 'ficha_tecnica.temperatura_max');
 });
 
 test('imagem de 1,13 MB sem Cloudinary configurado retorna diagnóstico e não grava produto', async () => {
@@ -408,7 +453,7 @@ function criarFormulario(fetchImpl, options = {}) {
     let atualizacoes = 0;
     const context = {
         document: { addEventListener() {}, getElementById: id => fields[id] || null },
-        window: { authManager: { obterToken: () => options.token || 'token-simulado' } },
+        window: { FichaVinho: require('../js/ficha-vinho'), authManager: { obterToken: () => options.token || 'token-simulado' } },
         localStorage: { getItem: () => null }, API_URL: '/api', FormData,
         console: quietConsole, fetch: fetchImpl
     };
@@ -450,6 +495,35 @@ test('formulário recebe diagnóstico de upload ausente e preserva os dados para
     assert.equal(pagina.button.disabled, false);
     assert.match(pagina.mensagens[0].texto, /não está configurado/);
     assert.deepEqual(pagina.mensagens.map(mensagem => mensagem.tipo), ['erro']);
+});
+
+test('formulário serializa a ficha e o estado sem safra, preservando campos após erro', async () => {
+    let enviado;
+    const pagina = criarFormulario(async (url, options) => {
+        enviado = Object.fromEntries(options.body.entries());
+        return { ok: false, status: 400, json: async () => ({ message: 'Revise a ficha' }) };
+    });
+    pagina.fields['sem-safra'] = { checked: true };
+    pagina.fields['ficha-produtor'] = { value: 'Produtor de Teste' };
+    pagina.fields['ficha-volume_ml'] = { value: '750' };
+    pagina.fields['ficha-teor_alcoolico'] = { value: '7.5' };
+    pagina.fields['ficha-corpo'] = { value: 'leve' };
+    pagina.fields['ficha-temperatura_min'] = { value: '' };
+    await pagina.submit();
+    assert.equal(enviado.ano, '');
+    assert.deepEqual(JSON.parse(enviado.ficha_tecnica), { produtor: 'Produtor de Teste', volume_ml: 750,
+        teor_alcoolico: 7.5, corpo: 'leve', temperatura_min: null });
+    assert.equal(pagina.getLimpezas(), 0);
+    assert.equal(pagina.fields['ficha-produtor'].value, 'Produtor de Teste');
+});
+
+test('migração da ficha é aditiva e não regrava os produtos ou pedidos existentes', () => {
+    const sql = fs.readFileSync(path.join(root, 'database/migrations/20261119_ficha_tecnica_vinhos.sql'), 'utf8');
+    assert.match(sql, /ADD COLUMN IF NOT EXISTS ficha_tecnica JSONB NOT NULL DEFAULT '\{\}'::jsonb/);
+    assert.match(sql, /ALTER COLUMN ano DROP NOT NULL/);
+    assert.match(sql, /vinhos_ficha_tecnica_objeto/);
+    assert.match(sql, /vinhos_ficha_temperaturas/);
+    assert.doesNotMatch(sql, /\b(?:DELETE|UPDATE|TRUNCATE)\b|DROP (?:TABLE|COLUMN|DATABASE)/i);
 });
 
 test('envios repetidos e configuração repetida não duplicam requisições nem mostram sucesso antecipado', async () => {

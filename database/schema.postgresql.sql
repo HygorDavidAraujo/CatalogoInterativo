@@ -6,13 +6,16 @@ CREATE TABLE IF NOT EXISTS vinhos (
     pais_origem VARCHAR(100),
     pais_codigo CHAR(2),
     bandeira_url VARCHAR(500),
-    ano INTEGER NOT NULL,
+    ano INTEGER,
     guarda VARCHAR(100),
     harmonizacao TEXT,
     descricao TEXT,
     preco NUMERIC(10, 2) NOT NULL,
     imagem VARCHAR(500),
     ativo BOOLEAN DEFAULT TRUE,
+    ficha_tecnica JSONB NOT NULL DEFAULT '{}'::jsonb
+        CONSTRAINT vinhos_ficha_tecnica_objeto CHECK (jsonb_typeof(ficha_tecnica) = 'object')
+        CONSTRAINT vinhos_ficha_temperaturas CHECK ((ficha_tecnica->>'temperatura_min')::numeric <= (ficha_tecnica->>'temperatura_max')::numeric),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
