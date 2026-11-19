@@ -427,6 +427,16 @@ de reenvio automático após a falha de ambos os provedores. Na recuperação, a
 continua genérica para não revelar contas cadastradas; o cliente pode solicitar
 outro link. Há limite de cinco solicitações por IP a cada 15 minutos.
 
+## Navegação do painel
+
+O painel é dividido em Pedidos, Catálogo e Configurações, com acesso à página de
+Clientes pela mesma navegação. O Catálogo possui as guias Vinhos cadastrados e
+Cadastro e edição. Editar um rótulo abre o formulário; salvar ou cancelar retorna à
+lista, preservando a busca e o filtro de tipo. Alternar entre seções mantém o
+rascunho durante a página aberta; recarregar a página descarta dados não salvos.
+Os endereços `admin.html#catalogo` e `admin.html#configuracoes` abrem as respectivas
+seções. Links de pedidos vindos do histórico continuam abrindo o pedido correto.
+
 ## Pedidos recebidos no painel
 
 O painel administrativo reúne os pedidos existentes, com busca por cliente, e-mail

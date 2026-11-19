@@ -113,6 +113,7 @@
         async abrir(id) {
             id = window.RenderSeguro.id(id);
             if (!id) return;
+            window.painelAdmin?.abrir('pedidos-recebidos');
             const versao = ++this.versaoDetalhe;
             const painel = $('pedido-detalhe');
             painel.hidden = false;
@@ -200,6 +201,7 @@
             $('pedidos-proxima').addEventListener('click', () => { this.pagina++; this.listar(); });
             $('pedidos-atualizar').addEventListener('click', () => { this.listar(); this.resumo(); });
             $('pedidos-ver-novos').addEventListener('click', async () => {
+                window.painelAdmin?.abrir('pedidos-recebidos', { foco: true });
                 const revisados = [...this.novos];
                 this.filtros = { status: '', busca: '' };
                 $('pedidos-filtros').reset();

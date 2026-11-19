@@ -286,9 +286,13 @@ function atualizarStatusDestaque(config) {
 }
 
 // ===== RENDERIZAÇÃO DA LISTA ADMIN =====
-async function renderizarListaAdmin(filtros = {}) {
+async function renderizarListaAdmin(filtros) {
     const container = document.getElementById('lista-vinhos-admin');
     if (!container) return;
+    filtros = filtros || {
+        busca: document.getElementById('busca-admin')?.value || '',
+        tipo: document.getElementById('filtro-tipo-admin')?.value || 'todos'
+    };
 
     try {
         await vinhoManager.carregarVinhos(true); // true = admin, mostra todos os vinhos
@@ -671,6 +675,7 @@ function configurarFormulario() {
             mostrarMensagem(idEmEnvio ? 'Vinho atualizado com sucesso!' : 'Vinho cadastrado com sucesso!', 'sucesso');
             console.log('Vinho salvo com sucesso, limpando formulário');
             limparFormulario();
+            window.painelAdmin?.abrirCatalogo('lista', { foco: true, substituir: true });
             console.log('Recarregando lista de vinhos');
             try {
                 await renderizarListaAdmin();
@@ -691,7 +696,11 @@ function configurarFormulario() {
     // Botão cancelar
     const btnCancelar = document.getElementById('btn-cancelar');
     if (btnCancelar) {
-        btnCancelar.addEventListener('click', limparFormulario);
+        btnCancelar.addEventListener('click', () => {
+            if (salvandoVinho) return;
+            limparFormulario();
+            window.painelAdmin?.abrirCatalogo('lista', { foco: true, substituir: true });
+        });
     }
 }
 
@@ -800,6 +809,7 @@ async function editarVinho(id) {
     }
 
     // Scroll para o formulário
+    window.painelAdmin?.abrirCatalogo('editor', { foco: true });
     document.getElementById('form-vinho').scrollIntoView({ behavior: 'smooth' });
 }
 

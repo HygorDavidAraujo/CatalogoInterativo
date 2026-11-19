@@ -55,16 +55,22 @@
     <!-- Admin Content -->
     <main class="admin-main" id="main">
         <div class="container">
+            <nav class="painel-navegacao" aria-label="Seções do painel">
+                <a href="#pedidos-recebidos" data-painel-link="pedidos-recebidos" aria-current="page"><i class="fa-solid fa-receipt" aria-hidden="true"></i> Pedidos</a>
+                <a href="#catalogo" data-painel-link="catalogo"><i class="fa-solid fa-wine-bottle" aria-hidden="true"></i> Catálogo</a>
+                <a href="clientes.html"><i class="fa-solid fa-users" aria-hidden="true"></i> Clientes</a>
+                <a href="#configuracoes" data-painel-link="configuracoes"><i class="fa-solid fa-gear" aria-hidden="true"></i> Configurações</a>
+            </nav>
+            <div id="pedidos-novos" class="pedidos-aviso" hidden>
+                <span id="pedidos-aviso-texto" role="status"></span>
+                <button type="button" class="btn btn-primary" id="pedidos-ver-novos">Ver novos pedidos</button>
+            </div>
             <section class="admin-card admin-card-full pedidos-painel" id="pedidos-recebidos" aria-labelledby="titulo-pedidos">
                 <div class="pedidos-cabecalho">
-                    <div><h2 id="titulo-pedidos">Pedidos recebidos</h2><p id="pedidos-resumo" role="status">Carregando resumo…</p></div>
+                    <div><h2 id="titulo-pedidos" tabindex="-1">Pedidos recebidos</h2><p id="pedidos-resumo" role="status">Carregando resumo…</p></div>
                     <button type="button" class="btn btn-secondary" id="pedidos-atualizar">Atualizar pedidos</button>
                 </div>
                 <p>Consulte os itens, acompanhe o status e acesse o histórico do cliente.</p>
-                <div id="pedidos-novos" class="pedidos-aviso" hidden>
-                    <span id="pedidos-aviso-texto" role="status"></span>
-                    <button type="button" class="btn btn-primary" id="pedidos-ver-novos">Ver novos pedidos</button>
-                </div>
                 <form id="pedidos-filtros" class="pedidos-filtros" role="search" aria-label="Buscar pedidos">
                     <div><label for="pedidos-busca">Cliente, e-mail ou número do pedido</label><input type="search" id="pedidos-busca" maxlength="150" placeholder="Nome, e-mail ou número"></div>
                     <div><label for="pedidos-status">Status</label><select id="pedidos-status"><option value="">Todos os pedidos</option><option value="abertos">Em aberto</option></select></div>
@@ -80,8 +86,8 @@
                 <section id="pedido-detalhe" class="pedido-detalhe" aria-label="Detalhes do pedido" hidden></section>
             </section>
             <!-- Configurações de Contato -->
-            <div class="admin-card admin-card-full">
-                <h2><i class="fa-solid fa-gear"></i> Configurações do Site</h2>
+            <section class="admin-card admin-card-full" id="configuracoes" aria-labelledby="titulo-configuracoes" hidden>
+                <h2 id="titulo-configuracoes" tabindex="-1"><i class="fa-solid fa-gear"></i> Configurações do Site</h2>
                 
                 <!-- Tabs de Navegação -->
                 <div class="config-tabs">
@@ -254,11 +260,19 @@
                         </button>
                     </div>
                 </form>
-            </div>
+            </section>
 
-            <div class="admin-grid">
+            <section id="catalogo" aria-labelledby="titulo-catalogo" hidden>
+                <div class="catalogo-admin-cabecalho">
+                    <h2 id="titulo-catalogo" tabindex="-1">Catálogo de vinhos</h2>
+                    <p>Gerencie os rótulos e mantenha as fichas dos produtos atualizadas.</p>
+                </div>
+                <div class="catalogo-admin-tabs" role="tablist" aria-label="Gerenciar catálogo">
+                    <button type="button" role="tab" id="catalogo-tab-lista" aria-controls="catalogo-lista" aria-selected="true" data-catalogo-tab="lista">Vinhos cadastrados</button>
+                    <button type="button" role="tab" id="catalogo-tab-editor" aria-controls="catalogo-editor" aria-selected="false" tabindex="-1" data-catalogo-tab="editor">Cadastro e edição</button>
+                </div>
                 <!-- Formulário de Cadastro -->
-                <div class="admin-card">
+                <div class="admin-card" id="catalogo-editor" role="tabpanel" aria-labelledby="catalogo-tab-editor" hidden>
                     <h2><i class="fa-solid fa-circle-plus"></i> Cadastrar Novo Vinho</h2>
                     <form id="form-vinho" class="form-vinho">
                         <div class="form-group">
@@ -483,17 +497,17 @@
                 </div>
 
                 <!-- Lista de Vinhos Cadastrados -->
-                <div class="admin-card">
-                    <h2><i class="fa-solid fa-list"></i> Vinhos Cadastrados</h2>
+                <div class="admin-card" id="catalogo-lista" role="tabpanel" aria-labelledby="catalogo-tab-lista">
+                    <h2 id="titulo-lista-vinhos" tabindex="-1"><i class="fa-solid fa-list"></i> Vinhos Cadastrados</h2>
                     
                     <!-- Filtros de Busca -->
                     <div class="filtros-admin">
                         <div class="busca-admin">
                             <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="busca-admin" placeholder="Buscar por nome ou tipo de uva..." class="input-busca-admin">
+                            <input type="search" id="busca-admin" aria-label="Buscar vinho por nome ou uva" placeholder="Buscar por nome ou tipo de uva..." class="input-busca-admin">
                         </div>
                         <div class="filtro-tipo-admin">
-                            <select id="filtro-tipo-admin" class="select-filtro-admin">
+                            <select id="filtro-tipo-admin" aria-label="Filtrar vinhos por tipo" class="select-filtro-admin">
                                 <option value="todos">Todos os tipos</option>
                                 <option value="tinto">Tintos</option>
                                 <option value="branco">Brancos</option>
@@ -508,7 +522,7 @@
                         <!-- Lista será carregada via JavaScript -->
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
     </main>
 
@@ -530,6 +544,7 @@
     <script src="js/mobile.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/vip-manager.js"></script>
+    <script src="js/painel-admin.js"></script>
     <script src="js/api-admin.js"></script>
     <script src="js/admin-acesso.js"></script>
     <script src="js/pedido-status.js"></script>

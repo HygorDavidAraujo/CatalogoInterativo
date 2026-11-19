@@ -1,4 +1,27 @@
 /* ===== ESTILOS ADMIN ===== */
+.admin-main [hidden] { display: none !important; }
+.painel-navegacao { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; margin-bottom: 1.5rem; scroll-margin-top: 1rem; }
+.painel-navegacao a { display: flex; justify-content: center; align-items: center; gap: .6rem; min-height: 48px; padding: .85rem .65rem; border: 1px solid #d6cbd1; border-radius: 10px; background: white; color: #6b1c40; font-weight: 600; text-decoration: none; }
+.painel-navegacao a[aria-current="page"] { background: #6b1c40; color: white; border-color: #6b1c40; }
+.painel-navegacao a:hover { box-shadow: 0 2px 8px #6b1c401c; }
+.painel-navegacao a:focus-visible, .catalogo-admin-tabs button:focus-visible { outline: 3px solid #9b6e38; outline-offset: 3px; }
+.catalogo-admin-cabecalho { margin-bottom: 1rem; }
+.catalogo-admin-cabecalho h2 { color: #6b1c40; margin-bottom: .4rem; }
+.catalogo-admin-cabecalho p { color: #595962; }
+.catalogo-admin-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; border-bottom: 1px solid #d6cbd1; }
+.catalogo-admin-tabs button { flex: 1; min-height: 48px; padding: .85rem; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #595962; font: inherit; font-weight: 600; cursor: pointer; }
+.catalogo-admin-tabs button[aria-selected="true"] { color: #6b1c40; border-bottom-color: #6b1c40; background: #f5eaf0; border-radius: 8px 8px 0 0; }
+#catalogo-editor { max-width: 960px; margin: 0 auto; }
+#catalogo .vinho-item-info { min-width: 0; overflow-wrap: anywhere; }
+#catalogo .filtros-admin { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 1rem; margin-bottom: 1.2rem; }
+#catalogo .busca-admin, #catalogo .filtro-tipo-admin { margin: 0; min-width: 0; }
+@media (max-width: 600px) {
+    .painel-navegacao { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .painel-navegacao a { font-size: .9rem; }
+    .catalogo-admin-tabs button { font-size: .9rem; padding: .75rem .5rem; }
+    #catalogo .filtros-admin { grid-template-columns: minmax(0, 1fr); gap: .6rem; }
+}
+
 .pedidos-painel { scroll-margin-top: 1rem; }
 .pedidos-cabecalho, .pedidos-filtros, .pedidos-paginacao, .pedidos-aviso { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .pedidos-cabecalho { justify-content: space-between; }
@@ -8,7 +31,7 @@
 .pedidos-filtros > div { flex: 1 1 220px; min-width: 0; }
 .pedidos-filtros label { display: block; font-weight: 600; margin-bottom: .4rem; }
 .pedidos-filtros input, .pedidos-filtros select { width: 100%; min-height: 44px; padding: .7rem; border: 1px solid #c8c8ce; border-radius: 8px; background: white; font: inherit; }
-.pedidos-aviso { background: #fff1cc; padding: 1rem; border-radius: 10px; margin-top: 1rem; color: #513d00; }
+.pedidos-aviso { background: #fff1cc; padding: 1rem; border-radius: 10px; margin-bottom: 1.2rem; color: #513d00; }
 .pedidos-painel [hidden] { display: none !important; }
 #pedidos-contador { display: inline-block; min-width: 1.5em; padding: .1rem .4rem; border-radius: 1rem; background: #6b1c40; color: white; text-align: center; }
 .pedido-fila { display: grid; grid-template-columns: 1fr 1.5fr auto auto; align-items: center; gap: 1rem; border-top: 1px solid #e3e3e8; padding: 1rem 0; }
