@@ -66,10 +66,32 @@ async function api(caminho, payload, fetchImpl = fetch) {
 
 function checkoutUrl(valor) {
     try {
+        if (typeof valor !== 'string' || !valor.trim()) throw new Error('URL ausente');
         const url = new URL(valor);
-        if (url.protocol === 'https:' && url.hostname === 'buy.infinitepay.io' && !url.username && !url.password) return url.href;
+        if (url.protocol === 'https:' && ['buy.infinitepay.io', 'checkout.infinitepay.io'].includes(url.hostname) &&
+            !url.username && !url.password && (!url.port || url.port === '443')) return url.href;
     } catch {}
     throw new ErroPedido('A InfinitePay não retornou um link de pagamento válido.', 502);
+}
+
+function extrairCheckoutUrl(resposta) {
+    // O nome da propriedade do link varia entre os formatos de retorno.
+    // Validar o endereço independentemente do campo que o transporta.
+    const campos = ['checkout_url', 'link', 'url'];
+    const candidatos = campos.filter(campo => typeof resposta?.[campo] === 'string' && resposta[campo].trim());
+    const validos = [];
+    for (const campo of candidatos) {
+        try { validos.push(checkoutUrl(resposta[campo])); } catch { /* Outro campo pode conter o link válido. */ }
+    }
+    const links = [...new Set(validos)];
+    if (links.length === 1) return links[0];
+    // Diagnóstico estrutural, sem valores de URLs, dados pessoais ou resposta bruta.
+    const estrutura = Object.fromEntries(campos.map(campo => [campo, typeof resposta?.[campo]]));
+    console.error('[infinitepay]', { operacao: 'links', codigo: 'INFINITEPAY_LINK_INVALIDO', campos: estrutura,
+        links_conflitantes: links.length > 1 });
+    const erro = new ErroPedido('A InfinitePay não retornou um link de pagamento válido.', 502);
+    erro.code = 'INFINITEPAY_LINK_INVALIDO';
+    throw erro;
 }
 
 async function transacao(pool, executar) {
@@ -177,12 +199,7 @@ async function gerarCheckout(pool, pedidoId, fetchImpl) {
     const pagamento = await preparar(pool, pedidoId, 'checkout');
     if (pagamento.checkout_url) return pagamento;
     const resposta = await api('links', pagamento.payload, fetchImpl);
-    let url;
-    try { url = checkoutUrl(resposta.url); }
-    catch (error) {
-        console.error('[infinitepay]', { operacao: 'links', codigo: 'INFINITEPAY_LINK_INVALIDO' });
-        error.code = 'INFINITEPAY_LINK_INVALIDO'; throw error;
-    }
+    const url = extrairCheckoutUrl(resposta);
     // Webhook pode ter confirmado enquanto a resposta da emissão estava em trânsito.
     const { rows } = await pool.query(`UPDATE pagamentos SET checkout_url = $2,
         status = CASE WHEN status = 'pago' THEN status ELSE 'pendente' END WHERE id = $1 RETURNING *`, [pagamento.id, url]);
@@ -233,4 +250,4 @@ async function conferirTap(pool, pedidoId, nsu, adminId) {
     return registrarPago(pool, rows[0], nsu, null, 'manual_admin', adminId);
 }
 
-module.exports = { configuracao, checkoutUrl, transacao, pedidoBloqueado, salvarEntrega, gerarCheckout, iniciarTap, confirmar, conferirTap };
+module.exports = { configuracao, checkoutUrl, extrairCheckoutUrl, transacao, pedidoBloqueado, salvarEntrega, gerarCheckout, iniciarTap, confirmar, conferirTap };

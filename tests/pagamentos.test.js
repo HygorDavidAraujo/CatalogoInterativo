@@ -52,7 +52,7 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
         chamadas.push({ url, headers: options.headers, payload: JSON.parse(options.body) });
         if (falhaProvedor) return { ok: false, status: falhaProvedor.status, json: async () => falhaProvedor.body };
         if (modo === 'falha') throw new Error('Não expor inchk_segredo');
-        if (url.endsWith('/links')) return { ok: true, json: async () => ({ url: 'https://buy.infinitepay.io/davini/teste' }) };
+        if (url.endsWith('/links')) return { ok: true, json: async () => ({ checkout_url: 'https://checkout.infinitepay.io/davini/teste' }) };
         return { ok: true, json: async () => retorno };
     };
     const secret = 'pagamentos-apenas-testes';
@@ -290,7 +290,21 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
 
 test('links externos são aceitos somente no domínio oficial de checkout', () => {
     assert.equal(service.checkoutUrl('https://buy.infinitepay.io/loja/link'), 'https://buy.infinitepay.io/loja/link');
-    for (const url of ['javascript:alert(1)', 'http://buy.infinitepay.io', 'https://buy.infinitepay.io.atacante.test', 'https://user:senha@buy.infinitepay.io']) assert.throws(() => service.checkoutUrl(url));
+    assert.equal(service.checkoutUrl('https://checkout.infinitepay.io/loja/link'), 'https://checkout.infinitepay.io/loja/link');
+    for (const url of [null, undefined, {}, 'javascript:alert(1)', 'http://buy.infinitepay.io',
+        'https://buy.infinitepay.io.atacante.test', 'https://checkout.infinitepay.io.atacante.test',
+        'https://user:senha@buy.infinitepay.io', 'https://checkout.infinitepay.io:8443/loja']) assert.throws(() => service.checkoutUrl(url));
+});
+
+test('emissão normaliza os formatos de link sem aceitar endereços externos ou respostas ambíguas', () => {
+    const url = 'https://checkout.infinitepay.io/loja/fatura';
+    for (const campo of ['checkout_url', 'link', 'url']) assert.equal(service.extrairCheckoutUrl({ [campo]: url }), url);
+    assert.equal(service.extrairCheckoutUrl({ checkout_url: null, link: url }), url);
+    assert.equal(service.extrairCheckoutUrl({ checkout_url: url, url }), url);
+    for (const resposta of [{}, null, { checkout_url: 'javascript:alert(1)' }, { link: 'https://checkout.infinitepay.io.atacante.test' },
+        { checkout_url: url, link: 'https://checkout.infinitepay.io/outra-fatura' }]) {
+        assert.throws(() => service.extrairCheckoutUrl(resposta), error => error.statusCode === 502 && error.code === 'INFINITEPAY_LINK_INVALIDO');
+    }
 });
 
 test('rateio de desconto preserva cada centavo e não cria preços negativos em quantidades indivisíveis', () => {
