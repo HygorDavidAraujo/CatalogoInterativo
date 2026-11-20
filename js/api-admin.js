@@ -753,6 +753,9 @@ async function editarVinho(id) {
     }
     const vinho = vinhoManager.getVinhoPorId(id);
     if (!vinho) return;
+    const imagemOriginal = window.getOriginalCloudinaryUrl
+        ? window.getOriginalCloudinaryUrl(vinho.imagemOriginal || vinho.imagem)
+        : vinho.imagemOriginal || vinho.imagem;
 
     vinhoEmEdicao = id;
     removerImagem = false;
@@ -793,8 +796,8 @@ async function editarVinho(id) {
             uploadActions.style.display = 'flex';
         }
         
-        if (vinho.imagem.startsWith('http')) {
-            document.getElementById('imagem-url').value = vinho.imagem;
+        if (imagemOriginal?.startsWith('http')) {
+            document.getElementById('imagem-url').value = imagemOriginal;
         }
     } else {
         previewImg.src = '';

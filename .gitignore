@@ -6,6 +6,9 @@ node_modules/
 .env.*
 !.env.example
 
+# Provisionamento e credenciais locais de teste
+/.local/
+
 # Uploads
 uploads/
 

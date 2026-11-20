@@ -87,10 +87,6 @@
             event.preventDefault();
             abrir('pedidos-recebidos', { foco: true });
         });
-        document.getElementById('atalho-clientes')?.addEventListener('click', event => {
-            event.preventDefault();
-            abrir('clientes', { foco: true });
-        });
         window.addEventListener('hashchange', lerEndereco);
         window.painelAdmin = { abrir, abrirCatalogo };
         selecionarGuia('lista');
