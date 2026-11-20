@@ -108,9 +108,13 @@
                     <div><label for="venda-quantidade">Quantidade</label><input id="venda-quantidade" type="number" min="1" max="999" value="1"></div>
                     <button type="button" id="venda-adicionar" class="btn btn-secondary">Adicionar vinho</button>
                     <ul id="venda-itens" class="pedido-fila-itens campo-inteiro"></ul>
+                    <div><label for="venda-desconto-tipo">Desconto manual adicional</label><select id="venda-desconto-tipo"><option value="valor">Valor em R$</option><option value="percentual">Percentual (%)</option></select></div>
+                    <div><label for="venda-desconto-valor">Valor do desconto</label><input type="number" id="venda-desconto-valor" min="0" max="99999999.99" step="0.01" value="0" required></div>
+                    <p class="campo-inteiro">O desconto manual é aplicado sobre os produtos após os benefícios do cliente. O frete não recebe esse desconto.</p>
+                    <p id="venda-resumo" class="campo-inteiro venda-resumo" role="status">Adicione vinhos para calcular o total.</p>
                     <div class="campo-inteiro"><label for="venda-observacoes">Observações</label><textarea id="venda-observacoes" maxlength="1000"></textarea></div>
                     <p class="campo-inteiro">Retirada presencial, sem frete. Você poderá ajustar a entrega no pedido antes de iniciar a cobrança. O total considera os benefícios do cliente selecionado.</p>
-                    <button type="submit" class="btn btn-primary" id="venda-registrar">Registrar venda e conferir total</button>
+                    <button type="submit" class="btn btn-primary" id="venda-registrar" disabled>Registrar venda com o total acima</button>
                 </form>
                 <p id="venda-feedback" role="status"></p><button type="button" id="venda-abrir-pedido" class="btn btn-secondary" hidden>Abrir venda para cobrar</button>
             </section>

@@ -15,7 +15,7 @@ async function notificarPedido(pool, pedidoId, { novo = false, status } = {}) {
         const label = PedidoStatus.obter(status || pedido.status).label;
         const link = `${getAppUrl()}/meu-perfil.html`;
         const resumo = itens.map(item => `${item.quantidade} x ${item.vinho_nome}: ${moeda(item.subtotal)}`).join('\n');
-        const corpo = `Pedido #${pedido.id}\nStatus: ${label}\n\n${resumo}\n\nTotal: ${moeda(pedido.total)}${pedido.observacoes ? `\nObservações: ${pedido.observacoes}` : ''}`;
+        const corpo = `Pedido #${pedido.id}\nStatus: ${label}\n\n${resumo}${Number(pedido.desconto_manual) > 0 ? `\nDesconto manual: ${moeda(pedido.desconto_manual)}` : ''}\n\nTotal: ${moeda(pedido.total)}${pedido.observacoes ? `\nObservações: ${pedido.observacoes}` : ''}`;
         const mensagem = {
             to: pedido.email,
             subject: novo ? `Recebemos seu pedido #${pedido.id} - Davini Vinhos` : `Pedido #${pedido.id}: ${label} - Davini Vinhos`,

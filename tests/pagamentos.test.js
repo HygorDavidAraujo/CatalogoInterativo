@@ -37,6 +37,8 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
         INSERT INTO pedidos_itens (pedido_id,vinho_id,vinho_nome,quantidade,preco_unitario,subtotal) VALUES (1,1,'Merlot',2,90,180);`);
     const migration = fs.readFileSync(path.join(root, 'database/migrations/20261120_pagamentos_infinitepay.sql'), 'utf8');
     await db.exec(migration); await db.exec(migration);
+    const descontosMigration = fs.readFileSync(path.join(root, 'database/migrations/20261120_venda_descontos.sql'), 'utf8');
+    await db.exec(descontosMigration); await db.exec(descontosMigration);
     assert.equal((await db.query('SELECT total, frete FROM pedidos WHERE id = 1')).rows[0].total, '180.00');
     let tail = Promise.resolve();
     const pool = { async query(sql, params) { await tail; return db.query(sql, params); }, async connect() {
@@ -45,8 +47,10 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
     } };
     const chamadas = [], emails = [];
     let modo = 'ok', retorno = { success: true, paid: true, amount: 19500, paid_amount: 19700 };
+    let falhaProvedor = null;
     const provedor = async (url, options) => {
         chamadas.push({ url, headers: options.headers, payload: JSON.parse(options.body) });
+        if (falhaProvedor) return { ok: false, status: falhaProvedor.status, json: async () => falhaProvedor.body };
         if (modo === 'falha') throw new Error('Não expor inchk_segredo');
         if (url.endsWith('/links')) return { ok: true, json: async () => ({ url: 'https://buy.infinitepay.io/davini/teste' }) };
         return { ok: true, json: async () => retorno };
@@ -148,6 +152,37 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
             assert.ok((await request('/vendas', { method: 'POST', body: novaVenda(extra) })).status >= 400);
         }
     });
+    await t.test('prévia aplica VIP e desconto antes de registrar, sem criar cliente ou pedido', async () => {
+        const antes = (await db.query('SELECT COUNT(*)::int AS n FROM pedidos')).rows[0].n;
+        const dados = { cliente_id: 2, itens: [{ id: 1, quantidade: 2 }], desconto: { tipo: 'percentual', valor: '10' } };
+        const previa = await request('/vendas/simular', { method: 'POST', body: dados });
+        assert.equal(previa.status, 200); assert.equal(previa.body.itens[0].preco, 90);
+        assert.equal(previa.body.subtotal, 180); assert.equal(previa.body.desconto_manual, 18); assert.equal(previa.body.total, 162);
+        assert.equal((await db.query('SELECT COUNT(*)::int AS n FROM pedidos')).rows[0].n, antes);
+        const novo = await request('/vendas/simular', { method: 'POST', body: { ...dados, cliente_id: undefined, novo_cliente: true } });
+        assert.equal(novo.body.total, 180, 'Novo cliente não herda o VIP do vendedor');
+        for (const desconto of [{ tipo: 'percentual', valor: 101 }, { tipo: 'valor', valor: 181 }, { tipo: 'valor', valor: -1 }, { tipo: 'valor', valor: '1.001' }]) {
+            assert.equal((await request('/vendas/simular', { method: 'POST', body: { ...dados, desconto } })).status, 400);
+        }
+        assert.equal((await request('/vendas/simular', { user: 2, method: 'POST', body: dados })).status, 403);
+    });
+    await t.test('valor previsto divergente não grava venda; desconto salvo permanece ao adicionar frete e gerar checkout', async () => {
+        const dados = novaVenda({ desconto: { tipo: 'valor', valor: '10.01' }, total_previsto: '169.99' });
+        assert.equal((await request('/vendas', { method: 'POST', body: { ...dados, total_previsto: '1.00' } })).status, 409);
+        assert.equal((await db.query('SELECT id FROM pedidos WHERE chave_criacao = $1', [dados.chave_criacao])).rows.length, 0);
+        const venda = await request('/vendas', { method: 'POST', body: dados });
+        assert.equal(venda.status, 201); assert.equal(venda.body.total, 169.99);
+        const id = venda.body.pedidoId;
+        const atualizado = await request(`/pagamentos/pedidos/${id}/entrega`, { method: 'PUT', body: entrega });
+        assert.equal(atualizado.body.total, '184.99'); assert.equal(atualizado.body.desconto_manual, '10.01');
+        assert.equal((await request(`/pagamentos/pedidos/${id}/checkout`, { method: 'POST', body: {} })).status, 200);
+        const payload = chamadas.at(-1).payload;
+        assert.equal(payload.items.reduce((s, i) => s + i.quantity * i.price, 0), 18499);
+        assert.equal(payload.items.filter(i => i.description === 'Merlot').reduce((s, i) => s + i.quantity, 0), 2);
+        assert.deepEqual(payload.options.payment_methods_enabled, ['credit_card', 'pix']);
+        assert.equal('assured_installments' in payload.options, false, 'Regras de taxas da conta preservadas');
+        assert.equal('discounts' in payload.options, false, 'Descontos por meio de pagamento são definidos na conta');
+    });
     await t.test('pré-cadastro protege senha e não duplica e-mail ou cliente em reenvio', async () => {
         const dados = novaVenda({ cliente_id: undefined, cliente: { nome_completo: 'Cliente novo', telefone: '(62)99999-9999', email: 'novo@example.test' } });
         const res = await request('/vendas', { method: 'POST', body: dados }); assert.equal(res.status, 201); assert.equal(res.body.total, 200);
@@ -217,6 +252,30 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
         assert.equal(res.body.pago, true); assert.equal(res.body.revisao, true);
         assert.equal((await db.query('SELECT status FROM pedidos WHERE id = $1', [id])).rows[0].status, 'cancelado');
     });
+    await t.test('pedido cancelado não permite confirmar recebimento manual, nem retomada do Tap', async () => {
+        const venda = await request('/vendas', { method: 'POST', body: novaVenda() }); const id = venda.body.pedidoId;
+        assert.equal((await request(`/pagamentos/pedidos/${id}/tap`, { method: 'POST', body: { payment_method: 'credit', installments: 2 } })).status, 200);
+        await db.query("UPDATE pedidos SET status = 'cancelado' WHERE id = $1", [id]);
+        assert.equal((await request(`/pagamentos/pedidos/${id}/tap/conferir`, { method: 'POST', body: { transaction_nsu: randomUUID(), conferido: true } })).status, 409);
+        assert.equal((await db.query('SELECT status FROM pagamentos WHERE pedido_id = $1', [id])).rows[0].status, 'pendente');
+        assert.equal((await request(`/pagamentos/pedidos/${id}/tap`, { method: 'POST', body: { payment_method: 'credit', installments: 2, reabrir_sem_pagamento: true } })).status, 409);
+    });
+    await t.test('recusa do provedor identifica configuração ou dados sem expor corpo sensível nem mudar o payload', async () => {
+        const venda = await request('/vendas', { method: 'POST', body: novaVenda() }); const id = venda.body.pedidoId;
+        for (const [http, body, esperado, code] of [
+            [403, { error: 'merchant mismatch', segredo: 'inchk_nao_expor' }, 503, 'INFINITEPAY_CREDENCIAL_RECUSADA'],
+            [422, { code: 'external_checkout_not_enabled' }, 503, 'INFINITEPAY_CHECKOUT_DESATIVADO'],
+            [422, { error: 'Dados de cliente inválidos', email: 'privado@example.test' }, 422, 'INFINITEPAY_DADOS_RECUSADOS'],
+            [500, { error: 'Falha interna' }, 502, 'INFINITEPAY_INDISPONIVEL']
+        ]) {
+            await db.query("UPDATE pagamentos SET tentativa_em = CURRENT_TIMESTAMP - INTERVAL '1 minute' WHERE pedido_id = $1", [id]);
+            falhaProvedor = { status: http, body };
+            const res = await request(`/pagamentos/pedidos/${id}/checkout`, { method: 'POST', body: {} });
+            assert.equal(res.status, esperado); assert.equal(res.body.code, code);
+            assert.doesNotMatch(JSON.stringify(res), /inchk_nao_expor|privado@example.test|merchant mismatch/);
+        }
+        falhaProvedor = null;
+    });
     await t.test('chave ausente bloqueia emissão sem reservar cobrança, e parcelas têm mínimo por parcela', async () => {
         const venda = await request('/vendas', { method: 'POST', body: novaVenda() }); const id = venda.body.pedidoId;
         const key = process.env.INFINITEPAY_API_KEY; delete process.env.INFINITEPAY_API_KEY;
@@ -232,4 +291,15 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
 test('links externos são aceitos somente no domínio oficial de checkout', () => {
     assert.equal(service.checkoutUrl('https://buy.infinitepay.io/loja/link'), 'https://buy.infinitepay.io/loja/link');
     for (const url of ['javascript:alert(1)', 'http://buy.infinitepay.io', 'https://buy.infinitepay.io.atacante.test', 'https://user:senha@buy.infinitepay.io']) assert.throws(() => service.checkoutUrl(url));
+});
+
+test('rateio de desconto preserva cada centavo e não cria preços negativos em quantidades indivisíveis', () => {
+    const { itensCheckout } = require('../services/vendaService');
+    const itens = [{ vinho_nome: 'A', quantidade: 3, preco_unitario: '1.01', subtotal: '3.03' },
+        { vinho_nome: 'B', quantidade: 2, preco_unitario: '5.07', subtotal: '10.14' }];
+    for (let desconto = 0; desconto <= 1317; desconto++) {
+        const resultado = itensCheckout(itens, (desconto / 100).toFixed(2));
+        assert.equal(resultado.reduce((s, i) => s + i.quantity * i.price, 0), 1317 - desconto);
+        assert.ok(resultado.every(i => Number.isInteger(i.price) && i.price > 0 && Number.isInteger(i.quantity) && i.quantity > 0));
+    }
 });

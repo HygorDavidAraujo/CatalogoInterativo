@@ -1457,3 +1457,5 @@
 .cobranca-paga { padding: 1rem; border-radius: 8px; background: #eaf5ee; color: #205d39; }
 #venda-itens { margin: 0; }
 @media (max-width: 600px) { .cobranca-form { grid-template-columns: 1fr; } .cobranca-botoes .btn { width: 100%; } }
+
+.venda-resumo { padding: 1rem; border: 1px solid #d7c2cd; border-radius: 10px; background: #faf6f8; color: #6b1c40; font-weight: 600; overflow-wrap: anywhere; }

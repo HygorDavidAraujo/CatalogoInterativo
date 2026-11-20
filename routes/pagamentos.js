@@ -28,7 +28,8 @@ function tratar(handler) {
         try { await handler(req, res); }
         catch (error) {
             if (error instanceof z.ZodError || error instanceof RangeError) return res.status(400).json({ error: 'Revise os dados informados.' });
-            if (error instanceof ErroPedido) return res.status(error.statusCode).json({ error: error.message });
+            if (error instanceof ErroPedido) return res.status(error.statusCode).json({ error: error.message,
+                ...(typeof error.code === 'string' && error.code.startsWith('INFINITEPAY_') ? { code: error.code } : {}) });
             if (error.code === '23505') return res.status(409).json({ error: 'Esta transação já está registrada em outra cobrança.' });
             if (['42P01', '42703'].includes(error.code)) return res.status(503).json({ error: 'Execute a migração de pagamentos no banco antes de usar esta função.' });
             console.error('[pagamentos] Operação não concluída:', error.code || error.name);

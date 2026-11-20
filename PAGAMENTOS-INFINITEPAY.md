@@ -4,7 +4,7 @@ Implementação local. A publicação continua pelo commit/push no GitHub e depl
 
 ## Ativação
 
-1. No SQL Editor do Neon do catálogo, execute **database/migrations/20261120_pagamentos_infinitepay.sql**. A migração é aditiva e pode ser reaplicada. Pedidos antigos preservam o total e ficam com frete ainda não definido.
+1. No SQL Editor do Neon do catálogo, execute **database/migrations/20261120_pagamentos_infinitepay.sql** e **database/migrations/20261120_venda_descontos.sql**, nessa ordem. Se a primeira já foi executada, basta executar a segunda. As migrações são aditivas e podem ser reaplicadas. Pedidos antigos preservam o total e ficam com frete ainda não definido.
 2. Na conta InfinitePay **davini-vinhos-finos**, ative **Checkout Integrado** nas configurações do checkout e gere uma API Key. Guarde a chave diretamente no ambiente **Production** do projeto Vercel; nunca envie pelo chat nem versione em arquivos.
 3. Configure na Vercel:
 
@@ -28,10 +28,14 @@ No painel **Pedidos → Ver pedido → Entrega e pagamento**:
 1. Combine com o cliente endereço/local, prazo e frete.
 2. Informe entrega ou retirada, valor do frete e detalhes. Na retirada, salve frete zero explicitamente.
 3. Use **Salvar entrega e recalcular total**. O servidor soma os itens originalmente vendidos ao frete, sem recalcular preços atuais nem somar o frete duas vezes.
-4. Confira o total e selecione **Gerar link de pagamento**.
+4. Confira o total e selecione **Gerar checkout Pix / crédito**.
 5. Use **Enviar link pelo WhatsApp** ou **Copiar link**. O envio pelo WhatsApp depende da ação do operador; não é disparado automaticamente.
 
 O link é de uso único, válido por 24 horas. Os itens enviados incluem o frete e os preços efetivamente vendidos. Parcelamento e taxas seguem as condições da conta InfinitePay: confira as configurações comerciais antes de operar.
+
+O Pix é habilitado explicitamente junto ao crédito no checkout. Não é uma modalidade do deeplink InfiniteTap. O QR Code e o Copia e Cola aparecem na página da InfinitePay. O cliente escolhe ali o pagamento por Pix ou crédito, inclusive parcelamento nas condições disponibilizadas pela InfinitePay.
+
+A integração não envia `assured_installments` nem `discounts`, preservando a configuração comercial da conta em **Configurações do Checkout → Parcelamento e taxas / descontos por meio de pagamento**. Não soma juros ao valor dos produtos/frete. `assured_installments` define quem absorve as taxas, não um limite de parcelas; por isso não é usado como limitador. Um desconto por Pix configurado na conta pode ser adicional ao desconto manual da venda; confira essa regra comercial para evitar descontos acumulados indesejados.
 
 Depois de iniciar uma cobrança, os detalhes de entrega e o total ficam bloqueados. Reenviar o link utiliza a mesma cobrança. Erros de comunicação preservam seu identificador e payload; aguarde 30 segundos e use **Recuperar cobrança**. Não crie outro pedido apenas porque uma requisição demorou.
 
@@ -41,7 +45,9 @@ O cliente que retorna da InfinitePay vê a consulta da confirmação. O históri
 
 ## Venda rápida no painel
 
-Abra **Venda rápida**, busque um cliente ou faça o pré-cadastro com nome, telefone e e-mail. Adicione vinhos e quantidades e registre a venda para conferir o total antes de cobrar.
+Abra **Venda rápida**, busque um cliente ou faça o pré-cadastro com nome, telefone e e-mail. Adicione vinhos e quantidades. Antes de registrar, a tela consulta o servidor e mostra preço unitário com VIP, subtotal dos itens e total. Informe desconto manual em reais ou percentual se necessário e confira o novo total. Só depois registre a venda.
+
+O desconto manual é adicional ao VIP e incide somente sobre os produtos, sem frete. O total mostrado é conferido novamente no servidor ao registrar; se preço ou benefício mudou, a venda é recusada para nova conferência. O desconto efetivo e a regra usada ficam salvos no pedido. O frete é somado sobre o valor já descontado. O checkout recebe o desconto rateado em centavos entre os produtos, preservando o total exato, inclusive quando a quantidade não divide o desconto igualmente.
 
 - O backend calcula os preços com os benefícios do **cliente selecionado**, sem usar o VIP do administrador.
 - A venda aparece nos pedidos e no histórico do cliente, com identificação do vendedor.
@@ -62,6 +68,10 @@ A comunicação usa o deeplink oficial `infinitepaydash://infinitetap-app`, com 
 
 Depois da cobrança, reabra o pedido, confira **na conta InfinitePay** a aprovação, o valor e o cliente, informe o NSU UUID da transação e marque a confirmação. O banco registra **manual_admin**, administrador e horário. Não confunda o NSU UUID com o código de autorização do cartão.
 
+Pedidos cancelados não exibem essa opção e a API recusa confirmação manual mesmo com uma tela antiga aberta. A confirmação autenticada de um pagamento online realmente recebido continua sendo registrada para conciliação, sem reabrir um pedido cancelado.
+
+No débito, a seleção de parcelas fica desabilitada e é enviado pagamento à vista. No crédito, a tela oferece até 12 parcelas, respeitando o mínimo de R$1 por parcela. A elegibilidade e as taxas finais são conferidas no aplicativo InfinitePay; não são inventadas nem calculadas por uma tabela paralela do catálogo.
+
 Se o aplicativo não abriu ou a transação falhou, existe **Reabrir tentativa sem pagamento aprovado**, com confirmação explícita de que o operador verificou a ausência de pagamento na InfinitePay. A modalidade e as parcelas originais são preservadas. O deeplink do Tap não oferece garantia documentada de idempotência: reabrir sem conferir pode duplicar uma cobrança. Nunca reabra se já houver pagamento aprovado.
 
 ## Cancelamento, expiração e estorno
@@ -73,6 +83,14 @@ Um pagamento recebido após cancelar o pedido fica registrado como pago, mas man
 Links expirados não são regenerados automaticamente. A cobrança existente permanece registrada para conferência e recebimento de eventual confirmação tardia. A validade de 24 horas é do checkout; não representa uma expiração garantida de uma tentativa no aplicativo InfiniteTap.
 
 ## Validação
+
+### Diagnóstico de falhas do checkout
+
+A primeira versão convertia qualquer recusa do provedor em 502 genérico. Agora o backend diferencia credencial recusada (401/403 do provedor), checkout desabilitado, dados inválidos (400/422), limite de chamadas, falha de comunicação, timeout e link inválido. Retorna uma orientação no painel e registra somente operação, status HTTP e código classificado; não registra o corpo bruto do provedor, a chave nem os dados do comprador.
+
+Para um pedido com erro, não abra outro pedido nem troque o método sem conferir. Corrija a configuração e use **Recuperar cobrança Pix / crédito** após 30 segundos. A identificação e o payload anteriores são reutilizados, evitando emitir uma segunda cobrança. As novas opções só são aplicadas a novas cobranças; uma tentativa já iniciada mantém seu payload original.
+
+As três variáveis de produção foram localizadas na Vercel durante a revisão, mas os valores protegidos não foram usados para emitir cobrança real. Os logs disponíveis não continham a resposta da falha do pedido #7, então a causa específica ainda precisa ser confirmada após publicar o diagnóstico e repetir a tentativa existente. Não atribuir automaticamente essa falha à chave ou à habilitação da conta sem observar o retorno.
 
 `npm test` inclui testes com PostgreSQL em memória e transporte InfinitePay simulado para: autorização, migração reaplicável, frete, centavos, uso único, reenvio, falha de emissão, retorno adulterado, confirmação idempotente, pedido cancelado, pré-cadastro, VIP e conferência do Tap.
 

@@ -1,10 +1,14 @@
 const { randomUUID } = require('node:crypto');
 const Precos = require('../js/precos');
 const { ErroPedido } = require('./pedidoService');
+const { itensCheckout } = require('./vendaService');
 
 function configuracao() {
     const handle = (process.env.INFINITEPAY_HANDLE || '').trim().replace(/^\$/, '');
     const apiKey = (process.env.INFINITEPAY_API_KEY || '').trim();
+    if (apiKey && (!apiKey.startsWith('inchk_') || /[\s"']/.test(apiKey))) {
+        throw new ErroPedido('A chave InfinitePay configurada na Vercel está inválida. Use somente a chave inchk_, sem aspas ou nome do cabeçalho.', 503);
+    }
     let base;
     try {
         base = new URL(process.env.APP_URL);
@@ -24,11 +28,39 @@ async function api(caminho, payload, fetchImpl = fetch) {
             headers: { 'Content-Type': 'application/json', ...(apiKey ? { 'X-Api-Key': apiKey } : {}) },
             body: JSON.stringify(payload)
         });
-        if (!response.ok) throw new Error('Resposta recusada');
-        return await response.json();
-    } catch {
+        const resultado = await response.json().catch(() => null);
+        if (!response.ok || resultado?.success === false && caminho === 'links') {
+            const descricao = JSON.stringify(resultado || {}).toLowerCase();
+            let codigo = 'INFINITEPAY_INDISPONIVEL';
+            let mensagem = 'A InfinitePay está indisponível. Tente novamente; a mesma cobrança será reutilizada.';
+            let status = 502;
+            if (descricao.includes('external_checkout_not_enabled')) {
+                codigo = 'INFINITEPAY_CHECKOUT_DESATIVADO'; status = 503;
+                mensagem = 'Ative Checkout Integrado na conta InfinitePay da loja e confira se a InfiniteTag e a chave pertencem à mesma conta.';
+            } else if ([401,403].includes(response.status)) {
+                codigo = 'INFINITEPAY_CREDENCIAL_RECUSADA'; status = 503;
+                mensagem = 'A InfinitePay recusou a autenticação. Confira a chave da API, a InfiniteTag e a habilitação do Checkout Integrado na mesma conta.';
+            } else if ([400,422].includes(response.status)) {
+                codigo = 'INFINITEPAY_DADOS_RECUSADOS'; status = 422;
+                mensagem = 'A InfinitePay recusou os dados da cobrança. Confira o e-mail e telefone do cliente e as configurações do checkout da conta.';
+            } else if (response.status === 429) {
+                codigo = 'INFINITEPAY_LIMITE'; status = 503;
+                mensagem = 'A InfinitePay limitou temporariamente as consultas. Aguarde e tente recuperar a mesma cobrança.';
+            }
+            console.error('[infinitepay]', { operacao: caminho, http_status: response.status, codigo });
+            const erro = new ErroPedido(mensagem, status); erro.code = codigo; throw erro;
+        }
+        if (!resultado || typeof resultado !== 'object') throw new Error('Resposta inválida');
+        return resultado;
+    } catch (error) {
+        if (error instanceof ErroPedido) throw error;
+        const codigo = controller.signal.aborted ? 'INFINITEPAY_TIMEOUT' : 'INFINITEPAY_COMUNICACAO';
+        const causa = error.cause?.code;
+        console.error('[infinitepay]', { operacao: caminho, codigo,
+            ...(typeof causa === 'string' && /^[A-Z0-9_]{1,60}$/.test(causa) ? { causa } : {}) });
         // Não incluir respostas do provedor, dados do cliente ou segredos nos logs/erros.
-        throw new ErroPedido('Não foi possível consultar a InfinitePay. Tente novamente; a cobrança será reutilizada.', 502);
+        const erro = new ErroPedido('Não foi possível consultar a InfinitePay. Tente novamente; a cobrança será reutilizada.', 502);
+        erro.code = codigo; throw erro;
     } finally { clearTimeout(timer); }
 }
 
@@ -75,10 +107,12 @@ async function salvarEntrega(pool, id, dados) {
         const subtotal = produtos.rows.reduce((s, i) => s + Precos.paraCentavos(i.subtotal), 0);
         const frete = Precos.paraCentavos(dados.frete);
         if (dados.entrega_tipo === 'retirada' && frete !== 0) throw new ErroPedido('Retirada deve ter frete zero.', 400);
-        if (subtotal + frete > Precos.MAX_CENTAVOS) throw new ErroPedido('Total acima do limite permitido.', 400);
+        const desconto = Precos.paraCentavos(p.desconto_manual || 0);
+        if (desconto > subtotal) throw new ErroPedido('O desconto está divergente dos itens. Revise o pedido.');
+        if (subtotal - desconto + frete > Precos.MAX_CENTAVOS) throw new ErroPedido('Total acima do limite permitido.', 400);
         const { rows } = await client.query(`UPDATE pedidos SET frete = $2, entrega_tipo = $3,
             entrega_detalhes = $4, total = $5 WHERE id = $1 RETURNING *`,
-        [id, frete / 100, dados.entrega_tipo, dados.entrega_detalhes, (subtotal + frete) / 100]);
+        [id, frete / 100, dados.entrega_tipo, dados.entrega_detalhes, (subtotal - desconto + frete) / 100]);
         return rows[0];
     });
 }
@@ -112,9 +146,7 @@ async function preparar(pool, pedidoId, metodo, opcoes = {}) {
             const { rows: usuarios } = await client.query('SELECT nome_completo, email, telefone FROM usuarios WHERE id = $1', [p.usuario_id]);
             const u = usuarios[0];
             const telefone = String(u.telefone || '').replace(/\D/g, '');
-            const lista = itens.filter(i => Precos.paraCentavos(i.preco_unitario) > 0).map(i => ({
-                description: i.vinho_nome, quantity: i.quantidade, price: Precos.paraCentavos(i.preco_unitario)
-            }));
+            const lista = itensCheckout(itens, p.desconto_manual || 0);
             if (Precos.paraCentavos(p.frete)) lista.push({ description: 'Frete / entrega', quantity: 1, price: Precos.paraCentavos(p.frete) });
             if (lista.reduce((s, i) => s + i.quantity * i.price, 0) !== valor) throw new ErroPedido('Os itens e o total estão divergentes. Revise o pedido.');
             payload = { handle: config.handle, order_nsu: id, items: lista,
@@ -122,7 +154,8 @@ async function preparar(pool, pedidoId, metodo, opcoes = {}) {
                     ...(/^\d{10,11}$/.test(telefone) ? { phone_number: `+55${telefone}` } : {}) },
                 redirect_url: `${config.base}/pagamento-retorno.html?pagamento=${id}`,
                 webhook_url: `${config.base}/api/pagamentos/webhook/${id}`,
-                options: { single_payment: true, valid_until: expira } };
+                // Não sobrescrever regras de repasse/parcelamento e descontos por método da conta.
+                options: { single_payment: true, valid_until: expira, payment_methods_enabled: ['credit_card', 'pix'] } };
         } else {
             if (p.origem !== 'presencial') throw new ErroPedido('Use o InfiniteTap em uma venda rápida presencial.');
             const parcelas = opcoes.payment_method === 'debit' ? 1 : opcoes.installments;
@@ -144,7 +177,12 @@ async function gerarCheckout(pool, pedidoId, fetchImpl) {
     const pagamento = await preparar(pool, pedidoId, 'checkout');
     if (pagamento.checkout_url) return pagamento;
     const resposta = await api('links', pagamento.payload, fetchImpl);
-    const url = checkoutUrl(resposta.url);
+    let url;
+    try { url = checkoutUrl(resposta.url); }
+    catch (error) {
+        console.error('[infinitepay]', { operacao: 'links', codigo: 'INFINITEPAY_LINK_INVALIDO' });
+        error.code = 'INFINITEPAY_LINK_INVALIDO'; throw error;
+    }
     // Webhook pode ter confirmado enquanto a resposta da emissão estava em trânsito.
     const { rows } = await pool.query(`UPDATE pagamentos SET checkout_url = $2,
         status = CASE WHEN status = 'pago' THEN status ELSE 'pendente' END WHERE id = $1 RETURNING *`, [pagamento.id, url]);
@@ -175,6 +213,7 @@ async function confirmar(pool, id, dados, fetchImpl) {
 async function registrarPago(pool, pagamento, nsu, slug, tipo, adminId = null) {
     return transacao(pool, async client => {
         const pedido = await pedidoBloqueado(client, pagamento.pedido_id);
+        if (tipo === 'manual_admin' && pedido.status === 'cancelado') throw new ErroPedido('Pedido cancelado: não é permitido confirmar recebimento manualmente.');
         const { rows } = await client.query('SELECT * FROM pagamentos WHERE id = $1 FOR UPDATE', [pagamento.id]);
         const atual = rows[0];
         if (atual.status === 'pago') {

@@ -13,7 +13,7 @@ No iPhone/iPad, a ativação exige abrir o aplicativo adicionado à Tela de Iní
 
 - **Pedidos:** contador de pedidos em aberto.
 - **Avisos:** contador de notificações não lidas do administrador, persistido no Neon.
-- A central exibe os avisos recentes e permite carregar os anteriores. Abrir um aviso mostra o pedido e registra a leitura. Abrir o pedido por push ou outro link também registra a leitura.
+- A central exibe somente avisos não lidos e permite carregar os anteriores ainda pendentes. Abrir um aviso mostra o pedido, registra a leitura e remove o aviso da central. Abrir o pedido por push ou outro link também registra a leitura e retira o aviso da lista. O registro de leitura permanece no banco e não altera a central de outro administrador.
 - **Marcar todas como lidas** considera até a notificação mais recente já carregada; um novo pedido recebido durante a operação continua não lido.
 - Cada administrador tem suas próprias leituras. Recarregar ou fazer novo login preserva esse histórico.
 - Novos pedidos passam a gerar avisos após a migração. Os pedidos antigos não são reenviados como notificações novas.

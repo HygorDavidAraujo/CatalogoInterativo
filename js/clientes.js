@@ -339,6 +339,7 @@ function renderizarPedido(pedido) {
                 }).join('')}
             </div>
             <div class="pedido-total">
+                ${Number(pedido.desconto_manual) > 0 ? `<span>Desconto manual: R$ ${Number(pedido.desconto_manual).toFixed(2).replace('.', ',')}</span>` : ''}
                 <strong>Total:</strong>
                 <strong>R$ ${parseFloat(pedido.total).toFixed(2).replace('.', ',')}</strong>
             </div>

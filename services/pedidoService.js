@@ -22,7 +22,7 @@ function calcularPrecoCentavos(precoBanco, beneficio) {
 // Executado na mesma transação da gravação. Os locks preservam os dados consultados
 // caso preço, visibilidade ou benefício sejam alterados enquanto o pedido é salvo.
 async function calcularPedido(client, usuarioId, itensSolicitados) {
-    const { rows: usuarios } = await client.query(
+    const { rows: usuarios } = usuarioId === null ? { rows: [{ is_vip: false }] } : await client.query(
         'SELECT id, is_vip, vip_tipo FROM usuarios WHERE id = $1 FOR SHARE',
         [usuarioId]
     );

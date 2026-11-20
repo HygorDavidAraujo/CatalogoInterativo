@@ -1,5 +1,5 @@
 // ===== SERVICE WORKER BÁSICO =====
-const CACHE_NAME = 'davini-vinhos-v7';
+const CACHE_NAME = 'davini-vinhos-v8';
 const PUSH_STATE_CACHE = 'davini-push-dispositivo';
 const urlsToCache = [
   '/',

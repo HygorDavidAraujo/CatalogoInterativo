@@ -38,7 +38,7 @@
                 const bloqueado = Boolean(p) || ['cancelado', 'finalizado'].includes(pedido.status);
                 const totalProdutos = pedido.itens.reduce((s, i) => s + Number(i.subtotal), 0);
                 alvo.innerHTML = `<h3>Entrega e pagamento</h3>
-                    <p>Produtos: <strong>${moeda(totalProdutos)}</strong> · Frete: <strong>${pedido.frete == null ? 'a combinar' : moeda(pedido.frete)}</strong></p>
+                    <p>Produtos: <strong>${moeda(totalProdutos)}</strong> · Desconto manual: <strong>${moeda(pedido.desconto_manual || 0)}</strong> · Frete: <strong>${pedido.frete == null ? 'a combinar' : moeda(pedido.frete)}</strong></p>
                     <form id="pedido-entrega-form" class="cobranca-form">
                         <div><label for="cobranca-entrega">Forma de entrega</label><select id="cobranca-entrega" ${bloqueado ? 'disabled' : ''}><option value="entrega">Entrega</option><option value="retirada" ${pedido.entrega_tipo === 'retirada' ? 'selected' : ''}>Retirada</option></select></div>
                         <div><label for="cobranca-frete">Frete (R$)</label><input id="cobranca-frete" type="number" min="0" max="99999999.99" step="0.01" required value="${pedido.frete == null ? '' : Number(pedido.frete)}" ${bloqueado ? 'disabled' : ''}></div>
@@ -60,6 +60,8 @@
                 const acoes = alvo.querySelector('#cobranca-acoes');
                 if (p?.status === 'pago') {
                     acoes.innerHTML = `<p class="cobranca-paga"><strong>Pagamento registrado</strong> · ${p.confirmacao === 'manual_admin' ? 'Conferido pelo administrador' : 'Confirmado pela API InfinitePay'}</p><p>Identificador da transação: ${texto(p.transaction_nsu)}</p>${pedido.status === 'cancelado' ? '<p role="alert">Pedido cancelado com pagamento registrado. Confira e trate o estorno na InfinitePay.</p>' : ''}`;
+                } else if (pedido.status === 'cancelado') {
+                    acoes.textContent = 'Pedido cancelado: cobrança e confirmação manual de recebimento estão bloqueadas. Se houver uma cobrança anterior, confira a situação e eventual estorno na InfinitePay.';
                 } else if (p?.metodo === 'tap') {
                     acoes.innerHTML = `<p>Uma tentativa de cobrança foi iniciada no InfiniteTap. Confira o resultado no aplicativo antes de registrar o pagamento.</p>
                         <form id="tap-conferencia" class="cobranca-form"><div class="campo-inteiro"><label for="tap-nsu">NSU da transação aprovada (UUID, não o código de autorização)</label><input id="tap-nsu" required pattern="[0-9a-fA-F-]{36}" maxlength="36" autocomplete="off"></div>
@@ -96,7 +98,7 @@
                             try { await navigator.clipboard.writeText(url); feedback.textContent = 'Link copiado.'; }
                             catch { feedback.textContent = `Copie o link: ${url}`; }
                         });
-                        const wa = whatsapp(pedido.telefone, `Olá, ${pedido.nome_completo}! Pedido #${pedido.id}\nProdutos: ${moeda(totalProdutos)}\nFrete: ${moeda(pedido.frete)}\nTotal: ${moeda(pedido.total)}\n${pedido.entrega_detalhes}\nFinalize o pagamento: ${url}`);
+                        const wa = whatsapp(pedido.telefone, `Olá, ${pedido.nome_completo}! Pedido #${pedido.id}\nProdutos: ${moeda(totalProdutos)}\nDesconto: ${moeda(pedido.desconto_manual || 0)}\nFrete: ${moeda(pedido.frete)}\nTotal: ${moeda(pedido.total)}\n${pedido.entrega_detalhes}\nFinalize o pagamento: ${url}`);
                         if (wa) {
                             const link = document.createElement('a'); link.className = 'btn btn-secondary';
                             link.textContent = 'Enviar link pelo WhatsApp'; link.href = wa; link.target = '_blank'; link.rel = 'noopener noreferrer';
@@ -105,7 +107,8 @@
                     }
                 } else if (!bloqueado || (p?.metodo === 'checkout' && !['cancelado', 'finalizado'].includes(pedido.status))) {
                     acoes.innerHTML = `<p>Confirme a entrega e o valor antes de emitir. O link aceitará um pagamento e terá validade de 24 horas.</p>
-                        <div class="cobranca-botoes"><button type="button" id="cobranca-gerar" class="btn btn-primary">${p ? 'Recuperar cobrança' : 'Gerar link de pagamento'}</button></div>`;
+                        <p>O checkout oferece Pix e cartão de crédito parcelado. As taxas, descontos por meio de pagamento e condições são definidos na conta InfinitePay. O total enviado aqui inclui somente produtos, desconto manual e frete.</p>
+                        <div class="cobranca-botoes"><button type="button" id="cobranca-gerar" class="btn btn-primary">${p ? 'Recuperar cobrança Pix / crédito' : 'Gerar checkout Pix / crédito'}</button></div>`;
                     $('cobranca-gerar').disabled = pedido.frete == null || !pedido.entrega_tipo;
                     $('cobranca-gerar').addEventListener('click', () => executar(acoes, feedback, async () => {
                         await api(`/pagamentos/pedidos/${pedido.id}/checkout`, {});
@@ -113,7 +116,12 @@
                         window.pedidosAdmin.listar();
                     }));
                     if (pedido.origem === 'presencial' && !p) {
-                        acoes.insertAdjacentHTML('beforeend', `<form id="tap-iniciar" class="cobranca-form"><div><label for="tap-modalidade">InfiniteTap</label><select id="tap-modalidade"><option value="credit">Crédito</option><option value="debit">Débito</option></select></div><div><label for="tap-parcelas">Parcelas no crédito</label><input id="tap-parcelas" type="number" min="1" max="12" value="1" required></div><button class="btn btn-primary" type="submit">Preparar cobrança por aproximação</button></form><p>Use no Android com o aplicativo InfinitePay instalado. O pagamento acontece no aplicativo; o retorno ao navegador depende da compatibilidade do aparelho.</p>`);
+                        acoes.insertAdjacentHTML('beforeend', `<form id="tap-iniciar" class="cobranca-form"><div><label for="tap-modalidade">Aproximação no InfiniteTap</label><select id="tap-modalidade"><option value="credit">Crédito</option><option value="debit">Débito</option></select></div><div><label for="tap-parcelas">Parcelas no crédito</label><select id="tap-parcelas">${Array.from({ length: Math.min(12, Math.floor(Number(pedido.total))) }, (_, i) => `<option value="${i + 1}">${i + 1}x${i ? '' : ' (à vista)'}</option>`).join('')}</select></div><button class="btn btn-primary" type="submit">Preparar cobrança por aproximação</button></form><p>Crédito em até 12x, com parcela mínima de R$ 1,00. Confira as taxas e condições finais no aplicativo InfinitePay antes de aproximar o cartão. Para Pix, use o checkout acima.</p>`);
+                        $('tap-modalidade').addEventListener('change', () => {
+                            const debito = $('tap-modalidade').value === 'debit';
+                            $('tap-parcelas').disabled = debito;
+                            if (debito) $('tap-parcelas').value = '1';
+                        });
                         $('tap-iniciar').addEventListener('submit', event => {
                             event.preventDefault();
                             const dados = { payment_method: $('tap-modalidade').value, installments: Number($('tap-parcelas').value) };
@@ -157,23 +165,62 @@
                 option.textContent = `${v.nome} · ${moeda(v.preco)} (antes dos benefícios do cliente)`; produto.append(option);
             });
             produto.value = anteriorProduto;
-            feedback.textContent = 'Os preços e benefícios do cliente serão calculados ao registrar a venda.';
+            feedback.textContent = 'Selecione o cliente e os vinhos para conferir os preços antes de registrar.';
+            window.dispatchEvent(new Event('venda:opcoes'));
         } catch (error) { feedback.textContent = error.message; }
     }
     document.addEventListener('DOMContentLoaded', () => {
         if (!$('venda-rapida') || !window.authManager?.isAdmin()) return;
         let iniciado = false;
         const itens = new Map();
-        const desenhar = () => {
+        let previa = null, versaoPrevia = 0, timerPrevia;
+        const desconto = () => ({ tipo: $('venda-desconto-tipo').value, valor: $('venda-desconto-valor').value || '0' });
+        const itensEnviados = () => [...itens].map(([id, item]) => ({ id, quantidade: item.quantidade }));
+        const desenhar = (precos = null) => {
             $('venda-itens').replaceChildren();
             itens.forEach((i, id) => {
                 const linha = document.createElement('li');
+                const calculado = precos?.itens.find(p => p.id === id);
                 const span = document.createElement('span'); span.textContent = `${i.quantidade} × ${i.nome}`;
+                const preco = document.createElement('small'); preco.textContent = calculado ? `${moeda(calculado.preco)} por unidade · Subtotal ${moeda(calculado.subtotal)}` : 'Aguardando cálculo dos preços para este cliente';
+                span.append(preco);
                 const remover = document.createElement('button'); remover.type = 'button'; remover.className = 'btn btn-secondary';
-                remover.textContent = 'Remover'; remover.addEventListener('click', () => { if (!criado) { itens.delete(id); desenhar(); } });
+                remover.textContent = 'Remover'; remover.addEventListener('click', () => { if (!criado) { itens.delete(id); desenhar(); agendarPrevia(); } });
                 linha.append(span, remover); $('venda-itens').append(linha);
             });
         };
+        async function recalcular(versao) {
+            const dados = { itens: itensEnviados(), desconto: desconto() };
+            if ($('venda-novo-cliente').checked) dados.novo_cliente = true;
+            else dados.cliente_id = Number($('venda-cliente').value);
+            try {
+                const resultado = await api('/vendas-rapidas/simular', dados);
+                if (versao !== versaoPrevia || criado) return;
+                previa = resultado; desenhar(resultado);
+                $('venda-resumo').textContent = `Produtos com benefícios do cliente: ${moeda(resultado.subtotal)} · Desconto manual: ${moeda(resultado.desconto_manual)} · Total: ${moeda(resultado.total)}`;
+                $('venda-registrar').disabled = false;
+                $('venda-feedback').textContent = 'Confira os preços e o total acima antes de registrar a venda.';
+            } catch (error) {
+                if (versao !== versaoPrevia || criado) return;
+                $('venda-resumo').textContent = error.message;
+            }
+        }
+        function agendarPrevia() {
+            if (criado) return;
+            clearTimeout(timerPrevia); const versao = ++versaoPrevia; previa = null;
+            $('venda-registrar').disabled = true; desenhar();
+            if (!itens.size) { $('venda-resumo').textContent = 'Adicione vinhos para calcular o total.'; return; }
+            if (!$('venda-novo-cliente').checked && !$('venda-cliente').value) { $('venda-resumo').textContent = 'Selecione ou pré-cadastre o cliente para calcular os preços.'; return; }
+            $('venda-resumo').textContent = 'Calculando preços e desconto…';
+            timerPrevia = setTimeout(() => recalcular(versao), 250);
+        }
+        window.addEventListener('venda:opcoes', agendarPrevia);
+        $('venda-cliente').addEventListener('change', agendarPrevia);
+        $('venda-desconto-tipo').addEventListener('change', () => {
+            $('venda-desconto-valor').max = $('venda-desconto-tipo').value === 'percentual' ? '100' : '99999999.99';
+            agendarPrevia();
+        });
+        $('venda-desconto-valor').addEventListener('input', agendarPrevia);
         window.addEventListener('painel:secao', event => {
             if (event.detail.secao === 'venda-rapida' && !iniciado) { iniciado = true; carregarOpcoes(); }
         });
@@ -186,6 +233,7 @@
             const novo = $('venda-novo-cliente').checked;
             $('venda-precadastro').hidden = !novo; $('venda-cliente').disabled = novo;
             $('venda-precadastro').querySelectorAll('input').forEach(input => { input.required = novo; input.disabled = !novo; });
+            agendarPrevia();
         });
         $('venda-adicionar').addEventListener('click', () => {
             if (criado) return;
@@ -195,13 +243,15 @@
             if (!vinho || !Number.isInteger(quantidade) || quantidade < 1 || soma > 999) {
                 $('venda-feedback').textContent = 'Selecione um vinho e uma quantidade entre 1 e 999.'; return;
             }
-            itens.set(id, { nome: vinho.nome, quantidade: soma }); desenhar();
+            itens.set(id, { nome: vinho.nome, quantidade: soma }); desenhar(); agendarPrevia();
         });
         $('venda-form').addEventListener('submit', event => {
             event.preventDefault();
             if (!itens.size) { $('venda-feedback').textContent = 'Adicione pelo menos um vinho.'; return; }
+            if (!previa && !criado) { $('venda-feedback').textContent = 'Aguarde e confira o cálculo do total antes de registrar.'; agendarPrevia(); return; }
             chave ||= crypto.randomUUID();
-            const dados = { chave_criacao: chave, itens: [...itens].map(([id, item]) => ({ id, quantidade: item.quantidade })), observacoes: $('venda-observacoes').value.trim() };
+            const dados = { chave_criacao: chave, itens: itensEnviados(), desconto: desconto(),
+                total_previsto: previa?.total.toFixed(2), observacoes: $('venda-observacoes').value.trim() };
             if ($('venda-novo-cliente').checked) dados.cliente = { nome_completo: $('venda-nome').value.trim(), telefone: $('venda-telefone').value.trim(), email: $('venda-email').value.trim() };
             else dados.cliente_id = Number($('venda-cliente').value);
             executar($('venda-form'), $('venda-feedback'), async () => {
@@ -217,12 +267,14 @@
         $('venda-nova').addEventListener('click', () => {
             if (!criado && itens.size && !window.confirm('Descartar os itens desta venda ainda não registrada?')) return;
             criado = null; chave = null; itens.clear(); desenhar(); $('venda-form').reset();
+            previa = null; ++versaoPrevia; clearTimeout(timerPrevia);
             delete $('venda-form').dataset.registrado;
             $('venda-form').querySelectorAll('button,input,select,textarea').forEach(c => { c.disabled = false; });
             $('venda-precadastro').hidden = true; $('venda-cliente').disabled = false;
             $('venda-precadastro').querySelectorAll('input').forEach(i => { i.required = false; i.disabled = true; });
             $('venda-abrir-pedido').hidden = true; $('venda-feedback').textContent = 'Nova venda pronta para atendimento.';
             carregarOpcoes();
+            agendarPrevia();
         });
     });
 })();

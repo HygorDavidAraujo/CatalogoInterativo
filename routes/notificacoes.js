@@ -31,7 +31,9 @@ router.get('/', async (req, res) => {
         const { rows } = await pool.query(`SELECT n.id, n.pedido_id, n.created_at, p.status, p.total,
             EXISTS (SELECT 1 FROM notificacoes_leituras l WHERE l.notificacao_id = n.id AND l.usuario_id = $1) AS lida
             FROM notificacoes_pedidos n JOIN pedidos p ON p.id = n.pedido_id
-            WHERE ($2::int IS NULL OR n.id < $2) ORDER BY n.id DESC LIMIT 21`, [req.usuario.id, cursor || null]);
+            WHERE ($2::int IS NULL OR n.id < $2)
+            AND NOT EXISTS (SELECT 1 FROM notificacoes_leituras l WHERE l.notificacao_id = n.id AND l.usuario_id = $1)
+            ORDER BY n.id DESC LIMIT 21`, [req.usuario.id, cursor || null]);
         res.json({ notificacoes: rows.slice(0, 20), proximo_cursor: rows.length > 20 ? rows[19].id : null });
     } catch (erro) { falha(res, erro); }
 });

@@ -126,6 +126,7 @@
             try {
                 const pedido = await this.api(`/${id}`);
                 if (versao !== this.versaoDetalhe) return;
+                this.pedidoAtual = pedido;
                 window.notificacoesAdmin?.marcarPedidoLido(id);
                 const p = window.RenderSeguro.dados(pedido);
                 const atual = window.PedidoStatus.obter(p.status);
@@ -188,6 +189,11 @@
                 const resposta = await this.api(`/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
                 if (resposta.status !== status) throw new Error('O status não foi confirmado pelo servidor. Reabra o pedido.');
                 form.dataset.statusAtual = status;
+                if (this.pedidoAtual?.id === id) {
+                    this.pedidoAtual.status = status;
+                    const cobranca = $('pedido-cobranca');
+                    if (cobranca) window.pagamentosAdmin?.montar(this.pedidoAtual, cobranca);
+                }
                 mensagem.textContent = 'Status atualizado. O histórico do cliente também foi atualizado.';
                 await Promise.all([this.listar(), this.resumo()]);
             } catch (error) {

@@ -72,11 +72,11 @@
         }
 
         renderizar() {
-            const itens = window.RenderSeguro.dados(this.itens);
+            const itens = window.RenderSeguro.dados(this.itens.filter(n => !n.lida));
             $('notificacoes-lista').innerHTML = itens.length ? itens.map(n => `<article class="notificacao-item ${n.lida ? 'notificacao-lida' : ''}">
                 <div><span class="notificacao-situacao">${n.lida ? 'Lida' : 'Não lida'}</span><h3>Pedido #${n.pedido_id}</h3>
                 <p>${new Date(n.created_at).toLocaleString('pt-BR')} · ${window.PedidoStatus.obter(n.status).label}</p></div>
-                <button type="button" class="btn btn-secondary" data-notificacao="${n.id}">Abrir pedido</button></article>`).join('') : '<p class="notificacoes-vazio">Nenhuma notificação por aqui. Novos pedidos aparecerão nesta central.</p>';
+                <button type="button" class="btn btn-secondary" data-notificacao="${n.id}">Abrir pedido</button></article>`).join('') : '<p class="notificacoes-vazio">Nenhuma notificação não lida. Novos pedidos aparecerão nesta central.</p>';
             $('notificacoes-mais').hidden = !this.cursor;
             $('notificacoes-marcar-todas').disabled = !this.itens.some(n => !n.lida);
         }
@@ -86,7 +86,7 @@
             if (!notificacao) return;
             try {
                 await this.api(`/${id}/lida`, { method: 'PUT', body: '{}' });
-                notificacao.lida = true;
+                this.itens = this.itens.filter(n => Number(n.id) !== id);
                 this.renderizar();
                 await this.resumo();
                 this.fechar();
@@ -106,6 +106,8 @@
             if (this.itens.some(n => Number(n.pedido_id) === Number(id) && n.lida)) return;
             try {
                 await this.api(`/pedido/${id}/lida`, { method: 'PUT', body: '{}' });
+                this.itens = this.itens.filter(n => Number(n.pedido_id) !== Number(id));
+                this.renderizar();
                 await this.resumo();
             } catch (erro) { $('notificacoes-feedback').textContent = erro.message; }
         }

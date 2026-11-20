@@ -70,7 +70,8 @@ test('migração e API de notificações com PostgreSQL em memória', async t =>
         assert.equal((await request(`/${notificacao.id}/lida`, { method: 'PUT', body: {} })).status, 200);
         assert.equal((await request('/resumo')).body.nao_lidas, 0);
         assert.equal((await request('/resumo', { usuario: 8 })).body.nao_lidas, 1);
-        assert.equal((await request('/')).body.notificacoes[0].lida, true);
+        assert.deepEqual((await request('/')).body.notificacoes, [], 'Leitura sai da central e permanece gravada');
+        assert.equal((await request('/', { usuario: 8 })).body.notificacoes[0].id, notificacao.id);
         await request(`/${notificacao.id}/lida`, { method: 'PUT', body: {} });
         assert.equal((await db.query('SELECT * FROM notificacoes_leituras')).rows.length, 1);
     });
@@ -79,14 +80,15 @@ test('migração e API de notificações com PostgreSQL em memória', async t =>
         const primeira = (await request('/')).body;
         assert.equal(primeira.notificacoes.length, 20);
         const segunda = (await request(`/?antes=${primeira.proximo_cursor}`)).body;
-        assert.equal(segunda.notificacoes.length, 5);
-        assert.equal(new Set([...primeira.notificacoes, ...segunda.notificacoes].map(n => n.id)).size, 25);
+        assert.equal(segunda.notificacoes.length, 4);
+        assert.equal(new Set([...primeira.notificacoes, ...segunda.notificacoes].map(n => n.id)).size, 24);
         const maximo = primeira.notificacoes[0].id;
         const novo = await inserir();
         await request('/lidas', { method: 'PUT', body: { ate_id: maximo } });
         assert.equal((await request('/resumo')).body.nao_lidas, 1);
         await request(`/pedido/${novo}/lida`, { method: 'PUT', body: {} });
         assert.equal((await request('/resumo')).body.nao_lidas, 0);
+        assert.deepEqual((await request('/')).body.notificacoes, [], 'Avisos lidos não reaparecem ao recarregar');
         assert.equal((await request('/resumo', { usuario: 8 })).body.nao_lidas, 26);
     });
     await t.test('IDs e páginas inválidos são rejeitados', async () => {
