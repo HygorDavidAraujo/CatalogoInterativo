@@ -19,8 +19,12 @@ const referenciaSchema = z.object({ order_nsu: uuid, transaction_nsu: uuid,
 
 router.get('/pedidos/:id', verificarAdminAuth, tratar(async (req, res) => {
     const { rows } = await pool.query(`SELECT id, metodo, status, checkout_url, transaction_nsu,
-        confirmacao, expira_em, pago_em FROM pagamentos WHERE pedido_id = $1`, [idSchema.parse(req.params.id)]);
-    res.json({ pagamento: rows[0] || null });
+        confirmacao, expira_em, pago_em, payload->>'payment_method' AS modalidade,
+        payload->>'installments' AS parcelas FROM pagamentos WHERE pedido_id = $1 AND ativa = TRUE`, [idSchema.parse(req.params.id)]);
+    const historico = await pool.query(`SELECT id, metodo, substituida_em, payload->>'payment_method' AS modalidade,
+        payload->>'installments' AS parcelas FROM pagamentos WHERE pedido_id = $1 AND ativa = FALSE
+        ORDER BY substituida_em DESC LIMIT 20`, [idSchema.parse(req.params.id)]);
+    res.json({ pagamento: rows[0] || null, historico: historico.rows });
 }));
 
 function tratar(handler) {
@@ -58,9 +62,18 @@ router.post('/pedidos/:id/tap', verificarAdminAuth, tratar(async (req, res) => {
     res.json(await Pagamentos.iniciarTap(pool, idSchema.parse(req.params.id), tapSchema.parse(req.body)));
 }));
 
+router.post('/pedidos/:id/trocar', verificarAdminAuth, tratar(async (req, res) => {
+    const dados = z.discriminatedUnion('metodo', [
+        z.object({ metodo: z.literal('checkout'), pagamento_anterior_id: uuid, sem_pagamento: z.literal(true) }).strict(),
+        z.object({ metodo: z.literal('tap'), pagamento_anterior_id: uuid, sem_pagamento: z.literal(true),
+            payment_method: z.enum(['credit', 'debit']), installments: z.number().int().min(1).max(12) }).strict()
+    ]).parse(req.body);
+    res.json(await Pagamentos.trocarFormaPagamento(pool, idSchema.parse(req.params.id), dados, req.usuario.id));
+}));
+
 router.post('/pedidos/:id/tap/conferir', verificarAdminAuth, tratar(async (req, res) => {
-    const dados = z.object({ transaction_nsu: uuid, conferido: z.literal(true) }).strict().parse(req.body);
-    const resultado = await Pagamentos.conferirTap(pool, idSchema.parse(req.params.id), dados.transaction_nsu, req.usuario.id);
+    const dados = z.object({ transaction_nsu: uuid, pagamento_id: uuid, conferido: z.literal(true) }).strict().parse(req.body);
+    const resultado = await Pagamentos.conferirTap(pool, idSchema.parse(req.params.id), dados.transaction_nsu, req.usuario.id, dados.pagamento_id);
     if (resultado.novo) await notificarPedido(pool, resultado.pedidoId, { status: resultado.cancelado ? 'cancelado' : 'confirmado' });
     res.json({ pago: resultado.pago, cancelado: resultado.cancelado });
 }));

@@ -39,6 +39,8 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
     await db.exec(migration); await db.exec(migration);
     const descontosMigration = fs.readFileSync(path.join(root, 'database/migrations/20261120_venda_descontos.sql'), 'utf8');
     await db.exec(descontosMigration); await db.exec(descontosMigration);
+    const tentativasMigration = fs.readFileSync(path.join(root, 'database/migrations/20261120_troca_pagamento_tap.sql'), 'utf8');
+    await db.exec(tentativasMigration); await db.exec(tentativasMigration);
     assert.equal((await db.query('SELECT total, frete FROM pedidos WHERE id = 1')).rows[0].total, '180.00');
     let tail = Promise.resolve();
     const pool = { async query(sql, params) { await tail; return db.query(sql, params); }, async connect() {
@@ -63,6 +65,7 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
         '../services/pedidoEmailService': { notificarPedido: async (...args) => emails.push(args.slice(1)) },
         '../services/infinitepayService': { ...service,
             gerarCheckout: (pool, id) => service.gerarCheckout(pool, id, provedor),
+            trocarFormaPagamento: (pool, id, dados, admin) => service.trocarFormaPagamento(pool, id, dados, admin, provedor),
             confirmar: (pool, id, dados) => service.confirmar(pool, id, dados, provedor) } });
     const vendas = modulo('routes/vendas-rapidas.js', { '../config/database': { pool }, '../middleware/auth': auth });
     const app = express(); app.use(express.json()); app.use('/pagamentos', router); app.use('/vendas', vendas);
@@ -237,7 +240,7 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
         const nsu = randomUUID();
         assert.equal((await request(`${rota}/conferir`, { method: 'POST', body: { transaction_nsu: nsu, conferido: false } })).status, 400);
         assert.equal((await request(`${rota}/conferir`, { user: 2, method: 'POST', body: { transaction_nsu: nsu, conferido: true } })).status, 403);
-        assert.equal((await request(`${rota}/conferir`, { method: 'POST', body: { transaction_nsu: nsu, conferido: true } })).status, 200);
+        assert.equal((await request(`${rota}/conferir`, { method: 'POST', body: { transaction_nsu: nsu, pagamento_id: res.body.pagamento_id, conferido: true } })).status, 200);
         const p = (await db.query('SELECT * FROM pagamentos WHERE pedido_id = $1', [id])).rows[0];
         assert.equal(p.status, 'pago'); assert.equal(p.confirmacao, 'manual_admin'); assert.equal(p.confirmado_por, 1);
         assert.equal((await request(rota, { method: 'POST', body: { payment_method: 'credit', installments: 1, reabrir_sem_pagamento: true } })).status, 409);
@@ -256,9 +259,71 @@ test('pedidos assistidos, InfinitePay e venda rápida com PostgreSQL e provedor 
         const venda = await request('/vendas', { method: 'POST', body: novaVenda() }); const id = venda.body.pedidoId;
         assert.equal((await request(`/pagamentos/pedidos/${id}/tap`, { method: 'POST', body: { payment_method: 'credit', installments: 2 } })).status, 200);
         await db.query("UPDATE pedidos SET status = 'cancelado' WHERE id = $1", [id]);
-        assert.equal((await request(`/pagamentos/pedidos/${id}/tap/conferir`, { method: 'POST', body: { transaction_nsu: randomUUID(), conferido: true } })).status, 409);
+        const pg = (await db.query('SELECT id FROM pagamentos WHERE pedido_id = $1', [id])).rows[0];
+        assert.equal((await request(`/pagamentos/pedidos/${id}/trocar`, { method: 'POST', body: { metodo: 'checkout', pagamento_anterior_id: pg.id, sem_pagamento: true } })).status, 409);
+        assert.equal((await request(`/pagamentos/pedidos/${id}/tap/conferir`, { method: 'POST', body: { transaction_nsu: randomUUID(), pagamento_id: pg.id, conferido: true } })).status, 409);
         assert.equal((await db.query('SELECT status FROM pagamentos WHERE pedido_id = $1', [id])).rows[0].status, 'pendente');
         assert.equal((await request(`/pagamentos/pedidos/${id}/tap`, { method: 'POST', body: { payment_method: 'credit', installments: 2, reabrir_sem_pagamento: true } })).status, 409);
+    });
+    await t.test('débito sem aprovação pode mudar para crédito e depois checkout Pix, preservando histórico e valor', async () => {
+        const venda = await request('/vendas', { method: 'POST', body: novaVenda() }); const id = venda.body.pedidoId;
+        const rota = `/pagamentos/pedidos/${id}`;
+        const debito = await request(`${rota}/tap`, { method: 'POST', body: { payment_method: 'debit', installments: 1 } });
+        const dados = { metodo: 'tap', payment_method: 'credit', installments: 3, pagamento_anterior_id: debito.body.pagamento_id, sem_pagamento: true };
+        assert.equal((await request(`${rota}/trocar`, { method: 'POST', body: { ...dados, sem_pagamento: false } })).status, 400);
+        assert.equal((await request(`${rota}/trocar`, { user: 2, method: 'POST', body: dados })).status, 403);
+        const credito = await request(`${rota}/trocar`, { method: 'POST', body: dados });
+        assert.equal(credito.status, 200); assert.equal(credito.body.metodo, 'tap');
+        assert.notEqual(credito.body.pagamento_id, debito.body.pagamento_id);
+        const url = new URL(credito.body.url);
+        assert.equal(url.searchParams.get('payment_method'), 'credit'); assert.equal(url.searchParams.get('installments'), '3');
+        assert.equal(url.searchParams.get('amount'), '18000');
+        const antigo = (await db.query('SELECT * FROM pagamentos WHERE id = $1', [debito.body.pagamento_id])).rows[0];
+        assert.equal(antigo.ativa, false); assert.equal(antigo.substituida_por, 1); assert.ok(antigo.substituida_em);
+        assert.equal(antigo.payload.payment_method, 'debit');
+        assert.equal((await request(`${rota}/tap/conferir`, { method: 'POST', body: { pagamento_id: antigo.id, transaction_nsu: randomUUID(), conferido: true } })).status, 409);
+        const pix = await request(`${rota}/trocar`, { method: 'POST', body: { metodo: 'checkout', sem_pagamento: true, pagamento_anterior_id: credito.body.pagamento_id } });
+        assert.equal(pix.status, 200); assert.equal(pix.body.metodo, 'checkout');
+        assert.match(pix.body.url, /^https:\/\/checkout.infinitepay.io\//);
+        const atual = await request(rota);
+        assert.equal(atual.body.pagamento.id, pix.body.pagamento_id); assert.equal(atual.body.historico.length, 2);
+        const payload = chamadas.at(-1).payload;
+        assert.deepEqual(payload.options.payment_methods_enabled, ['credit_card', 'pix']);
+        assert.equal(payload.items.reduce((s, i) => s + i.quantity * i.price, 0), 18000);
+        assert.equal((await db.query('SELECT COUNT(*)::int AS n FROM pagamentos WHERE pedido_id = $1 AND ativa = TRUE', [id])).rows[0].n, 1);
+        assert.equal((await request(`${rota}/trocar`, { method: 'POST', body: { ...dados, pagamento_anterior_id: pix.body.pagamento_id } })).status, 409, 'Checkout ativo não é substituído pois o link pode ser pago');
+    });
+    await t.test('trocas concorrentes e confirmações de telas antigas não criam duas tentativas ativas', async () => {
+        const venda = await request('/vendas', { method: 'POST', body: novaVenda() }); const id = venda.body.pedidoId;
+        const rota = `/pagamentos/pedidos/${id}`;
+        const tap = await request(`${rota}/tap`, { method: 'POST', body: { payment_method: 'debit', installments: 1 } });
+        const body = { metodo: 'tap', payment_method: 'credit', installments: 2, sem_pagamento: true, pagamento_anterior_id: tap.body.pagamento_id };
+        const respostas = await Promise.all([1, 2].map(() => request(`${rota}/trocar`, { method: 'POST', body })));
+        assert.deepEqual(respostas.map(r => r.status).sort(), [200,409]);
+        const atual = respostas.find(r => r.status === 200).body;
+        const confirmar = await request(`${rota}/tap/conferir`, { method: 'POST', body: { pagamento_id: atual.pagamento_id, transaction_nsu: randomUUID(), conferido: true } });
+        assert.equal(confirmar.status, 200);
+        assert.equal((await request(`${rota}/trocar`, { method: 'POST', body: { ...body, pagamento_anterior_id: atual.pagamento_id } })).status, 409);
+        assert.equal((await db.query('SELECT COUNT(*)::int AS n FROM pagamentos WHERE pedido_id = $1 AND ativa = TRUE', [id])).rows[0].n, 1);
+    });
+    await t.test('troca inválida faz rollback; erro externo preserva a nova cobrança para recuperação', async () => {
+        const venda = await request('/vendas', { method: 'POST', body: novaVenda() }); const id = venda.body.pedidoId;
+        const rota = `/pagamentos/pedidos/${id}`;
+        const tap = await request(`${rota}/tap`, { method: 'POST', body: { payment_method: 'debit', installments: 1 } });
+        const dados = { metodo: 'checkout', pagamento_anterior_id: tap.body.pagamento_id, sem_pagamento: true };
+        const chave = process.env.INFINITEPAY_API_KEY; delete process.env.INFINITEPAY_API_KEY;
+        try { assert.equal((await request(`${rota}/trocar`, { method: 'POST', body: dados })).status, 503); }
+        finally { process.env.INFINITEPAY_API_KEY = chave; }
+        assert.equal((await request(rota)).body.pagamento.id, tap.body.pagamento_id);
+        modo = 'falha';
+        assert.equal((await request(`${rota}/trocar`, { method: 'POST', body: dados })).status, 502);
+        modo = 'ok';
+        const atual = (await request(rota)).body.pagamento;
+        assert.equal(atual.metodo, 'checkout'); assert.equal(atual.status, 'gerando');
+        await db.query("UPDATE pagamentos SET tentativa_em = CURRENT_TIMESTAMP - INTERVAL '1 minute' WHERE id = $1", [atual.id]);
+        const recuperado = await request(`${rota}/checkout`, { method: 'POST', body: {} });
+        assert.equal(recuperado.status, 200); assert.equal(recuperado.body.id, atual.id);
+        assert.equal((await db.query('SELECT COUNT(*)::int AS n FROM pagamentos WHERE pedido_id = $1', [id])).rows[0].n, 2);
     });
     await t.test('recusa do provedor identifica configuração ou dados sem expor corpo sensível nem mudar o payload', async () => {
         const venda = await request('/vendas', { method: 'POST', body: novaVenda() }); const id = venda.body.pedidoId;

@@ -145,21 +145,32 @@ async function preparar(pool, pedidoId, metodo, opcoes = {}) {
     return transacao(pool, async client => {
         const p = await pedidoBloqueado(client, pedidoId);
         const valor = valorPedido(p);
-        const { rows } = await client.query('SELECT * FROM pagamentos WHERE pedido_id = $1 FOR UPDATE', [pedidoId]);
+        const { rows } = await client.query('SELECT * FROM pagamentos WHERE pedido_id = $1 AND ativa = TRUE FOR UPDATE', [pedidoId]);
         if (rows.length) {
             const existente = rows[0];
-            if (existente.metodo !== metodo) throw new ErroPedido('Já existe uma cobrança para este pedido. Confira antes de trocar o meio de pagamento.');
             if (existente.status === 'pago') throw new ErroPedido('Este pedido já está pago.');
-            if (metodo === 'tap') {
-                if (!opcoes.reabrir_sem_pagamento) throw new ErroPedido('Já existe uma tentativa no InfiniteTap. Confira o resultado antes de iniciar outra cobrança.');
+            if (opcoes.trocar_apos_falha) {
+                if (existente.id !== opcoes.pagamento_anterior_id) throw new ErroPedido('A tentativa já mudou em outra tela. Reabra o pedido antes de continuar.');
+                if (existente.metodo !== 'tap' || existente.status !== 'pendente' || p.origem !== 'presencial') {
+                    throw new ErroPedido('A troca está disponível apenas para tentativa presencial no InfiniteTap sem pagamento registrado.');
+                }
+                await client.query(`UPDATE pagamentos SET ativa = FALSE, substituida_em = CURRENT_TIMESTAMP,
+                    substituida_por = $2 WHERE id = $1`, [existente.id, opcoes.admin_id]);
+                // A inserção da nova tentativa acontece nesta mesma transação. Se qualquer
+                // validação falhar, a anterior continua ativa pelo rollback.
+            } else {
+                if (existente.metodo !== metodo) throw new ErroPedido('Já existe uma cobrança para este pedido. Confira antes de trocar o meio de pagamento.');
+                if (metodo === 'tap') {
+                    if (!opcoes.reabrir_sem_pagamento) throw new ErroPedido('Já existe uma tentativa no InfiniteTap. Confira o resultado antes de iniciar outra cobrança.');
+                    return existente;
+                }
+                if (new Date(existente.expira_em) <= new Date()) throw new ErroPedido('A cobrança expirou. Confira a situação na InfinitePay antes de emitir outro pedido.');
+                if (existente.checkout_url) return existente;
+                if (Date.now() - new Date(existente.tentativa_em).getTime() < 30000) throw new ErroPedido('A cobrança está sendo gerada. Aguarde 30 segundos antes de tentar novamente.');
+                await client.query('UPDATE pagamentos SET tentativa_em = CURRENT_TIMESTAMP WHERE id = $1', [existente.id]);
                 return existente;
             }
-            if (new Date(existente.expira_em) <= new Date()) throw new ErroPedido('A cobrança expirou. Confira a situação na InfinitePay antes de emitir outro pedido.');
-            if (existente.checkout_url) return existente;
-            if (Date.now() - new Date(existente.tentativa_em).getTime() < 30000) throw new ErroPedido('A cobrança está sendo gerada. Aguarde 30 segundos antes de tentar novamente.');
-            await client.query('UPDATE pagamentos SET tentativa_em = CURRENT_TIMESTAMP WHERE id = $1', [existente.id]);
-            return existente;
-        }
+        } else if (opcoes.trocar_apos_falha) throw new ErroPedido('A tentativa anterior não foi encontrada. Reabra o pedido.');
         const id = randomUUID();
         const expira = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         let payload;
@@ -195,8 +206,8 @@ async function preparar(pool, pedidoId, metodo, opcoes = {}) {
     });
 }
 
-async function gerarCheckout(pool, pedidoId, fetchImpl) {
-    const pagamento = await preparar(pool, pedidoId, 'checkout');
+async function gerarCheckout(pool, pedidoId, fetchImpl, opcoes = {}) {
+    const pagamento = await preparar(pool, pedidoId, 'checkout', opcoes);
     if (pagamento.checkout_url) return pagamento;
     const resposta = await api('links', pagamento.payload, fetchImpl);
     const url = extrairCheckoutUrl(resposta);
@@ -211,6 +222,17 @@ async function iniciarTap(pool, pedidoId, dados) {
     const p = await preparar(pool, pedidoId, 'tap', dados);
     await pool.query("UPDATE pedidos SET status = 'aguardando_pagamento' WHERE id = $1 AND status = 'pendente'", [pedidoId]);
     return { pagamento_id: p.id, url: `infinitepaydash://infinitetap-app?${new URLSearchParams(p.payload)}` };
+}
+
+async function trocarFormaPagamento(pool, pedidoId, dados, adminId, fetchImpl) {
+    if (dados.sem_pagamento !== true) throw new ErroPedido('Confirme que a tentativa anterior não teve pagamento aprovado.', 400);
+    const opcoes = { trocar_apos_falha: true, pagamento_anterior_id: dados.pagamento_anterior_id, admin_id: adminId };
+    if (dados.metodo === 'checkout') {
+        const p = await gerarCheckout(pool, pedidoId, fetchImpl, opcoes);
+        return { metodo: 'checkout', pagamento_id: p.id, url: p.checkout_url };
+    }
+    const p = await iniciarTap(pool, pedidoId, { ...opcoes, payment_method: dados.payment_method, installments: dados.installments });
+    return { ...p, metodo: 'tap' };
 }
 
 async function confirmar(pool, id, dados, fetchImpl) {
@@ -233,6 +255,7 @@ async function registrarPago(pool, pagamento, nsu, slug, tipo, adminId = null) {
         if (tipo === 'manual_admin' && pedido.status === 'cancelado') throw new ErroPedido('Pedido cancelado: não é permitido confirmar recebimento manualmente.');
         const { rows } = await client.query('SELECT * FROM pagamentos WHERE id = $1 FOR UPDATE', [pagamento.id]);
         const atual = rows[0];
+        if (!atual || atual.ativa === false) throw new ErroPedido('Esta tentativa foi substituída. Reabra o pedido para conferir a tentativa atual.');
         if (atual.status === 'pago') {
             if (atual.transaction_nsu !== nsu) throw new ErroPedido('Esta cobrança já possui outra transação registrada.');
             return { pago: true, novo: false, pedidoId: pedido.id, cancelado: pedido.status === 'cancelado' };
@@ -244,10 +267,11 @@ async function registrarPago(pool, pagamento, nsu, slug, tipo, adminId = null) {
     });
 }
 
-async function conferirTap(pool, pedidoId, nsu, adminId) {
-    const { rows } = await pool.query("SELECT * FROM pagamentos WHERE pedido_id = $1 AND metodo = 'tap'", [pedidoId]);
+async function conferirTap(pool, pedidoId, nsu, adminId, pagamentoId) {
+    const { rows } = await pool.query("SELECT * FROM pagamentos WHERE pedido_id = $1 AND metodo = 'tap' AND ativa = TRUE", [pedidoId]);
     if (!rows[0]) throw new ErroPedido('Tentativa InfiniteTap não encontrada.', 404);
+    if (rows[0].id !== pagamentoId) throw new ErroPedido('Esta tentativa não é mais a atual. Reabra o pedido para conferir o pagamento correto.');
     return registrarPago(pool, rows[0], nsu, null, 'manual_admin', adminId);
 }
 
-module.exports = { configuracao, checkoutUrl, extrairCheckoutUrl, transacao, pedidoBloqueado, salvarEntrega, gerarCheckout, iniciarTap, confirmar, conferirTap };
+module.exports = { configuracao, checkoutUrl, extrairCheckoutUrl, transacao, pedidoBloqueado, salvarEntrega, gerarCheckout, iniciarTap, trocarFormaPagamento, confirmar, conferirTap };

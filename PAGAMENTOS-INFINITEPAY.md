@@ -4,7 +4,7 @@ Implementação local. A publicação continua pelo commit/push no GitHub e depl
 
 ## Ativação
 
-1. No SQL Editor do Neon do catálogo, execute **database/migrations/20261120_pagamentos_infinitepay.sql** e **database/migrations/20261120_venda_descontos.sql**, nessa ordem. Se a primeira já foi executada, basta executar a segunda. As migrações são aditivas e podem ser reaplicadas. Pedidos antigos preservam o total e ficam com frete ainda não definido.
+1. No SQL Editor do Neon do catálogo, execute **database/migrations/20261120_pagamentos_infinitepay.sql**, **database/migrations/20261120_venda_descontos.sql** e **database/migrations/20261120_troca_pagamento_tap.sql**, nessa ordem. Execute apenas as que ainda faltam. As migrações podem ser reaplicadas e preservam os pedidos e pagamentos existentes. A terceira substitui a unicidade de cobrança por pedido por unicidade de **tentativa ativa**, mantendo as anteriores no histórico.
 2. Na conta InfinitePay **davini-vinhos-finos**, ative **Checkout Integrado** nas configurações do checkout e gere uma API Key. Guarde a chave diretamente no ambiente **Production** do projeto Vercel; nunca envie pelo chat nem versione em arquivos.
 3. Configure na Vercel:
 
@@ -72,7 +72,22 @@ Pedidos cancelados não exibem essa opção e a API recusa confirmação manual 
 
 No débito, a seleção de parcelas fica desabilitada e é enviado pagamento à vista. No crédito, a tela oferece até 12 parcelas, respeitando o mínimo de R$1 por parcela. A elegibilidade e as taxas finais são conferidas no aplicativo InfinitePay; não são inventadas nem calculadas por uma tabela paralela do catálogo.
 
-Se o aplicativo não abriu ou a transação falhou, existe **Reabrir tentativa sem pagamento aprovado**, com confirmação explícita de que o operador verificou a ausência de pagamento na InfinitePay. A modalidade e as parcelas originais são preservadas. O deeplink do Tap não oferece garantia documentada de idempotência: reabrir sem conferir pode duplicar uma cobrança. Nunca reabra se já houver pagamento aprovado.
+Se o aplicativo não abriu ou a transação falhou, existe **Retomar a mesma tentativa**, com confirmação explícita de que o operador verificou a ausência de pagamento na InfinitePay. A modalidade e as parcelas originais são preservadas. O deeplink do Tap não oferece garantia documentada de idempotência: reabrir sem conferir pode duplicar uma cobrança. Nunca reabra se já houver pagamento aprovado.
+
+### Trocar a forma de pagamento após tentativa sem aprovação
+
+Reabra o mesmo pedido. Além de **Retomar a mesma tentativa**, há o formulário **Pagamento não aprovado? Escolha outra forma**:
+
+1. Confira na InfinitePay que a tentativa anterior não teve pagamento aprovado.
+2. Escolha **Débito por aproximação**, **Crédito por aproximação** (com parcelas) ou **Pix / crédito no checkout InfinitePay**.
+3. Marque a conferência e selecione **Continuar com a forma escolhida**.
+4. Para cartão por aproximação, toque no novo link para abrir o InfiniteTap. Para Pix, abra o checkout gerado e apresente ou envie o link ao cliente.
+
+A troca mantém o pedido, os itens, o desconto e o frete. Cada tentativa ganha outro identificador. A anterior fica inativa, com data/hora, administrador e payload original preservados no banco; as formas e datas aparecem em **Tentativas anteriores de pagamento**. Essa marca registra a conferência feita pelo operador, não uma recusa autenticada pelo provedor.
+
+A operação usa transação e trava por pedido; o banco permite somente uma tentativa ativa. Uma tela desatualizada não consegue substituir a tentativa atual nem confirmar recebimento com o identificador anterior. Pedidos pagos ou cancelados não permitem a troca. Se houver falha ao gerar o checkout depois de salvar a nova tentativa, reabra o pedido e recupere essa cobrança; o histórico anterior continua preservado.
+
+A troca é permitida **a partir de uma tentativa InfiniteTap pendente**, após conferência do operador. Não substitui um checkout ativo, pois seu link continua podendo ser pago e a API não oferece cancelamento desse link. O deeplink anterior também não é revogado no aplicativo: não volte a usá-lo após a troca. O controle depende da conferência de ausência de pagamento antes de mudar a forma.
 
 ## Cancelamento, expiração e estorno
 

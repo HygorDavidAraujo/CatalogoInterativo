@@ -33,7 +33,7 @@
     window.pagamentosAdmin = {
         async montar(pedido, alvo) {
             try {
-                const { pagamento: p } = await api(`/pagamentos/pedidos/${pedido.id}`, undefined, 'GET');
+                const { pagamento: p, historico = [] } = await api(`/pagamentos/pedidos/${pedido.id}`, undefined, 'GET');
                 if (!alvo.isConnected) return;
                 const bloqueado = Boolean(p) || ['cancelado', 'finalizado'].includes(pedido.status);
                 const totalProdutos = pedido.itens.reduce((s, i) => s + Number(i.subtotal), 0);
@@ -66,7 +66,15 @@
                     acoes.innerHTML = `<p>Uma tentativa de cobrança foi iniciada no InfiniteTap. Confira o resultado no aplicativo antes de registrar o pagamento.</p>
                         <form id="tap-conferencia" class="cobranca-form"><div class="campo-inteiro"><label for="tap-nsu">NSU da transação aprovada (UUID, não o código de autorização)</label><input id="tap-nsu" required pattern="[0-9a-fA-F-]{36}" maxlength="36" autocomplete="off"></div>
                         <label class="campo-inteiro"><input type="checkbox" id="tap-conferido" required> Conferi na minha conta InfinitePay o pagamento aprovado, o valor de ${moeda(pedido.total)} e o cliente desta venda.</label><button type="submit" class="btn btn-primary">Registrar pagamento conferido</button></form>
-                        ${['cancelado', 'finalizado'].includes(pedido.status) ? '' : '<button type="button" id="tap-reabrir" class="btn btn-secondary">Reabrir tentativa sem pagamento aprovado</button>'}`;
+                        ${['cancelado', 'finalizado'].includes(pedido.status) ? '' : `<button type="button" id="tap-reabrir" class="btn btn-secondary">Retomar a mesma tentativa</button>
+                        <form id="tap-trocar-form" class="cobranca-form">
+                            <h4 class="campo-inteiro">Pagamento não aprovado? Escolha outra forma</h4>
+                            <div><label for="tap-nova-forma">Forma de pagamento</label><select id="tap-nova-forma"><option value="debit">Débito por aproximação</option><option value="credit">Crédito por aproximação</option><option value="checkout">Pix / crédito no checkout InfinitePay</option></select></div>
+                            <div><label for="tap-novas-parcelas">Parcelas no crédito por aproximação</label><select id="tap-novas-parcelas">${Array.from({ length: Math.min(12, Math.floor(Number(pedido.total))) }, (_, i) => `<option value="${i + 1}">${i + 1}x${i ? '' : ' (à vista)'}</option>`).join('')}</select></div>
+                            <label class="campo-inteiro"><input type="checkbox" id="tap-sem-pagamento" required> Conferi na InfinitePay que a tentativa anterior não teve pagamento aprovado.</label>
+                            <p class="campo-inteiro">Para Pix, o cliente paga pelo checkout. A tentativa anterior ficará no histórico; o valor e os descontos deste pedido serão mantidos.</p>
+                            <button type="submit" class="btn btn-primary">Continuar com a forma escolhida</button>
+                        </form>`}`;
                     $('tap-reabrir')?.addEventListener('click', () => {
                         if (!window.confirm('Confira primeiro no aplicativo InfinitePay: esta tentativa NÃO teve pagamento aprovado? Reabrir uma venda já paga pode cobrar o cliente novamente.')) return;
                         executar(acoes, feedback, async () => {
@@ -78,13 +86,53 @@
                     });
                     $('tap-conferencia').addEventListener('submit', event => {
                         event.preventDefault();
-                        const dados = { transaction_nsu: $('tap-nsu').value.trim(), conferido: $('tap-conferido').checked };
+                        const dados = { transaction_nsu: $('tap-nsu').value.trim(), pagamento_id: p.id, conferido: $('tap-conferido').checked };
                         executar($('tap-conferencia'), feedback, async () => {
                             await api(`/pagamentos/pedidos/${pedido.id}/tap/conferir`, dados);
                             await window.pedidosAdmin.abrir(pedido.id);
                             window.pedidosAdmin.listar();
                         });
                     });
+                    if ($('tap-trocar-form')) {
+                        $('tap-nova-forma').value = p.modalidade === 'credit' ? 'credit' : 'debit';
+                        $('tap-novas-parcelas').value = String(p.parcelas || 1);
+                        const atualizarParcelas = () => {
+                            const credito = $('tap-nova-forma').value === 'credit';
+                            $('tap-novas-parcelas').disabled = !credito;
+                            if (!credito) $('tap-novas-parcelas').value = '1';
+                        };
+                        atualizarParcelas();
+                        $('tap-nova-forma').addEventListener('change', atualizarParcelas);
+                        $('tap-trocar-form').addEventListener('submit', event => {
+                            event.preventDefault();
+                            const forma = $('tap-nova-forma').value;
+                            const dados = { metodo: forma === 'checkout' ? 'checkout' : 'tap', pagamento_anterior_id: p.id,
+                                sem_pagamento: $('tap-sem-pagamento').checked };
+                            if (dados.metodo === 'tap') { dados.payment_method = forma; dados.installments = Number($('tap-novas-parcelas').value); }
+                            executar(acoes, feedback, async () => {
+                                let resultado;
+                                try { resultado = await api(`/pagamentos/pedidos/${pedido.id}/trocar`, dados); }
+                                catch (error) {
+                                    // A nova tentativa pode ter sido salva antes de uma falha externa.
+                                    // Reabrir mostra a cobrança atual e permite recuperá-la sem duplicar.
+                                    await window.pedidosAdmin.abrir(pedido.id);
+                                    const mensagem = $('cobranca-feedback'); if (mensagem) mensagem.textContent = error.message;
+                                    return;
+                                }
+                                if (resultado.metodo === 'checkout') {
+                                    await window.pedidosAdmin.abrir(pedido.id);
+                                } else {
+                                    const link = document.createElement('a'); link.className = 'btn btn-primary';
+                                    link.textContent = 'Abrir InfiniteTap com a nova forma'; link.href = resultado.url;
+                                    const voltar = document.createElement('button'); voltar.type = 'button'; voltar.className = 'btn btn-secondary';
+                                    voltar.textContent = 'Atualizar resultado no pedido'; voltar.addEventListener('click', () => window.pedidosAdmin.abrir(pedido.id));
+                                    acoes.replaceChildren(link, voltar);
+                                    link.addEventListener('click', () => { setTimeout(() => window.pedidosAdmin.abrir(pedido.id), 1500); }, { once: true });
+                                    feedback.textContent = 'Nova tentativa preparada. Confira o resultado no aplicativo InfinitePay antes de registrar o recebimento.';
+                                }
+                            });
+                        });
+                    }
                 } else if (p?.checkout_url) {
                     if (new Date(p.expira_em) <= new Date()) {
                         acoes.textContent = 'Link expirado. Confira a cobrança na InfinitePay antes de emitir outro pedido.';
@@ -138,6 +186,17 @@
                             });
                         });
                     }
+                }
+                if (historico.length) {
+                    const detalhes = document.createElement('details');
+                    const titulo = document.createElement('summary'); titulo.textContent = 'Tentativas anteriores de pagamento'; detalhes.append(titulo);
+                    const lista = document.createElement('ul');
+                    historico.forEach(tentativa => {
+                        const item = document.createElement('li');
+                        item.textContent = `${tentativa.modalidade === 'debit' ? 'Débito' : 'Crédito'} · ${Number(tentativa.parcelas || 1)}x · substituída em ${new Date(tentativa.substituida_em).toLocaleString('pt-BR')} após conferência do operador.`;
+                        lista.append(item);
+                    });
+                    detalhes.append(lista); alvo.append(detalhes);
                 }
             } catch (error) { if (alvo.isConnected) alvo.textContent = error.message; }
         }

@@ -252,3 +252,14 @@ ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS desconto_manual NUMERIC(10,2) NOT N
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS desconto_tipo VARCHAR(20) CHECK (desconto_tipo IN ('valor','percentual'));
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS desconto_valor NUMERIC(10,2) CHECK (desconto_valor >= 0);
 COMMIT;
+
+-- Histórico de tentativas e troca após falha no InfiniteTap
+-- Permite substituir tentativas presenciais sem apagar o histórico.
+BEGIN;
+ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS ativa BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS substituida_em TIMESTAMPTZ;
+ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS substituida_por INTEGER REFERENCES usuarios(id);
+ALTER TABLE pagamentos DROP CONSTRAINT IF EXISTS pagamentos_pedido_id_key;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pagamentos_pedido_ativo ON pagamentos(pedido_id) WHERE ativa = TRUE;
+CREATE INDEX IF NOT EXISTS idx_pagamentos_pedido_historico ON pagamentos(pedido_id, created_at DESC);
+COMMIT;
