@@ -126,6 +126,25 @@ test('schema e migração aceitam exatamente os status compartilhados e os nomes
     assert.deepEqual(estadosDoSql(migration).sort(), esperados);
 });
 
+test('total gasto do cliente exclui pedidos cancelados sem apagar seu histórico', () => {
+    const { context } = criarTelas();
+    const pedidos = [
+        { status: 'finalizado', total: '100.00' },
+        { status: 'cancelado', total: '119.00' },
+        { status: 'entregue', total: '25.50' }
+    ];
+    assert.equal(context.calcularTotalGasto(pedidos), '125,50');
+    assert.equal(pedidos.length, 3);
+    assert.equal(pedidos[1].status, 'cancelado');
+});
+
+test('cliente com somente pedidos cancelados tem total gasto zero', () => {
+    const { context } = criarTelas();
+    assert.equal(context.calcularTotalGasto([{ status: 'cancelado', total: '119.00' }]), '0,00');
+    assert.equal(context.calcularTotalGasto([{ status: ' CANCELADO ', total: '119.00' }]), '0,00');
+    assert.equal(context.calcularTotalGasto([]), '0,00');
+});
+
 test('as duas páginas carregam a definição compartilhada antes do código que renderiza pedidos', () => {
     for (const [htmlFile, consumer] of [['clientes.html', 'js/clientes.js'], ['meu-perfil.html', 'js/perfil.js']]) {
         const html = fs.readFileSync(path.join(root, htmlFile), 'utf8');

@@ -290,7 +290,10 @@ function fecharModalCliente() {
 }
 
 function calcularTotalGasto(pedidos) {
-    const total = pedidos.reduce((sum, pedido) => sum + parseFloat(pedido.total), 0);
+    const total = pedidos.reduce((sum, pedido) => {
+        if (window.PedidoStatus.normalizar(pedido.status) === 'cancelado') return sum;
+        return sum + parseFloat(pedido.total);
+    }, 0);
     return total.toFixed(2).replace('.', ',');
 }
 
