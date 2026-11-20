@@ -76,6 +76,10 @@ app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, 'admin.ht
 app.get('/clientes.html', (req, res) => res.sendFile(path.join(__dirname, 'clientes.html')));
 app.get('/meu-perfil.html', (req, res) => res.sendFile(path.join(__dirname, 'meu-perfil.html')));
 app.get('/reset-senha.html', (req, res) => res.sendFile(path.join(__dirname, 'reset-senha.html')));
+app.get('/pagamento-retorno.html', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(path.join(__dirname, 'pagamento-retorno.html'));
+});
 app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
 app.get('/sw.js', (req, res) => res.sendFile(path.join(__dirname, 'sw.js')));
 app.get('/favicon.ico', (req, res) => res.redirect(308, '/images/favicon.svg'));
@@ -95,6 +99,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/beneficios', beneficiosRoutes);
 app.use('/api/notificacoes', require('./routes/notificacoes'));
+app.use('/api/pagamentos', require('./routes/pagamentos'));
+app.use('/api/vendas-rapidas', require('./routes/vendas-rapidas'));
 
 // Setup route apenas em desenvolvimento
 if (isDevelopment) {

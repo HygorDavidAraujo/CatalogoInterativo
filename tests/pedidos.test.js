@@ -265,7 +265,8 @@ test('WhatsApp usa os mesmos nomes, preços e total confirmados pela API', async
     const mensagem = new URL(state.aberturas[0]).searchParams.get('text');
     assert.match(mensagem, /Merlot do banco/);
     assert.match(mensagem, /Preço Unit: R\$ 100,00/);
-    assert.match(mensagem, /TOTAL: R\$ 200,00/);
+    assert.match(mensagem, /PRODUTOS: R\$ 200,00/);
+    assert.match(mensagem, /Frete e entrega a combinar/);
     assert.doesNotMatch(mensagem, /Nome desatualizado/);
     assert.equal(state.carrinho.itens.length, 0);
     assert.equal(state.btn.disabled, false);

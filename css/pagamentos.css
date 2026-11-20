@@ -1,0 +1,4 @@
+.pagamento-retorno { width: min(640px, calc(100% - 2rem)); margin: 10vh auto; padding: 2rem; background: white; border: 1px solid #e3d7dd; border-radius: 16px; box-shadow: 0 8px 32px #6b1c4010; }
+.pagamento-retorno h1 { color: #6b1c40; }
+.pagamento-retorno p { margin: 1rem 0; overflow-wrap: anywhere; }
+.pagamento-retorno .btn { margin: .5rem .5rem .5rem 0; }

@@ -3,7 +3,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const navegacao = document.querySelector('.painel-navegacao');
         if (!navegacao) return;
-        const secoes = ['pedidos-recebidos', 'catalogo', 'clientes', 'configuracoes'];
+        const secoes = ['pedidos-recebidos', 'venda-rapida', 'catalogo', 'clientes', 'configuracoes'];
         const links = [...navegacao.querySelectorAll('[data-painel-link]')];
         const tabs = [...document.querySelectorAll('[data-catalogo-tab]')];
         let guiaCatalogo = 'lista';

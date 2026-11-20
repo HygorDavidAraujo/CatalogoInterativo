@@ -13,7 +13,8 @@ const requiredTables = [
     'sessoes_usuario',
     'notificacoes_pedidos',
     'notificacoes_leituras',
-    'push_inscricoes'
+    'push_inscricoes',
+    'pagamentos'
 ];
 
 router.get('/setup', async (req, res) => {

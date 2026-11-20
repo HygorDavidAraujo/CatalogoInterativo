@@ -309,7 +309,8 @@ class CarrinhoManager {
             });
 
             mensagem += `\n━━━━━━━━━━━━━━━━\n`;
-            mensagem += `*TOTAL: R$ ${resultado.total.toFixed(2).replace('.', ',')}*`;
+            mensagem += `*PRODUTOS: R$ ${resultado.total.toFixed(2).replace('.', ',')}*`;
+            mensagem += '\nFrete e entrega a combinar. Aguardo o valor final e o link para pagamento.';
 
             // Buscar número do WhatsApp das configurações
             await vinhoManager.carregarConfiguracoes();

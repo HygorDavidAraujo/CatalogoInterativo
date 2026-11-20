@@ -33,7 +33,10 @@
                     this.encerrar();
                     throw new Error('Acesso expirado. Entre novamente como administrador.');
                 }
-                if (!response.ok) throw new Error('Não foi possível concluir a operação. Tente novamente.');
+                if (!response.ok) {
+                    const erro = await response.json().catch(() => ({}));
+                    throw new Error(erro.error || 'Não foi possível concluir a operação. Tente novamente.');
+                }
                 return await response.json();
             } finally {
                 clearTimeout(timeout);
@@ -137,7 +140,9 @@
                     <form id="pedido-status-form" class="pedidos-filtros" data-status-atual="${atual.valor}">
                         <div><label for="pedido-novo-status">Status do pedido #${p.id}</label><select id="pedido-novo-status">${!atual.valor ? '<option value="" selected disabled>Status não reconhecido</option>' : ''}${window.PedidoStatus.opcoes.map(o => `<option value="${o.valor}" ${o.valor === atual.valor ? 'selected' : ''}>${o.label}</option>`).join('')}</select></div>
                         <button type="submit" class="btn btn-primary">Salvar status</button>
-                    </form><p id="pedido-status-feedback" role="status"></p>`;
+                    </form><p id="pedido-status-feedback" role="status"></p>
+                    <section class="pedido-cobranca" id="pedido-cobranca" aria-label="Entrega e pagamento"></section>`;
+                window.pagamentosAdmin?.montar(pedido, painel.querySelector('#pedido-cobranca'));
                 painel.querySelector('[data-fechar-pedido]').addEventListener('click', () => this.fechar());
                 painel.querySelector('.pedido-cliente-link').addEventListener('click', event => {
                     if (!window.clientesPainel) return;

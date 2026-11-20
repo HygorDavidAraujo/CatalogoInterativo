@@ -1,5 +1,5 @@
 // ===== SERVICE WORKER BÁSICO =====
-const CACHE_NAME = 'davini-vinhos-v6';
+const CACHE_NAME = 'davini-vinhos-v7';
 const PUSH_STATE_CACHE = 'davini-push-dispositivo';
 const urlsToCache = [
   '/',
@@ -52,6 +52,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Apenas cachear GET requests
   if (event.request.method !== 'GET') return;
+
+  // Retornos financeiros contêm referências de transação; nunca persistir em cache.
+  if (new URL(event.request.url).pathname === '/pagamento-retorno.html') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   // Não interceptar API
   if (event.request.url.includes('/api/')) {

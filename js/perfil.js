@@ -577,6 +577,8 @@ class PerfilManager {
                         ${itensHtml}
                     </div>
                     <div class="pedido-resumo">
+                        <div class="resumo-linha"><span>Frete</span><span>${pedido.frete == null ? 'A combinar com a loja' : `R$ ${Number(pedido.frete).toFixed(2).replace('.', ',')}`}</span></div>
+                        ${pedido.entrega_detalhes ? `<p>${pedido.entrega_detalhes}</p>` : ''}
                         <div class="resumo-linha total">
                             <span>Total</span>
                             <span>R$ ${total.toFixed(2).replace('.', ',')}</span>

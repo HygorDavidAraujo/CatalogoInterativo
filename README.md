@@ -465,6 +465,18 @@ antes do deploy desta versão. Ela cria os avisos na mesma transação do pedido
 gera notificações retroativas para pedidos antigos. Todas as consultas operacionais
 exigem administrador e desabilitam cache.
 
+## Pagamentos InfinitePay e venda rápida
+
+O painel permite definir entrega/frete antes de gerar um checkout de uso único,
+compartilhar o link pelo WhatsApp e registrar vendas presenciais com os benefícios
+do cliente. A confirmação online consulta a API InfinitePay. O InfiniteTap é
+acionado pelo Android e, nesta versão, exige conferência do pagamento pelo
+administrador; o retorno físico ainda precisa ser validado no aparelho.
+
+Antes do deploy, execute a migração e configure as variáveis da conta da loja.
+Consulte [PAGAMENTOS-INFINITEPAY.md](PAGAMENTOS-INFINITEPAY.md) para ativação,
+operação, testes e limitações de cancelamento e estorno.
+
 ## 🎯 Melhorias Futuras
 
 - ✅ Sistema completo de backend com Node.js

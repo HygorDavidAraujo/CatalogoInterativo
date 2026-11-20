@@ -33,7 +33,7 @@
 #clientes .input-filtro { width: 100%; min-height: 46px; padding: .75rem 1rem .75rem 2.8rem; border: 1px solid #c8c8ce; border-radius: 8px; font: inherit; }
 #clientes .input-filtro:focus-visible { outline: 2px solid #6b1c40; outline-offset: 2px; }
 #clientes .tabela-clientes td { overflow-wrap: anywhere; }
-.painel-navegacao { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; margin-bottom: 1.5rem; scroll-margin-top: 1rem; }
+.painel-navegacao { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .65rem; margin-bottom: 1.5rem; scroll-margin-top: 1rem; }
 .painel-navegacao a { display: flex; justify-content: center; align-items: center; gap: .6rem; min-height: 48px; padding: .85rem .65rem; border: 1px solid #d6cbd1; border-radius: 10px; background: white; color: #6b1c40; font-weight: 600; text-decoration: none; }
 .painel-navegacao a[aria-current="page"] { background: #6b1c40; color: white; border-color: #6b1c40; }
 .painel-navegacao a:hover { box-shadow: 0 2px 8px #6b1c401c; }
@@ -1439,3 +1439,21 @@
         font-size: 0.9rem;
     }
 }
+
+/* Entrega, cobrança e atendimento presencial */
+.cobranca-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0; }
+.cobranca-form > div { min-width: 0; }
+.cobranca-form label { display: block; margin-bottom: .4rem; }
+.cobranca-form input:not([type="checkbox"]), .cobranca-form select, .cobranca-form textarea { width: 100%; min-height: 44px; padding: .75rem; border: 1px solid #cdbfc6; border-radius: 8px; font: inherit; background: #fff; }
+.cobranca-form textarea { min-height: 85px; resize: vertical; }
+.cobranca-form input[type="checkbox"] { width: 20px; height: 20px; vertical-align: middle; accent-color: #6b1c40; }
+.cobranca-form .campo-inteiro { grid-column: 1 / -1; }
+.cobranca-form fieldset { padding: 1rem; border: 1px solid #e1d5dc; border-radius: 10px; }
+.cobranca-form [disabled] { opacity: .65; cursor: not-allowed; }
+.cobranca-form [hidden] { display: none !important; }
+.cobranca-botoes { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: .75rem 0; }
+.cobranca-botoes input { flex: 1; min-width: 140px; }
+.pedido-cobranca { border-top: 1px solid #ded3d9; margin-top: 1.5rem; padding-top: 1.5rem; overflow-wrap: anywhere; }
+.cobranca-paga { padding: 1rem; border-radius: 8px; background: #eaf5ee; color: #205d39; }
+#venda-itens { margin: 0; }
+@media (max-width: 600px) { .cobranca-form { grid-template-columns: 1fr; } .cobranca-botoes .btn { width: 100%; } }

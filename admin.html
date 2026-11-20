@@ -57,6 +57,7 @@
         <div class="container">
             <nav class="painel-navegacao" aria-label="Seções do painel">
                 <a href="#pedidos-recebidos" data-painel-link="pedidos-recebidos" aria-current="page"><i class="fa-solid fa-receipt" aria-hidden="true"></i> Pedidos</a>
+                <a href="#venda-rapida" data-painel-link="venda-rapida"><i class="fa-solid fa-cash-register" aria-hidden="true"></i> Venda rápida</a>
                 <a href="#catalogo" data-painel-link="catalogo"><i class="fa-solid fa-wine-bottle" aria-hidden="true"></i> Catálogo</a>
                 <a href="#clientes" data-painel-link="clientes"><i class="fa-solid fa-users" aria-hidden="true"></i> Clientes</a>
                 <a href="#configuracoes" data-painel-link="configuracoes"><i class="fa-solid fa-gear" aria-hidden="true"></i> Configurações</a>
@@ -90,6 +91,28 @@
                     <button type="button" class="btn btn-secondary" id="pedidos-proxima" disabled>Próxima</button>
                 </nav>
                 <section id="pedido-detalhe" class="pedido-detalhe" aria-label="Detalhes do pedido" hidden></section>
+            </section>
+            <section class="admin-card admin-card-full" id="venda-rapida" aria-labelledby="titulo-venda-rapida" hidden>
+                <div class="pedidos-cabecalho"><div><h2 id="titulo-venda-rapida" tabindex="-1">Venda rápida presencial</h2><p>Selecione o cliente, adicione os vinhos e registre a venda para cobrar.</p></div><button type="button" class="btn btn-secondary" id="venda-nova">Nova venda</button></div>
+                <form id="venda-form" class="cobranca-form">
+                    <div class="campo-inteiro"><label for="venda-busca-cliente">Buscar cliente por nome, telefone ou e-mail</label><div class="cobranca-botoes"><input type="search" id="venda-busca-cliente" maxlength="150"><button type="button" id="venda-buscar" class="btn btn-secondary">Buscar cliente</button></div></div>
+                    <div class="campo-inteiro"><label for="venda-cliente">Cliente cadastrado (até 50 resultados por busca)</label><select id="venda-cliente"><option value="">Selecione um cliente</option></select></div>
+                    <label class="campo-inteiro"><input type="checkbox" id="venda-novo-cliente"> Pré-cadastrar novo cliente</label>
+                    <fieldset class="campo-inteiro cobranca-form" id="venda-precadastro" hidden><legend>Dados do cliente</legend>
+                        <div><label for="venda-nome">Nome completo</label><input id="venda-nome" minlength="3" maxlength="255" autocomplete="name" disabled></div>
+                        <div><label for="venda-telefone">Telefone com DDD</label><input id="venda-telefone" type="tel" maxlength="20" placeholder="(62)99999-9999" autocomplete="tel" disabled></div>
+                        <div class="campo-inteiro"><label for="venda-email">E-mail</label><input id="venda-email" type="email" maxlength="255" autocomplete="email" disabled></div>
+                        <p class="campo-inteiro">Não é necessário criar senha no atendimento. O cliente pode definir seu acesso depois usando “Esqueci minha senha” com este e-mail.</p>
+                    </fieldset>
+                    <div><label for="venda-produto">Vinho</label><select id="venda-produto"><option value="">Selecione um vinho</option></select></div>
+                    <div><label for="venda-quantidade">Quantidade</label><input id="venda-quantidade" type="number" min="1" max="999" value="1"></div>
+                    <button type="button" id="venda-adicionar" class="btn btn-secondary">Adicionar vinho</button>
+                    <ul id="venda-itens" class="pedido-fila-itens campo-inteiro"></ul>
+                    <div class="campo-inteiro"><label for="venda-observacoes">Observações</label><textarea id="venda-observacoes" maxlength="1000"></textarea></div>
+                    <p class="campo-inteiro">Retirada presencial, sem frete. Você poderá ajustar a entrega no pedido antes de iniciar a cobrança. O total considera os benefícios do cliente selecionado.</p>
+                    <button type="submit" class="btn btn-primary" id="venda-registrar">Registrar venda e conferir total</button>
+                </form>
+                <p id="venda-feedback" role="status"></p><button type="button" id="venda-abrir-pedido" class="btn btn-secondary" hidden>Abrir venda para cobrar</button>
             </section>
             <!-- Lista de Clientes -->
             <section class="admin-card admin-card-full" id="clientes" aria-labelledby="titulo-clientes" hidden>
@@ -776,6 +799,7 @@
     <script src="js/admin-acesso.js"></script>
     <script src="js/pedido-status.js"></script>
     <script src="js/pedidos-admin.js"></script>
+    <script src="js/pagamentos-admin.js"></script>
     <script src="js/notificacoes-admin.js"></script>
     <script src="js/clientes.js"></script>
     <script src="js/clientes-vip.js"></script>
