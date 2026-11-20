@@ -5,3 +5,12 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.error('SW registro falhou:', err));
     });
 }
+
+window.desativarPushDispositivo = () => {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.getRegistration().then(async registro => {
+        registro?.active?.postMessage({ tipo: 'PUSH_PREFERENCIA', ativo: false });
+        const inscricao = await registro?.pushManager?.getSubscription();
+        await inscricao?.unsubscribe();
+    }).catch(() => {});
+};

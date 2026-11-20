@@ -279,9 +279,11 @@ function atualizarStatusDestaque(config) {
         const expiraEm = new Date(fixadoEm.getTime() + 7 * 24 * 60 * 60 * 1000);
         const dataFixada = fixadoEm.toLocaleDateString('pt-BR');
         const dataExpira = expiraEm.toLocaleDateString('pt-BR');
-        status.textContent = `Fixado em ${dataFixada}. Valido ate ${dataExpira} ou ate substituicao.`;
+        status.textContent = expiraEm.getTime() <= Date.now()
+            ? `Fixação encerrada em ${dataExpira}. A seleção semanal automática está ativa.`
+            : `Fixado em ${dataFixada}. Válido até ${dataExpira}, enquanto o produto estiver visível.`;
     } else {
-        status.textContent = 'Sem destaque fixado. O sistema escolhe automaticamente.';
+        status.textContent = 'Seleção semanal automática, atualizada às segundas-feiras no horário de Brasília.';
     }
 }
 

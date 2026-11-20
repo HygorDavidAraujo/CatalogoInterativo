@@ -1,24 +1,15 @@
-// Proteger página admin - executar imediatamente
-(function() {
-    console.log('=== VERIFICAÇÃO DE ACESSO ADMIN ===');
-
-    // Verificar sessionStorage diretamente
-    const usuarioSalvo = sessionStorage.getItem('usuario');
-    console.log('SessionStorage usuario:', usuarioSalvo);
-
-    if (usuarioSalvo) {
-        const usuario = JSON.parse(usuarioSalvo);
-        console.log('Usuário parseado:', usuario);
-        console.log('isAdmin:', usuario.isAdmin);
-
-        if (usuario.isAdmin === true) {
-            console.log('✅ Acesso permitido!');
-            return; // Permitir acesso
-        }
+// Uma janela aberta por push pode ter token persistido, mas não sessionStorage.
+(async function() {
+    const auth = window.authManager;
+    if (!auth?.obterToken()) { window.location.replace('index.html'); return; }
+    const valido = await auth.validarSessao();
+    if (valido === true && auth.isAdmin()) return;
+    if (valido === null) {
+        const mensagem = document.createElement('p');
+        mensagem.setAttribute('role', 'alert');
+        mensagem.textContent = 'Não foi possível verificar o acesso. Recarregue o painel para tentar novamente.';
+        document.querySelector('main')?.prepend(mensagem);
+        return;
     }
-
-    // Se chegou aqui, não tem acesso
-    console.log('❌ Acesso negado! Redirecionando...');
-    alert('Acesso negado! Apenas administradores podem acessar esta página.');
-    window.location.href = 'index.html';
+    window.location.replace('index.html');
 })();

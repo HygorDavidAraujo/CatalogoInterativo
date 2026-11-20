@@ -1,4 +1,30 @@
 /* ===== ESTILOS ADMIN ===== */
+.admin-body { --sombra: 0 6px 22px #33212b09; }
+.central-notificacoes { scroll-margin-top: 1rem; border: 1px solid #d9c0ce; margin-bottom: 1.5rem; }
+.central-notificacoes h2 { color: #610831; }
+.central-notificacoes button:disabled { opacity: .45; cursor: default; }
+.central-notificacoes > p, .central-notificacoes .pedidos-cabecalho p { color: #655963; font-size: .9rem; }
+.notificacoes-acoes { display: flex; flex-wrap: wrap; gap: .7rem; margin: 1rem 0; }
+.notificacao-item { display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: #fbf3f7; border: 1px solid #ecd8e2; border-left: 3px solid #8b2e5a; border-radius: 10px; padding: 1rem; margin: .7rem 0; }
+.notificacao-item h3 { font-size: 1rem; margin: .3rem 0; color: #35252e; }
+.notificacao-item p { font-size: .83rem; color: #655963; }
+.notificacao-lida { background: #fafafa; border-color: #e6e2e5; }
+.notificacao-situacao { font-size: .7rem; color: #6b1c40; text-transform: uppercase; font-weight: 700; letter-spacing: .04em; }
+.notificacoes-vazio { padding: 1.5rem; background: #faf8fa; border-radius: 10px; text-align: center; }
+#notificacoes-contador { background: #ead7b5; color: #472e1a; border-radius: 16px; padding: .1rem .45rem; min-width: 1.5em; }
+.admin-body .admin-card { border: 1px solid #e5dfe3; border-radius: 16px; }
+.admin-body .painel-navegacao { gap: .8rem; }
+.admin-body .painel-navegacao a { box-shadow: 0 2px 6px #34202c05; }
+.admin-body .pedido-fila { border-radius: 10px; padding: 1rem; margin: .6rem 0; border: 1px solid #ebe4e8; background: #fff; }
+.admin-body .pedido-fila:hover { background: #fcf8fa; border-color: #ddc6d2; }
+@media (max-width: 600px) {
+    .admin-header h1 { font-size: 1.2rem !important; }
+    .admin-header .admin-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: .6rem; }
+    .admin-header .admin-nav .btn, .admin-header .btn-voltar { width: 100%; min-width: 0; padding: .65rem .4rem; min-height: 44px; justify-content: center; text-align: center; font-size: .8rem; }
+    .notificacao-item { align-items: stretch; flex-direction: column; gap: .6rem; }
+    .notificacoes-acoes .btn { width: 100%; }
+}
+
 .admin-main [hidden] { display: none !important; }
 #clientes .clientes-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 #clientes .filtros-clientes { display: flex; gap: .7rem; flex-wrap: wrap; }

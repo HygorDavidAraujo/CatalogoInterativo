@@ -272,17 +272,17 @@ async function renderizarVinhos(filtro = 'todos', busca = '', ordenacao = 'padra
         
         return `
             <div class="vinho-card" data-id="${vinho.id}">
-                <img src="${imagemSrc}" 
+                <div class="vinho-media"><img src="${imagemSrc}"
                      alt="${vinho.nome}" 
                      class="vinho-imagem" 
-                     loading="lazy">
+                     loading="lazy"></div>
                 <div class="vinho-info">
                     <span class="vinho-tipo tipo-${vinho.tipo}">${capitalizar(vinho.tipo)}</span>
                     <h3 class="vinho-nome">${vinho.nome}</h3>
                     ${complemento ? `<p class="vinho-complemento">${complemento}</p>` : ''}
                     ${etiquetasPerfil(ficha)}
-                    <p class="vinho-uva">${vinho.uva}</p>
-                    <p class="vinho-ano">${vinho.ano == null ? 'Sem safra' : `Safra ${vinho.ano}`}</p>
+                    <div class="vinho-metadados"><p class="vinho-uva">${vinho.uva}</p>
+                    <p class="vinho-ano">${vinho.ano == null ? 'Sem safra' : `Safra ${vinho.ano}`}</p></div>
                     ${pais ? `<p class="vinho-pais">${bandeira ? `<img src="${bandeira}" alt="Bandeira" width="22" height="14" loading="lazy">` : ''}<span>${pais}</span></p>` : ''}
                     <p class="vinho-preco" data-preco-vinho="${vinho.id}">${renderizarPrecoVinho(vinhoOriginal)}</p>
                     <button type="button" class="btn-detalhes" data-detalhes-vinho="${vinho.id}">Ver detalhes<span class="sr-only"> de ${vinho.nome}</span></button>
@@ -337,20 +337,9 @@ async function renderizarDestaqueSemana() {
         }
 
         const config = vinhoManager.configuracoes || {};
-        const destaqueId = config.destaque_vinho_id ? Number(config.destaque_vinho_id) : null;
-        const destaqueFixadoEm = config.destaque_fixado_em ? new Date(config.destaque_fixado_em) : null;
-        const limiteFixacao = 7 * 24 * 60 * 60 * 1000;
-        const fixacaoValida = destaqueId && destaqueFixadoEm && (Date.now() - destaqueFixadoEm.getTime() <= limiteFixacao);
-
-        let vinho = null;
-        if (fixacaoValida) {
-            vinho = vinhosAtivos.find(item => item.id === destaqueId) || null;
-        }
-
-        if (!vinho) {
-            const index = calcularIndiceAleatorioDoDia(vinhosAtivos.length);
-            vinho = vinhosAtivos[index];
-        }
+        let vinho = window.DestaqueVinho
+            ? window.DestaqueVinho.selecionar(vinhosAtivos, config)
+            : vinhosAtivos[calcularIndiceAleatorioDoDia(vinhosAtivos.length)];
         vinho = window.RenderSeguro.dados(vinho);
 
         const imagemSrc = vinho.imagem || '/images/placeholder-80x80.svg';

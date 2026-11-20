@@ -108,3 +108,12 @@ npm start
 ```
 
 O endpoint de desenvolvimento `/api/setup/setup` apenas verifica se as tabelas esperadas existem. O schema deve ser aplicado pelo SQL Editor do Neon.
+
+## Notificações persistentes e push
+
+Antes do deploy, execute `database/migrations/20261119_notificacoes_push.sql` no Neon.
+Configure `WEBPUSH_PUBLIC_KEY`, `WEBPUSH_PRIVATE_KEY` e `WEBPUSH_SUBJECT` na Vercel,
+preservando as mesmas chaves entre deployments. Nesta implementação, a configuração
+de produção já foi feita com autorização do responsável, que também confirmou a
+execução da migração. Depois do deploy, cada administrador ativa o dispositivo em
+**Avisos → Ativar neste dispositivo**. Consulte [NOTIFICACOES-PUSH.md](NOTIFICACOES-PUSH.md).

@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "verificar:producao": "node scripts/verificar-producao.js",
-    "test": "node --test tests/pedidos.test.js tests/auth.test.js tests/pedido-status.test.js tests/pedidos-admin.test.js tests/vinhos.test.js tests/email.test.js tests/render-seguro.test.js tests/precos.test.js tests/beneficios.test.js tests/imagens.test.js",
+    "test": "node --test tests/pedidos.test.js tests/auth.test.js tests/pedido-status.test.js tests/pedidos-admin.test.js tests/vinhos.test.js tests/email.test.js tests/render-seguro.test.js tests/precos.test.js tests/beneficios.test.js tests/imagens.test.js tests/notificacoes.test.js",
     "migrate:mysql-to-neon": "node scripts/migrate-mysql-to-neon.js"
   },
   "keywords": [
@@ -39,6 +39,7 @@
     "mysql2": "^3.6.5",
     "pg": "^8.23.1",
     "resend": "^6.17.1",
+    "web-push": "^4.0.0",
     "winston": "^3.19.0",
     "zod": "^4.3.6"
   },
@@ -46,6 +47,7 @@
     "nodemailer": "^6.10.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.17",
     "nodemon": "^3.0.2"
   }
 }

@@ -36,6 +36,9 @@
                 <h1><i class="fa-solid fa-wine-bottle"></i> Painel Administrativo</h1>
             </div>
             <div class="admin-nav">
+                <button type="button" class="btn btn-secondary" id="notificacoes-abrir" aria-label="Abrir central de notificações" aria-expanded="false" aria-controls="central-notificacoes">
+                    <i class="fa-solid fa-bell" aria-hidden="true"></i> Avisos <span id="notificacoes-contador" aria-label="Notificações não lidas">0</span>
+                </button>
                 <a href="#pedidos-recebidos" class="btn btn-secondary" id="atalho-pedidos">
                     <i class="fa-solid fa-bell" aria-hidden="true"></i> Pedidos <span id="pedidos-contador" aria-label="Pedidos em aberto">0</span>
                 </a>
@@ -58,9 +61,15 @@
                 <a href="#clientes" data-painel-link="clientes"><i class="fa-solid fa-users" aria-hidden="true"></i> Clientes</a>
                 <a href="#configuracoes" data-painel-link="configuracoes"><i class="fa-solid fa-gear" aria-hidden="true"></i> Configurações</a>
             </nav>
+            <section class="admin-card central-notificacoes" id="central-notificacoes" aria-labelledby="titulo-notificacoes" hidden>
+                <div class="pedidos-cabecalho"><div><h2 id="titulo-notificacoes" tabindex="-1">Central de notificações</h2><p>Seus avisos ficam salvos, mesmo depois de sair do painel.</p></div><button type="button" class="btn btn-secondary" id="notificacoes-fechar">Fechar</button></div>
+                <div class="notificacoes-acoes"><button type="button" class="btn btn-secondary" id="notificacoes-marcar-todas" disabled>Marcar todas como lidas</button><button type="button" class="btn btn-primary" id="push-alternar" disabled>Carregando notificações do dispositivo…</button></div>
+                <p id="push-feedback" role="status"></p><p id="notificacoes-feedback" role="status"></p>
+                <div id="notificacoes-lista"></div><button type="button" class="btn btn-secondary" id="notificacoes-mais" hidden>Carregar mais</button>
+            </section>
             <div id="pedidos-novos" class="pedidos-aviso" hidden>
                 <span id="pedidos-aviso-texto" role="status"></span>
-                <button type="button" class="btn btn-primary" id="pedidos-ver-novos">Ver novos pedidos</button>
+                <button type="button" class="btn btn-primary" id="pedidos-ver-novos">Ver notificações</button>
             </div>
             <section class="admin-card admin-card-full pedidos-painel" id="pedidos-recebidos" aria-labelledby="titulo-pedidos">
                 <div class="pedidos-cabecalho">
@@ -231,7 +240,7 @@
                         <div class="form-group">
                             <label for="config-destaque-vinho">Vinho em destaque</label>
                             <select id="config-destaque-vinho" name="destaque_vinho_id">
-                                <option value="">Aleatorio (sem fixar)</option>
+                                <option value="">Seleção semanal automática</option>
                             </select>
                             <small id="destaque-status" class="destaque-status">Sem destaque fixado. O sistema escolhe automaticamente.</small>
                         </div>
@@ -241,7 +250,7 @@
                             <ul>
                                 <li>Ao selecionar um vinho, ele ficará em destaque por 7 dias</li>
                                 <li>Após 7 dias ou ao escolher outro vinho, o destaque será substituído</li>
-                                <li>Se nenhum vinho for selecionado, o sistema escolhe automaticamente um vinho diferente a cada semana</li>
+                                <li>A seleção automática é atualizada às segundas-feiras no horário de Brasília, usando apenas rótulos visíveis</li>
                             </ul>
                         </div>
                     </div>
@@ -767,6 +776,7 @@
     <script src="js/admin-acesso.js"></script>
     <script src="js/pedido-status.js"></script>
     <script src="js/pedidos-admin.js"></script>
+    <script src="js/notificacoes-admin.js"></script>
     <script src="js/clientes.js"></script>
     <script src="js/clientes-vip.js"></script>
 </body>

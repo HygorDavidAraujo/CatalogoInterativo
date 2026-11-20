@@ -1,5 +1,6 @@
 {
   "name": "Davini Vinhos Finos",
+  "id": "/",
   "short_name": "Davini",
   "description": "Catálogo Interativo de Vinhos - Davini Vinhos Finos. Descubra vinhos excepcionais.",
   "start_url": "/",

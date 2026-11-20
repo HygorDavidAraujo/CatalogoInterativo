@@ -1,5 +1,6 @@
 // ===== SERVICE WORKER BÁSICO =====
-const CACHE_NAME = 'davini-vinhos-v4';
+const CACHE_NAME = 'davini-vinhos-v5';
+const PUSH_STATE_CACHE = 'davini-push-dispositivo';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -12,6 +13,7 @@ const urlsToCache = [
   '/js/render-seguro.js',
   '/js/precos.js',
   '/js/ficha-vinho.js',
+  '/js/destaque.js',
   '/js/pwa.js',
   '/js/mobile.js',
   '/images/favicon.svg'
@@ -35,7 +37,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheName !== CACHE_NAME && cacheName !== PUSH_STATE_CACHE) {
             console.log('🗑️ Removendo cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
@@ -98,3 +100,49 @@ async function syncPedidos() {
   // Implementar sincronização de pedidos offline
   console.log('🔄 Sincronizando pedidos...');
 }
+
+self.addEventListener('message', event => {
+  if (event.data?.tipo !== 'PUSH_PREFERENCIA' || typeof event.data.ativo !== 'boolean') return;
+  event.waitUntil((async () => {
+    const cache = await caches.open(PUSH_STATE_CACHE);
+    await cache.put('/__push_preferencia', new Response(JSON.stringify({ ativo: event.data.ativo })));
+    if (!event.data.ativo) {
+      const notificacoes = await self.registration.getNotifications?.() || [];
+      notificacoes.forEach(notificacao => notificacao.close());
+    }
+  })());
+});
+
+async function pushAtivo() {
+  const cache = await caches.open(PUSH_STATE_CACHE);
+  const resposta = await cache.match('/__push_preferencia');
+  return resposta ? (await resposta.json()).ativo === true : false;
+}
+
+self.addEventListener('push', event => {
+  event.waitUntil((async () => {
+    if (!await pushAtivo()) return;
+    let dados = {};
+    try { dados = event.data?.json() || {}; } catch (_) {}
+    const id = Number(dados.pedidoId);
+    const valido = Number.isInteger(id) && id > 0 && id <= 2147483647;
+    await self.registration.showNotification('Novo pedido recebido', {
+      body: 'Abra o painel para consultar os detalhes.', icon: '/images/favicon.svg',
+      tag: valido ? `pedido-${id}` : 'novo-pedido',
+      data: { url: valido ? `/admin.html?pedido=${id}#pedidos-recebidos` : '/admin.html#pedidos-recebidos' }
+    });
+  })());
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const ativo = await pushAtivo();
+    const destino = new URL(ativo ? event.notification.data?.url || '/admin.html' : '/index.html', self.location.origin);
+    if (destino.origin !== self.location.origin || !['/admin.html', '/index.html'].includes(destino.pathname)) return;
+    const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const painel = janelas.find(janela => new URL(janela.url).pathname === '/admin.html');
+    if (painel) { await painel.navigate(destino.href); return painel.focus(); }
+    return self.clients.openWindow(destino.href);
+  })());
+});

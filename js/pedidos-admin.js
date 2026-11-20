@@ -69,8 +69,10 @@
                 ids.forEach(id => this.conhecidos.add(id));
                 $('pedidos-contador').textContent = resumo.em_aberto;
                 $('pedidos-resumo').textContent = `${resumo.em_aberto} em aberto • ${resumo.total} pedidos • Atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
-                $('pedidos-novos').hidden = !this.novos.size;
-                $('pedidos-aviso-texto').textContent = this.novos.size ? `${this.novos.size} novo(s) pedido(s) recebido(s).` : '';
+                if (!window.notificacoesAdmin) {
+                    $('pedidos-novos').hidden = !this.novos.size;
+                    $('pedidos-aviso-texto').textContent = this.novos.size ? `${this.novos.size} novo(s) pedido(s) recebido(s).` : '';
+                }
             } catch (error) {
                 $('pedidos-resumo').textContent = 'Falha na atualização automática. Use Atualizar pedidos para tentar novamente.';
             } finally {
@@ -121,6 +123,7 @@
             try {
                 const pedido = await this.api(`/${id}`);
                 if (versao !== this.versaoDetalhe) return;
+                window.notificacoesAdmin?.marcarPedidoLido(id);
                 const p = window.RenderSeguro.dados(pedido);
                 const atual = window.PedidoStatus.obter(p.status);
                 painel.innerHTML = `
@@ -207,6 +210,7 @@
             $('pedidos-proxima').addEventListener('click', () => { this.pagina++; this.listar(); });
             $('pedidos-atualizar').addEventListener('click', () => { this.listar(); this.resumo(); });
             $('pedidos-ver-novos').addEventListener('click', async () => {
+                if (window.notificacoesAdmin) return;
                 window.painelAdmin?.abrir('pedidos-recebidos', { foco: true });
                 const revisados = [...this.novos];
                 this.filtros = { status: '', busca: '' };

@@ -6,6 +6,7 @@ const { validatePedido, validatePedidoStatus, validateId, validateClienteId } = 
 const { calcularPedido, ErroPedido } = require('../services/pedidoService');
 const PedidoStatus = require('../js/pedido-status');
 const { notificarPedido } = require('../services/pedidoEmailService');
+const { enviarPushPedido } = require('../services/pushService');
 
 // GET - Listar pedidos de um cliente
 router.get('/cliente/:clienteId', verificarAutenticacao, validateClienteId, async (req, res) => {
@@ -83,7 +84,10 @@ router.post('/', verificarAutenticacao, validatePedido, async (req, res) => {
             client.release();
         }
 
-        await notificarPedido(pool, pedidoId, { novo: true });
+        await Promise.allSettled([
+            notificarPedido(pool, pedidoId, { novo: true }),
+            enviarPushPedido(pool, pedidoId)
+        ]);
 
         res.status(201).json({ 
             success: true, 

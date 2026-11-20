@@ -47,7 +47,7 @@ async function main() {
     await verificar('/api/beneficios', 200, corpo => {
         exigir(Array.isArray(JSON.parse(corpo)), 'Formato inesperado de benefícios');
     });
-    for (const caminho of ['/api/auth/me', '/api/auth/usuarios', '/api/pedidos/resumo', '/api/pedidos/recebidos', '/api/vinhos?admin=true']) {
+    for (const caminho of ['/api/auth/me', '/api/auth/usuarios', '/api/pedidos/resumo', '/api/pedidos/recebidos', '/api/vinhos?admin=true', '/api/notificacoes/resumo']) {
         await verificar(caminho, 401);
     }
     const falhas = resultados.filter(resultado => !resultado.ok);

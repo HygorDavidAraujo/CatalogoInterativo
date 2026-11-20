@@ -93,6 +93,7 @@ app.use('/api/configuracoes', configuracoesRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/beneficios', beneficiosRoutes);
+app.use('/api/notificacoes', require('./routes/notificacoes'));
 
 // Setup route apenas em desenvolvimento
 if (isDevelopment) {

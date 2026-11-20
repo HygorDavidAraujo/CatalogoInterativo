@@ -447,14 +447,21 @@ ou número, filtro de status e páginas de 20 registros. Os detalhes exibem os i
 valores e observações gravados no pedido. A alteração de status usa a mesma API do
 histórico do cliente. Há links entre o pedido no painel e o cadastro do cliente.
 
-O contador informa pedidos em aberto. Enquanto a página estiver visível, o painel
-consulta um resumo a cada 30 segundos e apresenta um aviso para novos pedidos.
-O primeiro carregamento estabelece a referência, sem anunciar pedidos antigos.
-Os avisos são da sessão aberta no painel; não são notificações push com o navegador
-fechado. A lista mantém os filtros até o administrador atualizar ou ver os novos
-pedidos. Todas as consultas operacionais exigem administrador e desabilitam cache.
+O contador de Pedidos informa os pedidos em aberto. O botão Avisos mostra as
+notificações não lidas do administrador. A Central de notificações salva as leituras
+no Neon, mantendo-as após recarregar, sair e entrar novamente. Abrir um pedido marca
+o aviso correspondente como lido; a leitura de um administrador não afeta os outros.
+O monitoramento com o painel visível consulta o resumo a cada 30 segundos.
 
-Esta funcionalidade reutiliza `pedidos` e `pedidos_itens`, sem nova migração no Neon.
+O push é opcional por dispositivo, ativado por um clique explícito na central.
+Cada inscrição está vinculada à sessão: sair do sistema a remove. O aviso externo
+usa texto genérico, sem dados pessoais do cliente. O toque abre o pedido no painel,
+com autenticação. A ativação é descrita em [NOTIFICACOES-PUSH.md](NOTIFICACOES-PUSH.md).
+
+A migração `database/migrations/20261119_notificacoes_push.sql` deve ser executada
+antes do deploy desta versão. Ela cria os avisos na mesma transação do pedido e não
+gera notificações retroativas para pedidos antigos. Todas as consultas operacionais
+exigem administrador e desabilitam cache.
 
 ## 🎯 Melhorias Futuras
 

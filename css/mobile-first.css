@@ -29,13 +29,14 @@ html { scroll-behavior: smooth; scroll-padding-top: 84px; scrollbar-gutter: stab
 .hero-explorar { display: inline-flex; align-items: center; gap: 12px; color: white; text-decoration: none; min-height: 44px; padding: 10px 18px; border: 1px solid #ffffff80; border-radius: 7px; font-weight: 600; font-size: .9rem; }
 .hero-explorar:hover { background: #ffffff15; }
 .catalogo { padding: 28px 0 44px; }
-.section-title { font-size: clamp(1.45rem, 3vw, 1.9rem); text-align: center; color: var(--cor-primaria); margin-bottom: 24px; }
+.section-title { font-size: clamp(1.65rem, 3vw, 2.2rem); text-align: center; color: var(--cor-primaria); margin-bottom: 12px; font-family: Georgia, serif; }
+.catalogo-apresentacao { max-width: 540px; margin: 0 auto 28px; color: #6a5e55; text-align: center; font-size: .9rem; line-height: 1.65; }
 .section-title::after { content: ''; display: block; width: 48px; height: 3px; margin: 12px auto 0; border-radius: 3px; background: var(--cor-destaque); }
 /* Destaque: uma coluna em telas pequenas, duas apenas quando há espaço. */
 .destaque-semana { margin: 0 0 28px; }
-.destaque-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid #e3d8ce; border-radius: 16px; overflow: hidden; background: #faf6ef; box-shadow: 0 5px 18px #2c18100c; cursor: pointer; }
+.destaque-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid #dfc9ad; border-radius: 20px; overflow: hidden; background: linear-gradient(120deg, #fcf9f4, #f4ece1); box-shadow: 0 12px 32px #40281b0c; cursor: pointer; }
 .destaque-selo { position: absolute; top: 12px; left: 12px; z-index: 1; background: #ead7b5; color: #48321b; padding: 6px 10px; border-radius: 5px; font-size: .62rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.destaque-media { display: flex; justify-content: center; align-items: center; background: white; padding: 38px 20px 14px; min-width: 0; }
+.destaque-media { display: flex; justify-content: center; align-items: center; background: radial-gradient(ellipse at center, white 45%, #f7f3ed); padding: 38px 20px 14px; min-width: 0; }
 .destaque-media img { width: 100%; height: 165px; object-fit: contain; }
 .destaque-conteudo { min-width: 0; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
 .destaque-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -65,25 +66,28 @@ html { scroll-behavior: smooth; scroll-padding-top: 84px; scrollbar-gutter: stab
 #limpar-filtros { min-height: 44px; border: 0; color: var(--cor-primaria); background: transparent; text-decoration: underline; cursor: pointer; padding: 4px; }
 /* Grade: 2 colunas no celular, 3 em telas móveis largas, 4–5 no desktop. */
 .vinhos-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
-.vinho-card { min-width: 0; display: flex; flex-direction: column; border: 1px solid #e4ded7; border-radius: 12px; overflow: hidden; background: white; box-shadow: 0 2px 6px #2c181008; cursor: pointer; transition: box-shadow .2s, transform .2s; }
-.vinho-imagem { display: block; width: 100%; height: 165px; padding: 12px; object-fit: contain; background: white; }
-.vinho-info { padding: 12px; display: flex; flex-direction: column; align-items: stretch; gap: 6px; flex: 1; min-width: 0; }
+.vinho-card { min-width: 0; display: flex; flex-direction: column; border: 1px solid #e4ded7; border-radius: 16px; overflow: hidden; background: white; box-shadow: 0 4px 14px #2c181008; cursor: pointer; transition: box-shadow .2s, transform .2s; }
+.vinho-media { background: linear-gradient(145deg, #faf8f4, #fff); border-bottom: 1px solid #f0ebe4; }
+.vinho-imagem { display: block; width: 100%; height: 175px; padding: 14px; object-fit: contain; mix-blend-mode: multiply; }
+.vinho-info { padding: 12px; display: flex; flex-direction: column; align-items: stretch; gap: 8px; flex: 1; min-width: 0; }
+.vinho-metadados { display: flex; flex-wrap: wrap; gap: 3px 8px; }
+.vinho-metadados .vinho-ano { color: #5b4e43; }
 .vinho-tipo { display: inline-flex; align-self: flex-start; width: fit-content; background: #eee7dc; color: #634729; padding: 3px 7px; border-radius: 4px; font-size: .7rem; text-transform: uppercase; font-weight: 700; letter-spacing: .025em; }
 .tipo-tinto { background: #f2e4ea; color: #742546; }
 .tipo-branco, .tipo-espumante { background: #f3eddc; color: #715d2b; }
 .tipo-rose { background: #f9e8e4; color: #8c4c43; }
 .tipo-suco_integral_tinto, .tipo-suco_integral_branco { background: #eaf0e5; color: #486039; }
-.vinho-nome { font-size: .93rem; line-height: 1.4; font-weight: 650; color: #33271f; overflow-wrap: anywhere; margin: 2px 0; }
+.vinho-nome { font-size: 1rem; line-height: 1.4; font-weight: 650; color: #33271f; overflow-wrap: anywhere; margin: 2px 0; }
 .vinho-complemento, .vinho-uva, .vinho-ano, .vinho-pais { color: #74685f; font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; margin: 0; }
 .vinho-pais { display: flex; align-items: center; gap: 5px; }
 .vinho-pais img { flex: 0 0 auto; object-fit: cover; border-radius: 2px; }
 .perfil-etiquetas { display: flex; gap: 5px; flex-wrap: wrap; list-style: none; margin: 3px 0; }
-.perfil-etiquetas li { color: #66523c; background: #f7f3ed; font-size: .68rem; padding: 3px 6px; border-radius: 4px; }
+.perfil-etiquetas li { color: #66523c; background: #f7f3ed; font-size: .68rem; padding: 3px 7px; border: 1px solid #eee5d9; border-radius: 12px; }
 .vinho-preco { display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap; margin-top: auto; padding-top: 12px; color: var(--cor-primaria); }
 .preco-original { color: #7c7168; font-size: .8rem; font-weight: 400; }
 .vinho-preco .preco-final { font-size: 1.12rem; font-weight: 750; }
 .vinho-preco .badge-vip { font-size: .6rem; padding: 2px 5px; }
-.btn-detalhes { background: transparent; border: 0; min-height: 44px; padding: 6px; color: var(--cor-primaria); font-size: .8rem; text-decoration: underline; cursor: pointer; }
+.btn-detalhes { background: #fff; border: 1px solid #dfcdd6; border-radius: 8px; min-height: 44px; padding: 6px; color: var(--cor-primaria); font-size: .8rem; font-weight: 600; cursor: pointer; }
 .btn-adicionar-carrinho { display: inline-flex; justify-content: center; align-items: center; gap: 6px; width: 100%; min-height: 44px; padding: 10px 8px; border: 0; border-radius: 7px; background: var(--cor-primaria); color: white; font-size: .85rem; line-height: 1.3; font-weight: 650; cursor: pointer; }
 .btn-adicionar-carrinho:hover { background: #4b0625; }
 .vinhos-grid > .mensagem-vazio, .vinhos-grid > .mensagem-erro, .vinhos-grid > .loading-container { grid-column: 1 / -1; }
