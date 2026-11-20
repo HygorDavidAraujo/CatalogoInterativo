@@ -126,12 +126,22 @@
                 const config = await this.api('/push/config');
                 if (!config.disponivel) { $('push-alternar').textContent = 'Push aguardando configuração'; return; }
                 this.chave = config.chave_publica;
+                this.usuarioId = config.usuario_id;
                 let timeout;
                 try { this.registro = await Promise.race([navigator.serviceWorker.ready,
                     new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Recarregue o painel para iniciar as notificações do dispositivo.')), 8000); })]); }
                 finally { clearTimeout(timeout); }
-                this.inscricao = await this.registro.pushManager.getSubscription();
-                if (this.inscricao && Notification.permission === 'granted') await this.registrarPush(this.inscricao);
+                const inscricao = await this.registro.pushManager.getSubscription();
+                const preferencia = this.lerPreferenciaDispositivo();
+                const restaurar = !preferencia || (preferencia.usuarioId === this.usuarioId && preferencia.ativo);
+                if (inscricao && Notification.permission === 'granted' && restaurar) {
+                    await this.registrarPush(inscricao);
+                    this.inscricao = inscricao;
+                    $('push-feedback').textContent = 'Avisos ativados neste dispositivo.';
+                } else {
+                    this.inscricao = null;
+                    this.preferenciaPush(false);
+                }
                 this.atualizarBotaoPush();
             } catch (erro) { $('push-feedback').textContent = erro.message; $('push-alternar').textContent = 'Push indisponível no momento'; }
         }
@@ -140,8 +150,21 @@
             this.registro?.active?.postMessage({ tipo: 'PUSH_PREFERENCIA', ativo });
         }
 
+        lerPreferenciaDispositivo() {
+            try {
+                const valor = JSON.parse(localStorage.getItem('davini_push_preferencia'));
+                return valor && Number.isInteger(valor.usuarioId) && typeof valor.ativo === 'boolean' ? valor : null;
+            } catch (_) { return null; }
+        }
+
+        salvarPreferenciaDispositivo(ativo) {
+            try { localStorage.setItem('davini_push_preferencia', JSON.stringify({ usuarioId: this.usuarioId, ativo })); }
+            catch (_) {}
+        }
+
         async registrarPush(inscricao) {
             await this.api('/push/inscricao', { method: 'POST', body: JSON.stringify(inscricao.toJSON()) });
+            this.salvarPreferenciaDispositivo(true);
             this.preferenciaPush(true);
         }
 
@@ -155,6 +178,7 @@
             try {
                 if (this.inscricao) {
                     const inscricao = this.inscricao;
+                    this.salvarPreferenciaDispositivo(false);
                     this.preferenciaPush(false);
                     await inscricao.unsubscribe();
                     this.inscricao = null;

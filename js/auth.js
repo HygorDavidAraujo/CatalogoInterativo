@@ -7,7 +7,7 @@ class AuthManager {
 
     salvarUsuarioSessao(usuario, token) {
         if (!usuario.isAdmin || (this.usuarioLogado && this.usuarioLogado.id !== usuario.id)) {
-            window.desativarPushDispositivo?.();
+            window.suspenderPushDispositivo?.();
         }
         this.usuarioLogado = usuario;
         sessionStorage.setItem('usuario', JSON.stringify(usuario));
@@ -42,7 +42,7 @@ class AuthManager {
     }
 
     limparSessao() {
-        window.desativarPushDispositivo?.();
+        window.suspenderPushDispositivo?.();
         this.usuarioLogado = null;
         ['usuario', 'jwt_token'].forEach(chave => {
             sessionStorage.removeItem(chave);

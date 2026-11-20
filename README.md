@@ -454,7 +454,9 @@ o aviso correspondente como lido; a leitura de um administrador não afeta os ou
 O monitoramento com o painel visível consulta o resumo a cada 30 segundos.
 
 O push é opcional por dispositivo, ativado por um clique explícito na central.
-Cada inscrição está vinculada à sessão: sair do sistema a remove. O aviso externo
+Cada inscrição no servidor está vinculada à sessão: sair do sistema a remove e
+suspende os avisos localmente. A preferência do dispositivo é preservada e o push
+é restaurado ao retornar ao painel com a mesma conta. O aviso externo
 usa texto genérico, sem dados pessoais do cliente. O toque abre o pedido no painel,
 com autenticação. A ativação é descrita em [NOTIFICACOES-PUSH.md](NOTIFICACOES-PUSH.md).
 

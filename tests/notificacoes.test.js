@@ -234,3 +234,79 @@ test('servidor inicia e serve painel e favicon sem interoperabilidade require/ES
     assert.equal(resultado.status, 0, resultado.stderr || resultado.error?.message);
     assert.match(resultado.stdout, /RUNTIME_SMOKE_OK/);
 });
+
+function dispositivoPush({ conservarAoDesinscrever = false } = {}) {
+    const elementos = new Map(), storage = new Map(), mensagens = [], chamadas = [];
+    let usuarioId = 7, token = 'sessao-inicial', desinscricoes = 0, permissoes = 0;
+    let inscricao;
+    const dispositivo = { endpoint: 'https://fcm.googleapis.com/fcm/send/dispositivo', toJSON: () => ({ endpoint: dispositivo.endpoint, keys: {} }),
+        async unsubscribe() { desinscricoes++; if (!conservarAoDesinscrever) inscricao = null; return !conservarAoDesinscrever; } };
+    const registro = { active: { postMessage: mensagem => mensagens.push(mensagem) }, pushManager: {
+        getSubscription: async () => inscricao,
+        subscribe: async () => { inscricao = dispositivo; return dispositivo; }
+    } };
+    inscricao = dispositivo;
+    const window = { authManager: { obterToken: () => token }, PushManager: function() {}, Notification: {}, addEventListener() {} };
+    const context = { window, navigator: { serviceWorker: { ready: Promise.resolve(registro), getRegistration: async () => registro } },
+        document: { addEventListener() {}, getElementById(id) {
+            if (!elementos.has(id)) elementos.set(id, { textContent: '', disabled: true });
+            return elementos.get(id);
+        } }, Notification: { permission: 'granted', requestPermission: async () => { permissoes++; return 'granted'; } },
+        localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
+        setTimeout, clearTimeout, clearInterval, Uint8Array, atob, console: { log() {} } };
+    vm.createContext(context);
+    for (const file of ['js/pwa.js', 'js/notificacoes-admin.js']) vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context);
+    function painel() {
+        const instance = new window.NotificacoesAdmin();
+        instance.api = async (rota, options) => {
+            if (rota === '/push/config') return { disponivel: true, chave_publica: 'BAAA', usuario_id: usuarioId };
+            chamadas.push({ rota, method: options.method, token: instance.token });
+            return { success: true };
+        };
+        return instance;
+    }
+    return { window, painel, chamadas, mensagens, elementos, storage,
+        trocarSessao(id = usuarioId) { usuarioId = id; token = 'nova-sessao-' + id; },
+        get inscricao() { return inscricao; }, get desinscricoes() { return desinscricoes; }, get permissoes() { return permissoes; } };
+}
+
+test('logout suspende o push e o novo login da mesma conta restaura sem nova permissão', async () => {
+    const d = dispositivoPush();
+    await d.painel().configurarPush();
+    d.window.suspenderPushDispositivo();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(d.desinscricoes, 0);
+    assert.ok(d.inscricao);
+    assert.equal(d.mensagens.at(-1).ativo, false);
+    d.trocarSessao();
+    await d.painel().configurarPush();
+    assert.equal(d.chamadas.filter(c => c.method === 'POST').length, 2);
+    assert.equal(d.chamadas.at(-1).token, 'nova-sessao-7');
+    assert.equal(d.mensagens.at(-1).ativo, true);
+    assert.equal(d.permissoes, 0);
+    assert.equal(d.elementos.get('push-alternar').textContent, 'Desativar neste dispositivo');
+});
+
+test('desativação explícita permanece desativada após novo login mesmo se o navegador mantiver a inscrição', async () => {
+    const d = dispositivoPush({ conservarAoDesinscrever: true });
+    const painel = d.painel();
+    await painel.configurarPush();
+    await painel.alternarPush();
+    assert.equal(d.desinscricoes, 1);
+    assert.equal(JSON.parse(d.storage.get('davini_push_preferencia')).ativo, false);
+    d.trocarSessao();
+    await d.painel().configurarPush();
+    assert.equal(d.chamadas.filter(c => c.method === 'POST').length, 1);
+    assert.equal(d.mensagens.at(-1).ativo, false);
+    assert.equal(d.elementos.get('push-alternar').textContent, 'Ativar neste dispositivo');
+});
+
+test('preferência de um administrador não ativa automaticamente o dispositivo para outro', async () => {
+    const d = dispositivoPush();
+    await d.painel().configurarPush();
+    d.trocarSessao(8);
+    await d.painel().configurarPush();
+    assert.equal(d.chamadas.filter(c => c.method === 'POST').length, 1);
+    assert.equal(d.mensagens.at(-1).ativo, false);
+    assert.equal(d.elementos.get('push-alternar').textContent, 'Ativar neste dispositivo');
+});

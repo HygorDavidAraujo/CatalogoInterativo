@@ -60,7 +60,7 @@ router.put('/:id/lida', async (req, res) => {
 
 router.get('/push/config', (req, res) => {
     const config = configuracaoPush();
-    res.json({ disponivel: Boolean(config), chave_publica: config?.publicKey || null });
+    res.json({ disponivel: Boolean(config), chave_publica: config?.publicKey || null, usuario_id: req.usuario.id });
 });
 
 router.put('/pedido/:id/lida', async (req, res) => {

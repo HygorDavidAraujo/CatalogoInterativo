@@ -17,7 +17,8 @@ No iPhone/iPad, a ativação exige abrir o aplicativo adicionado à Tela de Iní
 - **Marcar todas como lidas** considera até a notificação mais recente já carregada; um novo pedido recebido durante a operação continua não lido.
 - Cada administrador tem suas próprias leituras. Recarregar ou fazer novo login preserva esse histórico.
 - Novos pedidos passam a gerar avisos após a migração. Os pedidos antigos não são reenviados como notificações novas.
-- **Desativar neste dispositivo** remove a inscrição daquele dispositivo. Sair encerra a sessão, remove suas inscrições no banco e desativa a recepção local. Após novo login, a ativação pode ser feita novamente na central.
+- **Desativar neste dispositivo** remove a inscrição e grava a preferência de não receber avisos. Ela permanece desativada após novo login até ser ativada explicitamente.
+- Sair encerra a sessão, remove suas inscrições no banco e suspende a recepção local, mas preserva a preferência e a inscrição do navegador. Ao retornar ao painel com a mesma conta, a inscrição é vinculada à nova sessão e os avisos voltam automaticamente, sem nova solicitação de permissão. A preferência não é reaproveitada automaticamente para outro administrador no mesmo dispositivo.
 - O aviso na tela bloqueada contém apenas texto genérico. Nome, contato, produtos e valores ficam no painel autenticado.
 - Inscrições expiradas, identificadas pelo serviço de push com HTTP 404/410, são removidas. Falhas de push não desfazem um pedido já confirmado.
 

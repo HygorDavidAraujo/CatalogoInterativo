@@ -6,11 +6,12 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-window.desativarPushDispositivo = () => {
+window.suspenderPushDispositivo = () => {
     if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.getRegistration().then(async registro => {
+    navigator.serviceWorker.getRegistration().then(registro => {
         registro?.active?.postMessage({ tipo: 'PUSH_PREFERENCIA', ativo: false });
-        const inscricao = await registro?.pushManager?.getSubscription();
-        await inscricao?.unsubscribe();
     }).catch(() => {});
 };
+
+// Compatibilidade com versões do auth.js ainda presentes no cache do navegador.
+window.desativarPushDispositivo = window.suspenderPushDispositivo;
