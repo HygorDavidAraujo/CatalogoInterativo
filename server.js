@@ -78,6 +78,7 @@ app.get('/meu-perfil.html', (req, res) => res.sendFile(path.join(__dirname, 'meu
 app.get('/reset-senha.html', (req, res) => res.sendFile(path.join(__dirname, 'reset-senha.html')));
 app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
 app.get('/sw.js', (req, res) => res.sendFile(path.join(__dirname, 'sw.js')));
+app.get('/favicon.ico', (req, res) => res.redirect(308, '/images/favicon.svg'));
 
 // Importar rotas
 const vinhosRoutes = require('./routes/vinhos');

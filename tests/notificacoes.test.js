@@ -5,6 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { createRequire } = require('node:module');
 const crypto = require('node:crypto');
+const { spawnSync } = require('node:child_process');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { PGlite } = require('@electric-sql/pglite');
@@ -179,8 +180,8 @@ test('service worker respeita adesão, oculta dados pessoais e abre somente o pr
     assert.equal(navegacoes[1], 'https://catalogo.example.com/index.html');
 });
 
-test('Web Push produz payload cifrado e assinatura VAPID com as chaves do servidor', () => {
-    const webpush = require('web-push');
+test('Web Push produz payload cifrado e assinatura VAPID com as chaves do servidor', async () => {
+    const webpush = await import('web-push');
     const keys = webpush.generateVAPIDKeys();
     const ecdh = crypto.createECDH('prime256v1'); ecdh.generateKeys();
     const subscription = { endpoint: 'https://fcm.googleapis.com/fcm/send/teste', keys: {
@@ -192,4 +193,44 @@ test('Web Push produz payload cifrado e assinatura VAPID com as chaves do servid
     assert.match(detalhe.headers.Authorization, /^vapid /);
     assert.ok(detalhe.body.length > payload.length);
     assert.equal(detalhe.body.includes(Buffer.from(payload)), false);
+});
+
+test('servidor inicia e serve painel e favicon sem interoperabilidade require/ESM', () => {
+    const codigo = `
+        const assert = require('node:assert/strict');
+        assert.throws(() => require('web-push'), { code: 'ERR_REQUIRE_ESM' });
+        const id = require.resolve('./config/database');
+        require.cache[id] = { id, filename: id, loaded: true, exports: {
+            pool: { query: async () => { throw new Error('Consulta inesperada no teste de inicialização'); } },
+            testConnection: async () => true
+        } };
+        (async () => {
+            const push = require('./services/pushService');
+            assert.equal(typeof push.enviarPushPedido, 'function');
+            const sdk = await import('web-push');
+            assert.equal(typeof sdk.sendNotification, 'function');
+            const app = require('./server');
+            const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
+            try {
+                const origem = 'http://127.0.0.1:' + server.address().port;
+                const painel = await fetch(origem + '/admin.html');
+                assert.equal(painel.status, 200);
+                assert.match(painel.headers.get('content-security-policy'), /script-src-attr 'none'/);
+                assert.doesNotMatch(await painel.text(), /<script(?![^>]*\\bsrc=)[^>]*>/i);
+                const favicon = await fetch(origem + '/favicon.ico', { redirect: 'manual' });
+                assert.equal(favicon.status, 308);
+                assert.equal(favicon.headers.get('location'), '/images/favicon.svg');
+                assert.equal((await fetch(origem + '/images/favicon.svg')).status, 200);
+                console.log('RUNTIME_SMOKE_OK');
+            } finally { await new Promise(resolve => server.close(resolve)); }
+        })().catch(error => { console.error(error); process.exitCode = 1; });
+    `;
+    const resultado = spawnSync(process.execPath, ['--no-experimental-require-module', '-e', codigo], {
+        cwd: root, encoding: 'utf8', timeout: 20000,
+        env: { ...process.env, NODE_ENV: 'production', VERCEL: '1', DATABASE_URL: 'postgresql://teste:teste@localhost:1/teste',
+            JWT_SECRET: 'runtime-testes-sem-segredos-reais', CLOUDINARY_CLOUD_NAME: '', CLOUDINARY_API_KEY: '', CLOUDINARY_API_SECRET: '',
+            WEBPUSH_PUBLIC_KEY: '', WEBPUSH_PRIVATE_KEY: '', WEBPUSH_SUBJECT: '' }
+    });
+    assert.equal(resultado.status, 0, resultado.stderr || resultado.error?.message);
+    assert.match(resultado.stdout, /RUNTIME_SMOKE_OK/);
 });
